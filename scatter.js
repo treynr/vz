@@ -36,6 +36,7 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
     var in_width = (opts.dimensions === undefined) ? 700 : opts.dimensions[1];
     var height = in_height + 100;
     var width = in_width + 50;
+    var radius = (opts.radius === undefined) ? 5 : opts.radius;
     //var in_height = 500;
     //var in_width = 700;
     var xpad = 50;
@@ -182,7 +183,7 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
         .enter()
         .append('circle')
         .attr('class', 'circ')
-        .attr('r', 5)
+        .attr('r', radius)
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide)
         .attr('fill', function(d, i) {
