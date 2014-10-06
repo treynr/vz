@@ -30,7 +30,6 @@ function makeHistogram(data, opts) {
         //.bins(x.ticks(50))
         .bins(x.ticks(opts.nbins))
         (data);
-    console.log(data);
 
     var y = d3.scale.linear()
         .domain([0, d3.max(data, function(d) { return d.y; })])
@@ -70,7 +69,14 @@ function makeHistogram(data, opts) {
 
     bar.append("rect")
         .attr("x", 10)
-        .attr("width", x(data[0].dx) - 1)
+        .attr("width", function(d) {//x(data[0].dx) - 1)
+            if (opts.domain[0] === 0)
+                return x(data[0].dx) - 1;
+            else if (opts.nbins)
+                return width / opts.nbins;
+            else
+                return width / 10;
+        })
         .attr("height", function(d) { return height - y(d.y); });
 
     //bar.append("text")

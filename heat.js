@@ -18,10 +18,24 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
 
     var svg = d3.select('body')
         .append('svg')
-        .attr('height', height + margin.top + margin.bottom)
-        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom + 50)
+        .attr('width', width + margin.left + margin.right + 50)
         .append('g')
         .attr('transform', 'translate(' + margin.left + ', ' + margin.top + ')');
+
+    // Title
+    svg.append("text")
+        .text(title)
+        .attr("x", width / 3)
+        .attr("y", 150)
+        .style("text-anchor", "middle")
+        .style('font-size', '15px')
+        .style('font-family', 'sans-serif')
+        .style('font-weight', 'bold')
+        .attr('transform', 'translate(' + -margin.left + ', ' + -margin.top + ')');
+        //.attr("transform", "translate("+cell_size/2 + ",-6) rotate (-90)")
+        //.attr("class",  function (d,i) { return 'mono'; });
+        //.attr('transform', 'translate(' + margin.left + ', ' + margin.top + ')');
 
     for (var i = 0; i < rlabels.length; i++) {
         row_ind.push(i + 1);
@@ -44,7 +58,7 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
       .text(function (d, i) { return d; })
       .attr("x", 0)
       //.attr("y", function (d, i) { return hcrow.indexOf(i+1) * cellSize; })
-      .attr("y", function (d, i) { return row_ind.indexOf(i+1) * cell_size; })
+      .attr("y", function (d, i) { return row_ind.indexOf(i+1) * cell_size + 1; })
       .style("text-anchor", "end")
       .attr("transform", "translate(-6," + cell_size / 1.5 + ")")
       .attr("class", function (d,i) { return "rowLabel mono r"+i;} ); 
@@ -60,7 +74,7 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
       .append("text")
       .text(function (d, i) { return d; })
       .attr("x", 0)
-      .attr("y", function (d, i) { return col_ind.indexOf(i+1) * cell_size; })
+      .attr("y", function (d, i) { return col_ind.indexOf(i+1) * cell_size + 2; })
       .style("text-anchor", "left")
       .attr("transform", "translate("+cell_size/2 + ",-6) rotate (-90)")
       .attr("class",  function (d,i) { return "colLabel mono c"+i;} );
@@ -141,6 +155,58 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
                d3.selectAll(".rowLabel").classed("text-highlight",false);
                d3.selectAll(".colLabel").classed("text-highlight",false);
                //d3.select("#tooltip").classed("hidden", true);
-        })
-        ; 
+        });
+
+        var grad = svg.append('linearGradient')
+            .attr('id', 'pretty_gradient')
+            .attr('x1', '0%')
+            .attr('y1', '50%')
+            .attr('x2', '100%')
+            .attr('y2', '50%')
+            .attr('spreadMethod', 'pad');
+        
+        grad.append('stop')
+            .attr('offset', '0%')
+            .attr('stop-color', '#0767F8')
+            .attr('stop-opacity', 1);
+        grad.append('stop')
+            .attr('offset', '100%')
+            .attr('stop-color', '#EDF3FE')
+            .attr('stop-opacity', 1);
+
+        svg.append('rect')
+            .attr('x', 0)
+            .attr('y', height + 10)
+            .attr('height', 35)
+            .attr('width', width)
+            .style('stroke-width', '0.5px')
+            .style('stroke', 'black')
+            .style('fill', 'url(#pretty_gradient)');
+
+        svg.append("text")
+            .text('0.0')
+            .attr("x", 0)
+            .attr("y", height + 60)
+            .style("text-anchor", "left")
+            //.attr("transform", "translate("+cell_size/2 + ",-6) rotate (-90)")
+            .attr("class",  function (d,i) { return 'mono'; });
+            //.attr('transform', 'translate(' + margin.left + ', ' + margin.top + ')');
+        
+        svg.append("text")
+            .text('1.0')
+            .attr("x", width - margin.right - 10)
+            .attr("y", height + 60)
+            .style("text-anchor", "right")
+            //.attr("transform", "translate("+cell_size/2 + ",-6) rotate (-90)")
+            .attr("class",  function (d,i) { return 'mono'; });
+            //.attr('transform', 'translate(' + margin.left + ', ' + margin.top + ')');
+        
+        svg.append("text")
+            .text('Condensation Values')
+            .attr("x", width / 2)
+            .attr("y", height + 60)
+            .style("text-anchor", "middle")
+            //.attr("transform", "translate("+cell_size/2 + ",-6) rotate (-90)")
+            .attr("class",  function (d,i) { return 'mono'; });
+            //.attr('transform', 'translate(' + margin.left + ', ' + margin.top + ')');
 };
