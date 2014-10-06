@@ -11,6 +11,16 @@ var mean = function(arr) {
     return _.reduce(arr, function(m,n){return m + n;}, 0) / arr.length;
 }
 
+//// opts {
+//      domain : [a, b]
+//      dimensions : [height, width]
+//      nbins : number of bins (histogram only)
+//      title : title string
+//      xlabel : x axis label
+//      ylabel : y axis label
+//      color : a color string, either a name (e.g. red) or hex (e.g. #ff0000)
+//   }
+//
 // For now, data is a list of objects. Each object contains two values (for 
 // the x and y) and an identifier.
 // Array format: [{id, x, y}...]
@@ -35,6 +45,8 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
         .append('svg')
         .attr('height', height)
         .attr('width', width);
+
+    var svg_key = d3.select('body').append('svg').attr('width', 450).attr('height', 320);
 
     svg.append('rect')
         .attr('x', xpad)
@@ -72,14 +84,16 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
 
     // Create the scale and axes
     var yscale = d3.scale.linear()
-        .domain([0, d3.max(ys)]) // use y values array
+        //.domain([0, d3.max(ys)]) // use y values array
+        .domain([d3.min(ys), d3.max(ys)]) // 9/14/2014 changed to this to try and get a prettier graph
         .range([in_height, 0]);
     var yaxis = d3.svg.axis()
         .scale(yscale)
         .orient('left')
         .ticks(10);
     var xscale = d3.scale.linear()
-        .domain([0, d3.max(xs)]) // use x values array
+        //.domain([0, d3.max(xs)]) // use x values array
+        .domain([d3.min(xs), d3.max(xs)]) // 9/14/2014 changed to this to try and get a prettier graph
         .range([0, in_width]);
     var xaxis = d3.svg.axis()
         .scale(xscale)
@@ -137,6 +151,29 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
         for (var i = 0; i <= single; i++)
             colors(i);
 
+    // Tool-tip shit, added 9/25/14
+    // currently only for ratio data. when I'm not being a lazy piece of shit,
+    // I'll update it for everything else.
+    var tip = d3.tip()
+        .attr('class', 'd3-tip')
+        .html(function(d) {
+            return 'GS0: ' + d.gs_name0 + '<br />GS1: ' + d.gs_name1;
+        });
+
+    // added 10/06/14, really need to rewrite this shit
+    if (opts['tip'] !== undefined) {
+        tip = d3.tip()
+            .attr('class', 'd3-tip')
+            .html(function(d) {
+                return d.tip;
+        });
+    }
+
+    svg.call(tip);
+
+    // color mapping used when each data point has two groups that need color
+    var cmap = {};
+
     svg.append('g')
         .attr('id', 'circs')
         .attr('clip-path', 'url(#chart-area)')
@@ -146,17 +183,69 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
         .append('circle')
         .attr('class', 'circ')
         .attr('r', 5)
+        .on('mouseover', tip.show)
+        .on('mouseout', tip.hide)
         .attr('fill', function(d, i) {
 
             if (grps.length === 1) {
                 return colors(single);
             }
 
-            for (var i = 0; i < grps.length; i++) {
-                console.log(d['grp']);
-                if (d['grp'] == grps[i]) {
-                    return colors(i);
+            if (d['grp'] !== undefined) {
+                // this is an ugly groups implementation and it fucking disgusts me,
+                // reminder to write a better way of doing this
+                for (var i = 0; i < grps.length; i++) {
+                    if (d['grp'] == grps[i]) {
+                        return colors(i);
+                    }
                 }
+            }
+
+            // For two groups, we're gonna color half of the circle with each
+            // groups color
+            if (d['grp0'] !== undefined) {
+                
+                var c0 = null;
+                var c1 = null;
+
+                if (cmap[d['grp0']] !== undefined) {
+                    if (cmap[d['grp0']][d['grp1']] !== undefined) {
+                        return cmap[d['grp0']][d['grp1']];
+                    }
+                }
+
+                for (var i = 0; i < grps.length; i++) {
+
+                    if (d['grp0'] == grps[i]) {
+                        c0 = colors(i);
+                    }
+                    if (d['grp1'] == grps[i]) {
+                        c1 = colors(i);
+                    }
+                    if ((c0 !== null) && (c1 !== null)) 
+                        break;
+                }
+                if (cmap[d['grp0']] === undefined) {
+                    cmap[d['grp0']] = {};
+                }
+                if (cmap[d['grp1']] === undefined) {
+                    cmap[d['grp1']] = {};
+                }
+                if (cmap[d['grp0']][d['grp1']] === undefined) {
+
+                    var gid = '' + c0.slice(1) + c1.slice(1);
+
+                    cmap[d['grp0']][d['grp1']] = 'url(#' + gid + ')';
+
+                    var grad = svg.append("defs").append("linearGradient").attr("id", gid)
+                        .attr("x1", "0%").attr("x2", "0%").attr("y1", "100%").attr("y2", "0%");
+                    grad.append("stop").attr("offset", "50%").style("stop-color", c0);
+                    grad.append("stop").attr("offset", "50%").style("stop-color", c1);
+                }
+                if (cmap[d['grp1']][d['grp0']] === undefined) {
+                    cmap[d['grp1']][d['grp0']] = 'url(#' + c0.slice(1) + c1.slice(1) + ')';
+                }
+                return cmap[d['grp0']][d['grp1']];
             }
 
             return 'rgb(240,240,240)';
@@ -213,4 +302,38 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
         .attr('y', 0)// - (in_width / 2))
         .attr('dy', '1em')
         .text(ylabel);
+
+    // Append all the grouping colored key shit if necessary
+    if (grps.length > 1) {
+
+        svg_key.append('text')
+            .attr({
+                'text-anchor': 'middle',
+                'font-family': 'sans-serif',
+                'font-size': '15px',
+                'y': '15',
+                'x': (450 / 3)
+            })
+            .text('Group Legend');
+                
+        var key = svg_key.selectAll('g')
+            .data(grps)
+            .enter()
+            .append('g')
+            .attr('class', 'legend');
+
+        key.append('circle')
+            .attr('cx', 10)
+            .attr('cy', function(d, i){ return (i * 20) + 30; })
+            .attr('r', 6)
+            .attr('fill', function(d, i){
+                return colors(i);
+            });
+        key.append('text')
+            .attr('x', 30)
+            .attr('y', function(d, i){ return (i * 20) + 35; })
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', '12px')
+            .text(function(d, i){ return d; });
+    }
 }

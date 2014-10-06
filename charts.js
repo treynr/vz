@@ -4,6 +4,8 @@
 //      dimensions : [height, width]
 //      nbins : number of bins (histogram only)
 //      title : title string
+//      xlabel : x axis label
+//      ylabel : y axis label
 //      color : a color string, either a name (e.g. red) or hex (e.g. #ff0000)
 //   }
 //
@@ -16,8 +18,8 @@ function makeHistogram(data, opts) {
     var formatCount = d3.format(",.0f");
 
     var margin = {top: 10, right: 30, bottom: 30, left: 30};
-    height = height - margin.top - margin.bottom;
-    width = width - margin.left - margin.right;
+    //height = height - margin.top - margin.bottom;
+    //width = width - margin.left - margin.right;
 
     var x = d3.scale.linear()
         .domain(opts.domain)
@@ -28,18 +30,32 @@ function makeHistogram(data, opts) {
         //.bins(x.ticks(50))
         .bins(x.ticks(opts.nbins))
         (data);
+    console.log(data);
 
     var y = d3.scale.linear()
         .domain([0, d3.max(data, function(d) { return d.y; })])
-        .range([height, 0]);
+        .range([height, 20]);
 
     var xAxis = d3.svg.axis()
         .scale(x)
         .orient("bottom");
 
+    var yAxis = d3.svg.axis()
+        .scale(y)
+        .tickFormat(d3.format(','))
+        .orient("left");
+
+    function customAxis(g) {
+        g.selectAll("text")
+            .attr("x", 4)
+            .attr("dy", -4);
+    }
+
     var svg = d3.select("body").append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        //.attr("width", width + margin.left + margin.right)
+        //.attr("height", height + margin.top + margin.bottom)
+        .attr("width", width + 50)
+        .attr("height", height + 100)
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -53,7 +69,7 @@ function makeHistogram(data, opts) {
         .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
 
     bar.append("rect")
-        .attr("x", 1)
+        .attr("x", 10)
         .attr("width", x(data[0].dx) - 1)
         .attr("height", function(d) { return height - y(d.y); });
 
@@ -66,8 +82,36 @@ function makeHistogram(data, opts) {
 
     svg.append("g")
         .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
+        .attr("transform", "translate(10," + height + ")")
         .call(xAxis);
+    svg.append("g")
+        .attr("class", "y axis")
+        .attr("transform", "translate(10,0)")
+        .call(yAxis);
+        //.call(customAxis);
+
+    if (opts.xlabel !== undefined) {
+
+        svg.append('text')
+            .attr('class', 'label')
+            .style('text-anchor', 'middle')
+            .attr('x', width / 2)
+            .attr('y', height + 40)
+            .text(opts.xlabel);
+    }
+
+    if (opts.ylabel !== undefined) {
+
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('class', 'label')
+            .attr('text-anchor', 'middle')
+            //.attr('x', in_width / 2)
+            .attr('x', 0 - (height / 2) - 0)//0 - in_height)
+            .attr('y', -30)// - (in_width / 2))
+            .attr('dy', '1em')
+            .text(opts.ylabel);
+    }
 
     if (opts.title !== undefined) {
 
