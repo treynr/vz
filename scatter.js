@@ -35,11 +35,11 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
     var in_height = (opts.dimensions === undefined) ? 500 : opts.dimensions[0];
     var in_width = (opts.dimensions === undefined) ? 700 : opts.dimensions[1];
     var height = in_height + 100;
-    var width = in_width + 50;
+    var width = in_width + 60;
     var radius = (opts.radius === undefined) ? 5 : opts.radius;
     //var in_height = 500;
     //var in_width = 700;
-    var xpad = 50;
+    var xpad = 55;
     var ypad = 30;
 
     var svg = d3.select('body')
@@ -86,7 +86,8 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
     // Create the scale and axes
     var yscale = d3.scale.linear()
         //.domain([0, d3.max(ys)]) // use y values array
-        .domain([d3.min(ys), d3.max(ys)]) // 9/14/2014 changed to this to try and get a prettier graph
+        //.domain([d3.min(ys), d3.max(ys)]) // 9/14/2014 changed to this to try and get a prettier graph
+        .domain([d3.min(ys), d3.max(ys) + 0.04]) // 9/14/2014 changed to this to try and get a prettier graph
         .range([in_height, 0]);
     var yaxis = d3.svg.axis()
         .scale(yscale)
@@ -94,7 +95,8 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
         .ticks(10);
     var xscale = d3.scale.linear()
         //.domain([0, d3.max(xs)]) // use x values array
-        .domain([d3.min(xs), d3.max(xs)]) // 9/14/2014 changed to this to try and get a prettier graph
+        //.domain([d3.min(xs), d3.max(xs)]) // 9/14/2014 changed to this to try and get a prettier graph
+        .domain([d3.min(xs) - 0.05, d3.max(xs)]) // 9/14/2014 changed to this to try and get a prettier graph
         .range([0, in_width]);
     var xaxis = d3.svg.axis()
         .scale(xscale)
@@ -175,6 +177,7 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
     // color mapping used when each data point has two groups that need color
     var cmap = {};
 
+    console.log(grps);
     svg.append('g')
         .attr('id', 'circs')
         .attr('clip-path', 'url(#chart-area)')
@@ -209,6 +212,8 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
                 var c0 = null;
                 var c1 = null;
 
+                //console.log('d0: ' + d['grp0']);
+                //console.log('d1: ' + d['grp1']);
                 if (cmap[d['grp0']] !== undefined) {
                     if (cmap[d['grp0']][d['grp1']] !== undefined) {
                         return cmap[d['grp0']][d['grp1']];
