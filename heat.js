@@ -278,7 +278,8 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
     for (var i = 0; i < data.length; i++) 
         mmdat.push(data[i]['ratio']);
 
-    var mmin = +parseFloat(d3.min(mmdat)).toFixed(1);
+    //var mmin = +parseFloat(d3.min(mmdat)).toFixed(1);
+    var mmin = d3.min(mmdat);//+parseFloat(d3.min(mmdat)).toFixed(1);
     var mmax = d3.max(mmdat);
 
     var cscale = d3.scale.linear()
@@ -316,7 +317,12 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
                 tip.show(d);
             }
         })
-        .style("fill", function(d) { return colorScale(cscale(d.ratio)); })//;
+        .style("fill", function(d) { 
+            if (isNaN(d.ratio))
+                return colorScale(cscale(0));
+            else
+                return colorScale(cscale(d.ratio)); 
+        })//;
         /* .on("click", function(d) {
                var rowtext=d3.select(".r"+(d.row-1));
                if(rowtext.classed("text-selected")==false){

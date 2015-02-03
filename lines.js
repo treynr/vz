@@ -87,11 +87,23 @@ function makeLineTS(data, opts) {
       .text(function(d) { return d.key; });
 }
 
+//// opts {
+//      xdom : [a, b]
+//      ydom : [a, b]
+//      dimensions : [height, width]
+//      title : title string
+//      xlabel : x axis label
+//      ylabel : y axis label
+//      color : a color string, either a name (e.g. red) or hex (e.g. #ff0000)
+//   }
+//
 function makeLineDist(data, opts) {
 
     var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
     var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
     var color = (opts.color === undefined) ? 'steelblue' : opts.color;
+    var xdom = (opts.xdom === undefined) ? [d3.min(data), d3.max(data)] : opts.xdom;
+    var ydom = [1, data.length];
 
     //var formatCount = d3.format(",.0f");
 
@@ -107,6 +119,7 @@ function makeLineDist(data, opts) {
     var xscale = d3.scale.linear()
         .domain(opts.xdom)
         .range([margin.left, width]);
+
     var xaxis = d3.svg.axis()
         .scale(xscale)
         .orient('bottom')
@@ -189,3 +202,228 @@ function makeLineDist(data, opts) {
     //}
 }
 
+//// opts {
+//      xdom : [a, b]
+//      dimensions : [height, width]
+//      title : title string
+//      xlabel : x axis label
+//      ylabel : y axis label
+//      color : a color string, either a name (e.g. red) or hex (e.g. #ff0000)
+//   }
+//
+function lineGraphSingle(data, opts) {
+
+    var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
+    var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
+    var color = (opts.color === undefined) ? 'steelblue' : opts.color;
+    var xdom = [1, data.length];
+    var ydom = (opts.ydom === undefined) ? [d3.min(data), d3.max(data)] : opts.ydom;
+    var margin = (opts.marg === undefined) ? 
+                 {top: 10, right: 30, bottom: 30, left: 50} : opts.marg;
+
+    var svg = d3.select('body')
+        .append('svg')
+        .attr('height', height)
+        .attr('width', width);
+
+    height = height - margin.top - margin.bottom,
+    width = width - margin.left - margin.right;
+
+    var xscale = d3.scale.linear()
+        .domain(xdom)
+        .range([margin.left, width]);
+    var xaxis = d3.svg.axis()
+        .scale(xscale)
+        .orient('bottom')
+        .ticks(10);
+
+    var yscale = d3.scale.linear()
+        .domain(ydom)
+        .range([height, margin.bottom]);
+    var yaxis = d3.svg.axis()
+        .scale(yscale)
+        .orient('left')
+        .ticks(20);
+
+    var line = d3.svg.line()
+        //.interpolate('basis')
+        .interpolate('basis')
+        .x(function(d, i){return xscale(i);})
+        .y(function(d, i){return yscale(d);});
+
+    svg.append('path')
+        .datum(data)
+        .attr('d', line)
+        .attr('stroke', '#666')
+        .attr('stroke-width', '3px')
+        .attr('class', 'line');
+
+    svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', 'translate(0,' + (height) + ')')
+        .call(xaxis);
+    svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', 'translate(' + (margin.left) + ',0)')
+        .call(yaxis);
+
+    if (opts.xlabel !== undefined) {
+
+        svg.append('text')
+            .attr('class', 'label')
+            .style('text-anchor', 'middle')
+            .attr('x', (margin.right + width) / 2)
+            .attr('y', height + margin.bottom)
+            .text(opts.xlabel);
+    }
+
+    if (opts.ylabel !== undefined) {
+
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('class', 'label')
+            .attr('text-anchor', 'middle')
+            .attr('x', 0 - (height / 2) - 0)
+            .attr('y', 0)
+            .attr('dy', '1em')
+            .text(opts.ylabel);
+    }
+
+    if (opts.title !== undefined) {
+
+        svg.append('text')
+            .attr('x', (width + margin.right)/ 2)
+            .attr('y', margin.top)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '14px')
+            .style('text-decoration', 'underline')
+            .text(opts.title);
+    }
+}
+
+function maxx(arr) {
+    var m = [];
+    
+    for (var i = 0; i < arr.length; i++)
+        m.push(d3.max(arr[i]));
+
+    return d3.max(m);
+}
+
+function minn(arr) {
+    var m = [];
+    
+    for (var i = 0; i < arr.length; i++)
+        m.push(d3.min(arr[i]));
+
+    return d3.min(m);
+}
+
+// graph multiple lines, data is an array of arrays
+function lineGraphMult(data, opts) {
+
+    var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
+    var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
+    var color = (opts.color === undefined) ? 'steelblue' : opts.color;
+    //var xdom = [1, data.length];
+    var xdom = [1, data[0].length];
+    //var ydom = (opts.ydom === undefined) ? [d3.min(data), d3.max(data)] : opts.ydom;
+    var ydom = (opts.ydom === undefined) ? [minn(data), maxx(data)] : opts.ydom;
+
+    var svg = d3.select('body')
+        .append('svg')
+        .attr('height', height)
+        .attr('width', width);
+
+    var margin = {top: 10, right: 30, bottom: 30, left: 50};
+    height = height - margin.top - margin.bottom,
+    width = width - margin.left - margin.right;
+
+    var xscale = d3.scale.linear()
+        .domain(xdom)
+        .range([margin.left, width]);
+    var xaxis = d3.svg.axis()
+        .scale(xscale)
+        .orient('bottom')
+        .ticks(10);
+
+    var yscale = d3.scale.linear()
+        .domain(ydom)
+        .range([height, margin.bottom]);
+    var yaxis = d3.svg.axis()
+        .scale(yscale)
+        .orient('left')
+        .ticks(20);
+
+    var gs = svg.selectAll('aline')
+        .data(data)
+        .enter().append('g');
+
+    var line = d3.svg.line()
+        //.interpolate('basis')
+        .interpolate('basis')
+        .x(function(d, i){return xscale(i);})
+        .y(function(d, i){return yscale(d);});
+
+    var colors = d3.scale.category10();
+
+    gs.each(function(d, i) {
+
+        var e = d3.select(this);
+        e.append('path')
+            //.datum(data)
+            //.attr('d', line)
+            .attr('d', function(){ return line(d, i);})
+            .attr('stroke', function(){ 
+                console.log(i);
+                if (i === 0) return '#666';
+                else if (i === 1) return '#f00';
+                else return '#00E';
+            })
+            //.attr('d', function(d, i){)
+            .attr('class', 'line');
+    });
+
+    svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', 'translate(0,' + (height) + ')')
+        .call(xaxis);
+    svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', 'translate(' + (margin.left) + ',0)')
+        .call(yaxis);
+
+    if (opts.xlabel !== undefined) {
+
+        svg.append('text')
+            .attr('class', 'label')
+            .style('text-anchor', 'middle')
+            .attr('x', (margin.right + width) / 2)
+            .attr('y', height + margin.bottom)
+            .text(opts.xlabel);
+    }
+
+    if (opts.ylabel !== undefined) {
+
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('class', 'label')
+            .attr('text-anchor', 'middle')
+            //.attr('x', in_width / 2)
+            .attr('x', 0 - (height / 2) - 0)//0 - in_height)
+            .attr('y', 0)// - (in_width / 2))
+            .attr('dy', '1em')
+            .text(opts.ylabel);
+    }
+
+    if (opts.title !== undefined) {
+
+        svg.append('text')
+            .attr('x', (width + margin.right)/ 2)
+            .attr('y', margin.top)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '14px')
+            .style('text-decoration', 'underline')
+            .text(opts.title);
+    }
+}
