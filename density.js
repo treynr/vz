@@ -14,8 +14,11 @@ var maxwrap = function(arr) { return d3.max(arr); };
 //
 //// data should be an array of arrays, each inner array containing the set of
 //// points to be plotted.
+//// grps can be empty, but if not, should be an array of group names, the same
+//// length as data. Each index in grps corresponds to the same index in data
+//// and vice-versa. 
 //
-var density = function(data, opts) {
+var density = function(data, opts, grps) {
 
     //// Default configuration options
     var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
@@ -94,6 +97,44 @@ var density = function(data, opts) {
     svg.append("g")
         .attr("class", "y axis")
         .call(yAxis);
+
+    if (grps !== undefined && grps) {
+
+        var key = d3.select('body')
+            .append('svg')
+            .attr('width', 450)
+            .attr('height', 320);
+
+        key.append('text')
+            .attr({
+                'text-anchor': 'middle',
+                'font-family': 'sans-serif',
+                'font-size': '15px',
+                'y': '15',
+                'x': (450 / 3)
+            })
+            .text('Key');
+                
+        var k = key.selectAll('g')
+            .data(grps)
+            .enter()
+            .append('g')
+            .attr('class', 'legend');
+
+        k.append('circle')
+            .attr('cx', 10)
+            .attr('cy', function(d, i){ return (i * 20) + 30; })
+            .attr('r', 6)
+            .attr('fill', function(d, i){
+                return colors(i);
+            });
+        k.append('text')
+            .attr('x', 30)
+            .attr('y', function(d, i){ return (i * 20) + 35; })
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', '12px')
+            .text(function(d, i){ return d; });
+    }
 
     //var data = histogram(faithful);
     //var kde = kernelDensityEstimator(epanechnikovKernel(7), x.ticks(100));
