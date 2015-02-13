@@ -124,13 +124,15 @@ var density = function(data, opts, grps) {
         k.append('circle')
             .attr('cx', 10)
             .attr('cy', function(d, i){ return (i * 20) + 30; })
-            .attr('r', 6)
+            .attr('r', 7)
+            .attr('stroke', 'black')
+            .attr('stroke-width', '1px')
             .attr('fill', function(d, i){
-                return colors(i);
+                return colors[i];
             });
         k.append('text')
             .attr('x', 30)
-            .attr('y', function(d, i){ return (i * 20) + 35; })
+            .attr('y', function(d, i){ return (i * 21) + 35; })
             .attr('font-family', 'sans-serif')
             .attr('font-size', '12px')
             .text(function(d, i){ return d; });
