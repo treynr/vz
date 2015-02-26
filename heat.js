@@ -5,6 +5,8 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
     var margin = { top: 300, right: 10, bottom: 50, left: 300 };
     var in_height = (opts.dimensions === undefined) ? 500 : opts.dimensions[0];
     var in_width = (opts.dimensions === undefined) ? 700 : opts.dimensions[1];
+    var longbar = (opts.longbar === undefined) ? false : opts.longbar;
+    var center = (opts.center === undefined) ? false : opts.center;
     var height = in_height + 100;
     var width = in_width + 50;
     var xpad = 50;
@@ -276,7 +278,8 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
     // Get min/max data values
     var mmdat = [];
     for (var i = 0; i < data.length; i++) 
-        mmdat.push(data[i]['ratio']);
+        mmdat.push(data[i][2]);
+        //mmdat.push(data[i]['ratio']);
 
     //var mmin = +parseFloat(d3.min(mmdat)).toFixed(1);
     var mmin = d3.min(mmdat);//+parseFloat(d3.min(mmdat)).toFixed(1);
@@ -287,6 +290,33 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
         //.domain([0.6, 1.0])
         .range([0.0, 1.0]);
 
+    //// A background so that missing values are filled with a certain color.
+    svg.append('rect')
+        //.attr("y", function(d) { return 0; })
+        //.attr("x", function(d) { return 0; })
+        .attr("x", function(d) { 
+            if (center)
+                return in_width / 3; 
+            else
+                return 0;
+        })
+        .attr("y", function(d) { 
+            if (center)
+                return (in_height / 2); 
+            else
+                return 0;
+        })
+        .attr("width", function() { return clabels.length * cell_size; })
+        .attr("height", function() { return rlabels.length * cell_size; })
+        .style("fill", '#aaaaaa')
+        .attr('transform', function() {
+            if (center)
+                return 'translate(' + -margin.left + ', ' + -margin.top + ')'; 
+            else
+                return '';
+        })
+        ;
+
     var the_heat = svg.append('g')//.attr('class', 'g3')
         //.selectAll('.cellg')
         .selectAll('rect')
@@ -294,14 +324,35 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
         .data(data)//, function(d){return d.ratio;})
         .enter()
         .append("rect")
-        .attr("y", function(d) { return rlabels.indexOf(d.gs_name0) * cell_size; })
-        .attr("x", function(d) { return clabels.indexOf(d.gs_name1) * cell_size; })
+        //.attr("y", function(d) { return rlabels.indexOf(d.gs_name0) * cell_size; })
+        //.attr("y", function(d) { return rlabels.indexOf(d[0]) * cell_size; })
+        //.attr("x", function(d) { return clabels.indexOf(d.gs_name1) * cell_size; })
+        //.attr("x", function(d) { return clabels.indexOf(d[1]) * cell_size; })
+        .attr("x", function(d) { 
+            if (center)
+                return (clabels.indexOf(d[1]) * cell_size) + (in_width / 3); 
+            else
+                return clabels.indexOf(d[1]) * cell_size; 
+        })
+        .attr("y", function(d) { 
+            if (center)
+                return (rlabels.indexOf(d[0]) * cell_size) + (in_height / 2); 
+            else
+                return rlabels.indexOf(d[0]) * cell_size; 
+        })
         //.attr("x", function(d) { return row_ind.indexOf(d.col) * cellSize; })
         //.attr("y", function(d) { return col_ind.indexOf(d.row) * cellSize; })
         //.attr("class", function(d){return "cell cell-border cr"+(d.row-1)+" cc"+(d.col-1);})
-        .attr("class", function(d){return "cell cell-border cr"+(rlabels.indexOf(d.gs_name0)-1)+" cc"+(clabels.indexOf(d.gs_name1)-1);})
+        //.attr("class", function(d){return "cell cell-border cr"+(rlabels.indexOf(d.gs_name0)-1)+" cc"+(clabels.indexOf(d.gs_name1)-1);})
+        .attr("class", function(d){return "cell cell-border cr"+(rlabels.indexOf(d[0])-1)+" cc"+(clabels.indexOf(d[1])-1);})
         .attr("width", cell_size)
         .attr("height", cell_size)
+        .attr('transform', function() {
+            if (center)
+                return 'translate(' + -margin.left + ', ' + -margin.top + ')'; 
+            else
+                return '';
+        })
         //.on('mouseover', tip.show)
         //.on('mouseout', tip.hide)
         //.on('click', tip.show)
@@ -318,10 +369,10 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
             }
         })
         .style("fill", function(d) { 
-            if (isNaN(d.ratio))
+            if (isNaN(d[2]))
                 return colorScale(cscale(0));
             else
-                return colorScale(cscale(d.ratio)); 
+                return colorScale(cscale(d[2])); 
         })//;
         /* .on("click", function(d) {
                var rowtext=d3.select(".r"+(d.row-1));
@@ -336,8 +387,10 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
                d3.select(this).classed("cell-hover",true);
                //d3.selectAll(".rowLabel").classed("text-highlight",function(r,ri){ return ri==(d.row-1);});
                //d3.selectAll(".colLabel").classed("text-highlight",function(c,ci){ return ci==(d.col-1);});
-               d3.selectAll(".rowLabel").classed("text-highlight",function(r,ri){ return ri==(rlabels.indexOf(d.gs_name0)/*-1*/);});
-               d3.selectAll(".colLabel").classed("text-highlight",function(c,ci){ return ci==(clabels.indexOf(d.gs_name1)/*-1*/);});
+               //d3.selectAll(".rowLabel").classed("text-highlight",function(r,ri){ return ri==(rlabels.indexOf(d.gs_name0)/*-1*/);});
+               //d3.selectAll(".colLabel").classed("text-highlight",function(c,ci){ return ci==(clabels.indexOf(d.gs_name1)/*-1*/);});
+               d3.selectAll(".rowLabel").classed("text-highlight",function(r,ri){ return ri==(rlabels.indexOf(d[0])/*-1*/);});
+               d3.selectAll(".colLabel").classed("text-highlight",function(c,ci){ return ci==(clabels.indexOf(d[1])/*-1*/);});
         
                //Update the tooltip position and value
                //d3.select("#tooltip")
@@ -383,28 +436,84 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
             .attr('stop-opacity', 1);
 
         svg.append('rect')
-            .attr('x', 0)
-            .attr('y', height + 10)
-            .attr('height', 35)
-            .attr('width', width)
+            //.attr('x', 0)
+            //.attr('y', height + 10)
+            .attr('x', function() {
+                if (longbar)
+                    return 20;
+                    //return in_width / 3;
+                else
+                    return 0;
+            })
+            .attr('y', function() {
+                if (longbar)
+                    return in_height - 120;
+                else
+                    return height + 10;
+            })
+            .attr('height', 25)
+            //.attr('width', width)
+            .attr('width', function() {
+                if (longbar)
+                    return in_width / 2;
+                else
+                    return width;
+                //return in_width / 2;
+            })
+            .attr('transform', function() {
+                if (longbar)
+                    return 'translate(' + -margin.left + ', ' + -margin.top + ')'; 
+                else
+                    return '';
+            })
             .style('stroke-width', '0.5px')
             .style('stroke', 'black')
             .style('fill', 'url(#pretty_gradient)');
 
         svg.append("text")
             //.text('0.0')
-            .text('' + mmin)
-            .attr("x", 0)
-            .attr("y", height + 60)
+            .text('' + mmin.toFixed(4))
+            .attr("x", 10)
+            //.attr("y", height + 60)
+            .attr("y", function() {
+                if (longbar)
+                    return in_height - 80;
+                else
+                    return height + 60;
+            })
             .style("text-anchor", "left")
             //.attr("transform", "translate("+cell_size/2 + ",-6) rotate (-90)")
+            .attr('transform', function() {
+                if (longbar)
+                    return 'translate(' + -margin.left + ', ' + -margin.top + ')'; 
+                else
+                    return '';
+            })
             .attr("class",  function (d,i) { return 'mono'; });
             //.attr('transform', 'translate(' + margin.left + ', ' + margin.top + ')');
         
         svg.append("text")
             .text('1.0')
-            .attr("x", width - margin.right - 10)
-            .attr("y", height + 60)
+            //.attr("x", width - margin.right - 10)
+            .attr("x", function() {
+                if (longbar)
+                    return (in_width / 2) + 10;
+                else
+                    return width - margin.right - 10
+            })
+            //.attr("y", height + 60)
+            .attr("y", function() {
+                if (longbar)
+                    return in_height - 80;
+                else
+                    return height + 60;
+            })
+            .attr('transform', function() {
+                if (longbar)
+                    return 'translate(' + -margin.left + ', ' + -margin.top + ')'; 
+                else
+                    return '';
+            })
             .style("text-anchor", "right")
             //.attr("transform", "translate("+cell_size/2 + ",-6) rotate (-90)")
             .attr("class",  function (d,i) { return 'mono'; });
@@ -418,8 +527,27 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
                 else
                     return opts.keyt;
             })
-            .attr("x", width / 2)
-            .attr("y", height + 60)
+            //.attr("x", width / 2)
+            //.attr("y", height + 60)
+            .attr("x", function() {
+                if (longbar)
+                    return (in_width / 3) - 20;
+                else
+                    return width / 2;
+            })
+            //.attr("y", height + 60)
+            .attr("y", function() {
+                if (longbar)
+                    return in_height - 80;
+                else
+                    return height + 60;
+            })
+            .attr('transform', function() {
+                if (longbar)
+                    return 'translate(' + -margin.left + ', ' + -margin.top + ')'; 
+                else
+                    return '';
+            })
             .style("text-anchor", "middle")
             //.attr("transform", "translate("+cell_size/2 + ",-6) rotate (-90)")
             .attr("class",  function (d,i) { return 'mono'; });

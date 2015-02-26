@@ -9,7 +9,7 @@ var maxwrap = function(arr) { return d3.max(arr); };
 //      title : title string
 //      xlabel : x axis label
 //      ylabel : y axis label
-//      color : a color string, either a name (e.g. red) or hex (e.g. #ff0000)
+//      colors : array of colors
 //   }
 //
 //// data should be an array of arrays, each inner array containing the set of
@@ -29,6 +29,8 @@ var density = function(data, opts, grps) {
     var ymax = (opts.ydom === undefined) ? 1 : opts.ydom[1];
     var xlabel = (opts.xlabel === undefined) ? '' : opts.xlabel;
     var scale = (opts.scale === undefined) ? 1 : opts.scale;
+    var colors = (opts.colors === undefined) ?
+        ['#1f77b4', '#2ca02c', '#d62728', '#9467bd', '#ff7f0e'] : opts.colors;
 
     var margin = {top: 20, right: 30, bottom: 30, left: 40};
     height = height - margin.top - margin.bottom;
@@ -36,7 +38,7 @@ var density = function(data, opts, grps) {
 
     // Normally we'd use the d3js color scale, but I want to pick pretty colors
     // Might add more later, but I don't think I'll need more than this. 
-    var colors = ['#1f77b4', '#2ca02c', '#d62728', '#9467bd', '#ff7f0e'];
+    //var colors = ['#1f77b4', '#2ca02c', '#d62728', '#9467bd', '#ff7f0e'];
 
     if (opts.xdom === undefined) {
 
@@ -94,6 +96,19 @@ var density = function(data, opts, grps) {
         .text(xlabel)
         ;
 
+    // title
+    if (opts.title !== undefined) {
+
+        console.log('fuuuuu');
+        svg.append('text')
+            .attr('class', 'label')
+            .style('text-anchor', 'middle')
+            .style('font-size', '15px')
+            .attr('x', (width + margin.left + margin.right) / 2)
+            .attr('y', 5)
+            .text(opts.title);
+    }
+
     svg.append("g")
         .attr("class", "y axis")
         .call(yAxis);
@@ -105,15 +120,15 @@ var density = function(data, opts, grps) {
             .attr('width', 450)
             .attr('height', 320);
 
-        key.append('text')
-            .attr({
-                'text-anchor': 'middle',
-                'font-family': 'sans-serif',
-                'font-size': '15px',
-                'y': '15',
-                'x': (450 / 3)
-            })
-            .text('Key');
+        //key.append('text')
+        //    .attr({
+        //        'text-anchor': 'middle',
+        //        'font-family': 'sans-serif',
+        //        'font-size': '15px',
+        //        'y': '15',
+        //        'x': (450 / 3)
+        //    })
+        //    .text('Key');
                 
         var k = key.selectAll('g')
             .data(grps)
@@ -123,10 +138,11 @@ var density = function(data, opts, grps) {
 
         k.append('circle')
             .attr('cx', 10)
-            .attr('cy', function(d, i){ return (i * 20) + 30; })
-            .attr('r', 7)
+            .attr('cy', function(d, i){ return (i * 22) + 30; })
+            .attr('r', 9)
+            .style('fill-opacity', 0.6)
             .attr('stroke', 'black')
-            .attr('stroke-width', '1px')
+            .attr('stroke-width', '1.5px')
             .attr('fill', function(d, i){
                 return colors[i];
             });
@@ -144,7 +160,10 @@ var density = function(data, opts, grps) {
     
     //var kde = kernelDensityEstimator(triweightKernel(0.5), x.ticks(50));
     //var kde = kernelDensityEstimator(triweightKernel(2), x.ticks(50));
+    //
     var kde = kernelDensityEstimator(triweightKernel(scale), x.ticks(50));
+    //var kde = kernelDensityEstimator(epanechnikovKernel(scale), x.ticks(50));
+
 
     //var kde = kernelDensityEstimator(uniformKernel(0.5), x.ticks(50));
     //var kde = kernelDensityEstimator(quarticKernel(0.4), x.ticks(50));
@@ -159,6 +178,7 @@ var density = function(data, opts, grps) {
   //    .attr("width", x(data[0].dx + data[0].x) - x(data[0].x) - 1)
   //    .attr("height", function(d) { return height - y(d.y); });
 
+
     for (var i = 0; i < data.length; i++) {
 
         svg.append("path")
@@ -168,7 +188,7 @@ var density = function(data, opts, grps) {
             .attr("class", "area")
             //.style('fill', 'steelblue')
             .style('fill', function() { return colors[i]; })
-            .style('opacity', 0.5)
+            .style('opacity', 0.3)
             .attr("d", area)
             ;
         svg.append("path")

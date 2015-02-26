@@ -181,10 +181,6 @@ function makeBar(data, opts) {
         //.range([height, margin.bottom]);
         .range([height, 0]);
 
-    console.log(y(1));
-    console.log(y(10));
-    console.log(y(100));
-    console.log(y(1000));
     var xAxis = d3.svg.axis()
         .scale(x)
         .orient("bottom");
@@ -232,6 +228,7 @@ function makeBar(data, opts) {
         .data(data)
         .enter().append("rect")
         .attr("class", "bar")
+        .attr('fill', color)
         .attr("x", function(d) { return x(d.name); })
         .attr("width", x.rangeBand())
         .attr("y", function(d) { return y(d.freq); })
