@@ -94,6 +94,18 @@ var density = function(data, opts, grps) {
         .text(xlabel)
         ;
 
+    // title
+    if (opts.title !== undefined) {
+
+        console.log('fuuuuu');
+        svg.append('text')
+            .attr('class', 'label')
+            .style('text-anchor', 'middle')
+            .attr('x', width / 2)
+            .attr('y', 15)
+            .text(opts.title);
+    }
+
     svg.append("g")
         .attr("class", "y axis")
         .call(yAxis);
@@ -124,9 +136,9 @@ var density = function(data, opts, grps) {
         k.append('circle')
             .attr('cx', 10)
             .attr('cy', function(d, i){ return (i * 20) + 30; })
-            .attr('r', 6)
+            .attr('r', 19)
             .attr('fill', function(d, i){
-                return colors(i);
+                return colors[i];
             });
         k.append('text')
             .attr('x', 30)

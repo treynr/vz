@@ -91,7 +91,9 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
             //.attr('transform', 'translate(' + -margin.left + ', ' + -margin.top + ')')
               .attr("transform", "translate("+cell_size/2 + ",-6) rotate (-90)")
               .attr("class",  function (d,i) { return "colLabel mono c"+i;} )
-            .text(function(d){ return d.name; });
+            .text(function(d){ 
+                    return d.name; 
+            });
 
         // first tick
         svg.append('rect')
@@ -209,7 +211,12 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
       .data(rlabels)
       .enter()
       .append("text")
-      .text(function (d, i) { return d; })
+      .text(function (d, i) { 
+            if (d.length > 20)
+                return d.substr(0,20) + '...';
+            else
+          return d; 
+              })
       .style('fill', function(d){ 
             if (grps)
                 return grpcolors(grps[0].indexOf(grps[1][d])); 
@@ -249,7 +256,10 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
             //if ((grps !== null) && (d.length > 10))
             //    return d.slice(0, 13) + '...'
             //else
-              return d; 
+            if (d.length > 20)
+                return d.substr(0,20) + '...';
+            else
+          return d; 
         })
       .attr("x", 0)
       .attr("y", function (d, i) { return col_ind.indexOf(i+1) * cell_size + 2; })
@@ -285,6 +295,7 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
     var cscale = d3.scale.linear()
         .domain([mmin, mmax])
         //.domain([0.6, 1.0])
+        //.range([0.0, 1.0]);
         .range([0.0, 1.0]);
 
     var the_heat = svg.append('g')//.attr('class', 'g3')
@@ -367,18 +378,22 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
             .attr('offset', '0%')
             .attr('stop-color', function() {
                     if (opts.rg === undefined)
-                        return '#0767F8';
-                    else
+                        //return '#0767F8';
                         return '#EDF3FE';
+                    else
+                        return '#0767F8';
+                        //return '#EDF3FE';
             })
             .attr('stop-opacity', 1);
         grad.append('stop')
             .attr('offset', '100%')
             .attr('stop-color', function() {
                     if (opts.rg === undefined)
-                        return '#EDF3FE';
-                    else
+                        //return '#EDF3FE';
                         return '#0767F8';
+                    else
+                        return '#EDF3FE';
+                        //return '#0767F8';
             })
             .attr('stop-opacity', 1);
 
@@ -393,7 +408,8 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
 
         svg.append("text")
             //.text('0.0')
-            .text('' + mmin)
+            //.text('' + mmin)
+            .text('0.0')
             .attr("x", 0)
             .attr("y", height + 60)
             .style("text-anchor", "left")

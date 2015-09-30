@@ -214,12 +214,13 @@ function makeLineDist(data, opts) {
 function lineGraphSingle(data, opts) {
 
     var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
-    var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
+    var width = (opts.dimensions === undefined) ? 500 : opts.dimensions[1];
     var color = (opts.color === undefined) ? 'steelblue' : opts.color;
-    var xdom = [1, data.length];
+    //var xdom = [1, data.length];
+    var xdom = [0, data.length - 1];
     var ydom = (opts.ydom === undefined) ? [d3.min(data), d3.max(data)] : opts.ydom;
     var margin = (opts.marg === undefined) ? 
-                 {top: 10, right: 30, bottom: 30, left: 50} : opts.marg;
+                 {top: 10, right: 30, bottom: 30, left: 60} : opts.marg;
 
     var svg = d3.select('body')
         .append('svg')
@@ -235,7 +236,8 @@ function lineGraphSingle(data, opts) {
     var xaxis = d3.svg.axis()
         .scale(xscale)
         .orient('bottom')
-        .ticks(10);
+        //.ticks(10);
+        .ticks(data.length);
 
     var yscale = d3.scale.linear()
         .domain(ydom)
@@ -254,8 +256,9 @@ function lineGraphSingle(data, opts) {
     svg.append('path')
         .datum(data)
         .attr('d', line)
-        .attr('stroke', '#666')
+        .attr('stroke', color)
         .attr('stroke-width', '3px')
+        .attr('fill', 'none')
         .attr('class', 'line');
 
     svg.append('g')
@@ -283,7 +286,7 @@ function lineGraphSingle(data, opts) {
             .attr('transform', 'rotate(-90)')
             .attr('class', 'label')
             .attr('text-anchor', 'middle')
-            .attr('x', 0 - (height / 2) - 0)
+            .attr('x', -(height / 2))
             .attr('y', 0)
             .attr('dy', '1em')
             .text(opts.ylabel);

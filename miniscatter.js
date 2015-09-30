@@ -12,7 +12,7 @@ var mean = function(arr) {
 }
 
 // Data should just be an array of values
-var miniScatter = function(data, xlabel, ylabel, title) {
+var miniScatter = function(data, xlabel, ylabel, title, opts) {
 
     //var height = 800;
     //var width = 800;
@@ -107,14 +107,20 @@ var miniScatter = function(data, xlabel, ylabel, title) {
         .attr('id', 'circs')
         .attr('clip-path', 'url(#chart-area)')
         .selectAll('circle')
-        //.data(json)
         .data(data)
         .enter()
         .append('circle')
         .attr('class', 'circ')
         .attr('r', 5)
         //.attr('fill', 'rgb(210, 210, 210)')
-        //.attr('stroke', 'black')
+        .attr('stroke', 'black')
+        .attr('stroke-width', '1px')
+        .attr('fill', function() {
+            if (opts.color === undefined)
+                return 'rgb(210, 210, 210)';
+            else
+                return opts.color;
+        })
         .attr('cx', function(d) {return randNeg(15) + ((div * 1) + xpad);})
         //.attr('cx', div + xpad)
         .attr('cy', function(d) {return yscale(d) + ypad;});
