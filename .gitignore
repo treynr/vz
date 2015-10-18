@@ -16,9 +16,5 @@
 *.csv
 *.txt
 
-## We (usually) safely ignore html
-*.html
-
 ## FUCK VIM SWAP FILES
-*.swp
-*.swo
+*.sw*
