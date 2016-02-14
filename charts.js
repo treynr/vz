@@ -27,6 +27,14 @@ function makeHistogram(data, opts) {
         .attr("height", height)
         .append("g");
 
+	if (opts.domain === undefined) {
+
+		var dmax = d3.max(data);
+		var dmin = d3.min(data);
+
+		opts.domain = [dmax, dmin];
+	}
+
     var margin = {top: 10, right: 30, bottom: 30, left: 50};
     height = height - margin.top - margin.bottom;
     width = width - margin.left - margin.right;
@@ -43,12 +51,14 @@ function makeHistogram(data, opts) {
         (data);
 
     var y = d3.scale.linear()
+        //.domain([0, d3.max(data, function(d) { return d.y; })])
         .domain([0, d3.max(data, function(d) { return d.y; })])
         //.range([height, 20]);
         .range([height, margin.bottom]);
 
     var xAxis = d3.svg.axis()
         .scale(x)
+        .tickFormat(d3.format('s'))
         .orient("bottom");
 
     var yAxis = d3.svg.axis()
@@ -64,6 +74,8 @@ function makeHistogram(data, opts) {
         .enter().append("g")
         //.attr("class", "bar")
         .attr('shape-rendering', 'crispEdges')
+        .attr('stroke', 'black')
+        .attr('stroke-width', '1px')
         .attr('fill', color)
         //.attr('fill', '#f00')
         .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
@@ -76,14 +88,15 @@ function makeHistogram(data, opts) {
     bar.append("rect")
         //.attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
         .attr("width", function(d) {//x(data[0].dx) - 1)
-            if (opts.domain[0] === 0)
-                return x(data[0].dx) - 1;
-            else if (opts.nbins)
-                return (width / opts.nbins) + bpad;//- 1;
-                //return (width / (x.ticks(opts.nbins).length - 1)) - 2;
-                //return cw;
-            else
-                return width / 10;
+			return (width / opts.nbins) + 10;//- 1;
+            //if (opts.domain[0] === 0)
+            //    return x(data[0].dx) - 1;
+            //else if (opts.nbins)
+            //    return (width / opts.nbins) + bpad;//- 1;
+            //    //return (width / (x.ticks(opts.nbins).length - 1)) - 2;
+            //    //return cw;
+            //else
+            //    return width / 10;
         })
         .attr("height", function(d) { return height - y(d.y); });
 
@@ -108,6 +121,7 @@ function makeHistogram(data, opts) {
 
         svg.append('text')
             .attr('class', 'label')
+            .style('font-size', '18px')
             .style('text-anchor', 'middle')
             .attr('x', (margin.right + width) / 2)
             .attr('y', height + margin.bottom)

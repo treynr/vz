@@ -13,7 +13,7 @@ var ring = function(data, mlabel, title, opts) {
 
     //var in_height = (opts.dimensions === undefined) ? 500 : opts.dimensions[0];
     //var in_width = (opts.dimensions === undefined) ? 700 : opts.dimensions[1];
-    var height = (opts.dimensions === undefined) ? 500 : opts.dimensions[0];
+    var height = (opts.dimensions === undefined) ? 700 : opts.dimensions[0];
     var width = (opts.dimensions === undefined) ? 700 : opts.dimensions[1];
     var inner = (opts.inner === undefined) ? 120 : opts.inner
     //var height = in_height + 100;
@@ -27,6 +27,12 @@ var ring = function(data, mlabel, title, opts) {
     height = height - margin.top - margin.bottom;
     width = width - margin.left - margin.right;
 
+	// Sort by greatest values, decreasing order
+	data.sort(function(la, lb) {
+
+		return lb[1] - la[1];
+	});
+
     var ring = d3.layout.pie()
         .value(function(d, i) {return d[1];});
 
@@ -37,26 +43,6 @@ var ring = function(data, mlabel, title, opts) {
     for (var i = 0; i < data.length; i++)
         total += data[i][1];
 
-    var key = d3.select('body').append('svg')
-        .attr('width', 250)
-        .attr('height', 200)
-        .selectAll('g')
-        .data(data)
-        .enter().append('g')
-        .attr("transform", function(d, i) { return "translate(40," + i * 20 + ")"; });
-    key.append('rect')
-        .attr('width', 18)
-        .attr('height', 18)
-        .style('fill', function(d, i) {return color(i);});
-    key.append("text")
-        .attr("x", 24)
-        .attr("y", 9)
-        .attr("dy", ".35em")
-        .attr('font-size', '12px')
-        .text(function(d) { 
-            
-            return d[0] + ' (' + round(d[1] / total)  + '% - ' + d[1] + ')'; 
-        });
     //var color = d3.scale.ordinal()
         //.range(['#438ab2', '#28536a', '#193849', '#f4d765', '#a9544d']);
         //.range(["#d0743c","#a05d56","#98abc5", "#8a89a6", "#7b6888", "#6b486b",  "#ff8c00"]);
@@ -75,7 +61,7 @@ var ring = function(data, mlabel, title, opts) {
         .append('g')
         .attr('class', 'arc')
         .attr('stroke', '#fff')
-        .attr('transform', 'translate(' + (width/2)  + ',' + (width - 100) + ')');
+        .attr('transform', 'translate(' + (width/2)  + ',' + (width - 150) + ')');
     
 
     arcs.append('path')
@@ -121,7 +107,7 @@ var ring = function(data, mlabel, title, opts) {
     //    .text('blah');
 
     var center = svg.append('g')
-        .attr('transform', 'translate(' + (width / 2) + ',' + (height / 2) + ')');
+        .attr('transform', 'translate(' + (width / 2) + ',' + (10) + ')');
 
     center.append('text')
         .attr('dy', '.35em')
@@ -139,6 +125,27 @@ var ring = function(data, mlabel, title, opts) {
             .attr('font-weight', 'normal')
             .text(opts.msublabel);
     }
+
+    var key = d3.select('body').append('svg')
+        .attr('width', 350)
+        .attr('height', 200)
+        .selectAll('g')
+        .data(data)
+        .enter().append('g')
+        .attr("transform", function(d, i) { return "translate(40," + i * 20 + ")"; });
+    key.append('rect')
+        .attr('width', 18)
+        .attr('height', 18)
+        .style('fill', function(d, i) {return color(i);});
+    key.append("text")
+        .attr("x", 24)
+        .attr("y", 9)
+        .attr("dy", ".35em")
+        .attr('font-size', '12px')
+        .text(function(d) { 
+            
+            return d[0] + ' (' + round(d[1] / total)  + '% - ' + d[1] + ')'; 
+        });
 }
 
 var rings = function(data, mlabel, title, opts) {

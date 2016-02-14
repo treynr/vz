@@ -53,14 +53,17 @@ var DensityPlot = (function() {
 	var my = {};
 
 	// 
-	var kernels = {
+	var KERNELS = {
 
 		EPANECHNIKOV : epanechnikovKernel,
 		TRIWEIGHT : triweightKernel,
 		TRIANGULAR : triangularKernel,
 		UNIFORM : uniformKernel,
-		QUARTIC : quarticKernel
+		QUARTIC : quarticKernel,
+		GAUSSIAN : gaussianKernel
 	};
+
+	my.kernels = KERNELS;
 
 	function validateOptions(opts, data) {
 
@@ -73,13 +76,23 @@ var DensityPlot = (function() {
 
 		// Options specific to this visualization
 		// Specifies the kernel function to use when estimating density
-		var kernel = opts.kernel || kernels.TRIWEIGHT;
+		//var kernel = opts.kernel || kernels.TRIWEIGHT;
+		var kernel = opts.kernel || triweightKernel;
 		// The smoothing scale to use with the kernel function
 		var scale = opts.scale || 1;
 
 		// The x-domain (min, max)
-		var xmin = opts.xdomain || d3.min(data.map(minwrap));
-		var xmax = opts.xdomain || d3.max(data.map(maxwrap));
+		if (opts.xdomain === undefined) {
+
+			var xmin = d3.min(data.map(minwrap));
+			var xmax = d3.max(data.map(maxwrap));
+		} else {
+
+			var xmin = opts.xdomain[0];
+			var xmax = opts.xdomain[1];
+		}
+
+		var ydomain = opts.ydomain || undefined;
 
 		return {
 			height : height,
@@ -89,7 +102,8 @@ var DensityPlot = (function() {
 			ylabel : ylabel,
 			kernel : kernel,
 			scale : scale,
-			xdomain : [xmin, xmax]
+			xdomain : [xmin, xmax],
+			ydomain : ydomain
 		};
 	}
 
@@ -117,12 +131,18 @@ var DensityPlot = (function() {
 			.scale(x)
 			.orient("bottom");
 
-		var kde = kernelDensityEstimator(triweightKernel(opts.scale), x.ticks(50));
+		//var kde = kernelDensityEstimator(triweightKernel(opts.scale), x.ticks(50));
+		var kde = kernelDensityEstimator(opts.kernel(opts.scale), x.ticks(50));
 
 		var flat = [].concat.apply([], data);
 		var yvals = kde(flat).map(function(e, i, a) { return e[1]; });
 		var ymin = d3.min(yvals);
 		var ymax = d3.max(yvals);
+
+		if (opts.ydomain !== undefined) {
+			ymin = opts.ydomain[0];
+			ymax = opts.ydomain[1];
+		}
 
 		var y = d3.scale.linear()
 			.domain([ymin, ymax])
@@ -233,7 +253,7 @@ var DensityPlot = (function() {
 				;
 		}
 
-		linepts = [{x: 0.8}, {x: 0.45, color: '#FF0000'}];
+		//linepts = [{x: 0.8}, {x: 0.45, color: '#FF0000'}];
 
 		for (var i = 0; i < linepts.length; i++) {
 
@@ -278,190 +298,3 @@ var DensityPlot = (function() {
 //// length as data. Each index in grps corresponds to the same index in data
 //// and vice-versa. 
 //
-var density = function(data, opts, grps) {
-
-	console.log('wut');
-    //// Default configuration options
-    var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
-    var width = (opts.dimensions === undefined) ? 500 : opts.dimensions[1];
-    var xmin = (opts.xdom === undefined) ? 0 : opts.xdom[0];
-    var xmax = (opts.xdom === undefined) ? 0 : opts.xdom[1];
-    var ymin = (opts.ydom === undefined) ? 0 : opts.ydom[0];
-    var ymax = (opts.ydom === undefined) ? 1 : opts.ydom[1];
-    var xlabel = (opts.xlabel === undefined) ? '' : opts.xlabel;
-    var scale = (opts.scale === undefined) ? 1 : opts.scale;
-
-    var margin = {top: 20, right: 30, bottom: 30, left: 40};
-    height = height - margin.top - margin.bottom;
-    width = width - margin.left - margin.right;
-
-    // Normally we'd use the d3js color scale, but I want to pick pretty colors
-    // Might add more later, but I don't think I'll need more than this. 
-    var colors = ['#1f77b4', '#2ca02c', '#d62728', '#9467bd', '#ff7f0e'];
-
-    if (opts.xdom === undefined) {
-
-        xmin = d3.min(data.map(minwrap));
-        xmax = d3.max(data.map(maxwrap));
-    }
-
-    var x = d3.scale.linear()
-        //.domain([30, 110])
-        //.domain([d3.min(xmin), d3.max(xmax)])
-        //.domain([dmin, dmax])
-        .domain([xmin, xmax])
-        .range([0, width]);
-
-    var y = d3.scale.linear()
-        //.domain([0, .9])
-        .domain([ymin, ymax])
-        .range([height, 0]);
-
-    var xAxis = d3.svg.axis()
-        .scale(x)
-        .orient("bottom");
-
-    var yAxis = d3.svg.axis()
-        .scale(y)
-        .orient("left")
-        //.tickFormat(d3.format("%"))
-        ;
-
-    var line = d3.svg.line()
-        .x(function(d) { return x(d[0]); })
-        .y(function(d) { return y(d[1]); });
-
-    var area = d3.svg.area()
-        .x(function(d) { return x(d[0]); })
-        .y0(height)
-        .y1(function(d) { return y(d[1]); })
-        ;
-
-    var svg = d3.select("body").append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    svg.append("g")
-        .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(xAxis)
-        .append("text")
-        .attr("class", "label")
-        .attr("x", width)
-        .attr("y", -6)
-        .style("text-anchor", "end")
-        .text(xlabel)
-        ;
-
-    // title
-    if (opts.title !== undefined) {
-
-        console.log('fuuuuu');
-        svg.append('text')
-            .attr('class', 'label')
-            .style('text-anchor', 'middle')
-            .attr('x', width / 2)
-            .attr('y', 15)
-            .text(opts.title);
-    }
-
-    svg.append("g")
-        .attr("class", "y axis")
-        .call(yAxis);
-
-    if (grps !== undefined && grps) {
-
-        var key = d3.select('body')
-            .append('svg')
-            .attr('width', 450)
-            .attr('height', 320);
-
-        key.append('text')
-            .attr({
-                'text-anchor': 'middle',
-                'font-family': 'sans-serif',
-                'font-size': '15px',
-                'y': '15',
-                'x': (450 / 3)
-            })
-            .text('Key');
-                
-        var k = key.selectAll('g')
-            .data(grps)
-            .enter()
-            .append('g')
-            .attr('class', 'legend');
-
-        k.append('circle')
-            .attr('cx', 10)
-            .attr('cy', function(d, i){ return (i * 20) + 30; })
-            .attr('r', 19)
-            .attr('fill', function(d, i){
-                return colors[i];
-            });
-        k.append('text')
-            .attr('x', 30)
-            .attr('y', function(d, i){ return (i * 20) + 35; })
-            .attr('font-family', 'sans-serif')
-            .attr('font-size', '12px')
-            .text(function(d, i){ return d; });
-    }
-
-    //var data = histogram(faithful);
-    //var kde = kernelDensityEstimator(epanechnikovKernel(7), x.ticks(100));
-    //var kde = kernelDensityEstimator(epanechnikovKernel(0.5), x.ticks(50));
-    
-    //var kde = kernelDensityEstimator(triweightKernel(0.5), x.ticks(50));
-    //var kde = kernelDensityEstimator(triweightKernel(2), x.ticks(50));
-    var kde = kernelDensityEstimator(triweightKernel(scale), x.ticks(50));
-
-    //var kde = kernelDensityEstimator(uniformKernel(0.5), x.ticks(50));
-    //var kde = kernelDensityEstimator(quarticKernel(0.4), x.ticks(50));
-    //var kde = kernelDensityEstimator(gaussianKernel(0.5), x.ticks(50));
-
-  //svg.selectAll(".bar")
-  //    .data(data)
-  //  .enter().insert("rect", ".axis")
-  //    .attr("class", "bar")
-  //    .attr("x", function(d) { return x(d.x) + 1; })
-  //    .attr("y", function(d) { return y(d.y); })
-  //    .attr("width", x(data[0].dx + data[0].x) - x(data[0].x) - 1)
-  //    .attr("height", function(d) { return height - y(d.y); });
-
-    for (var i = 0; i < data.length; i++) {
-
-        svg.append("path")
-            //.datum(kde(faithful))
-            //.datum(kde(data[0]))
-            .datum(kde(data[i]))
-            .attr("class", "area")
-            //.style('fill', 'steelblue')
-            .style('fill', function() { return colors[i]; })
-            .style('opacity', 0.5)
-            .attr("d", area)
-            ;
-        svg.append("path")
-            //.datum(kde(faithful))
-            //.datum(kde(data[0]))
-            .datum(kde(data[i]))
-            .attr("class", "line")
-            .attr("d", line)
-            ;
-    }
-
-    function kernelDensityEstimator(kernel, x) {
-      return function(sample) {
-        return x.map(function(x) {
-          return [x, d3.mean(sample, function(v) { return kernel(x - v); })];
-        });
-      };
-    }
-
-}
-
-
-
-
-

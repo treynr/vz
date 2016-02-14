@@ -154,7 +154,8 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
     }
 
     //var colorScale = d3.interpolateRgb('#0AAAF5', '#FFF');
-    var colorScale = d3.interpolateRgb('#0767F8', '#EDF3FE');
+    //var colorScale = d3.interpolateRgb('#0767F8', '#EDF3FE');
+    var colorScale = d3.interpolateRgb( '#EDF3FE','#0767F8');
     //var colorScale = d3.scale.linear()
     //    .domain(opts.domain)
     //    .range(d3.range
@@ -291,6 +292,8 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
     //var mmin = +parseFloat(d3.min(mmdat)).toFixed(1);
     var mmin = d3.min(mmdat);//+parseFloat(d3.min(mmdat)).toFixed(1);
     var mmax = d3.max(mmdat);
+	console.log('min:' + mmin);
+	console.log('max:' + mmax);
 
     var cscale = d3.scale.linear()
         .domain([mmin, mmax])
@@ -409,7 +412,13 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
         svg.append("text")
             //.text('0.0')
             //.text('' + mmin)
-            .text('0.0')
+            //.text('0.0')
+            .text(function() {
+                if (opts.kmin === undefined)
+                    return '0.0';
+                else
+                    return opts.kmin;
+            })
             .attr("x", 0)
             .attr("y", height + 60)
             .style("text-anchor", "left")
@@ -418,7 +427,13 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
             //.attr('transform', 'translate(' + margin.left + ', ' + margin.top + ')');
         
         svg.append("text")
-            .text('1.0')
+            //.text('1.0')
+            .text(function() {
+                if (opts.kmax === undefined)
+                    return '1.0';
+                else
+                    return opts.kmax;
+            })
             .attr("x", width - margin.right - 10)
             .attr("y", height + 60)
             .style("text-anchor", "right")

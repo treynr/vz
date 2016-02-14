@@ -76,6 +76,7 @@ var miniScatter = function(data, xlabel, ylabel, title, opts) {
         .domain([0, d3.max(data)])
         .range([in_height, 0]);
     var yaxis = d3.svg.axis()
+        .tickFormat(d3.format('s'))
         .scale(yscale)
         .orient('left')
         .ticks(6);
