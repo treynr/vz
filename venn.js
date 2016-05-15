@@ -504,25 +504,25 @@
                 .attr("width", width)
                 .attr("height", height + 30);
 
-        svg.append('text')
-            .attr('y', 10)
-            .attr('x', 5)
-            .attr('font-size', '13px')
-            .attr('fill', 'green')
-            .attr('font-weight', 'bold')
-            .text(extra.a);
-        svg.append('text')
-            .attr('y', 25)
-            .attr('x', 5)
-            .attr('font-size', '13px')
-            .attr('fill', 'steelblue')
-            .attr('font-weight', 'bold')
-            .text(extra.b);
-        svg.append('text')
-            .attr('y', 42)
-            .attr('x', 5)
-            .attr('font-size', '13px')
-            .text('jaccard: ' + extra.j);
+        //svg.append('text')
+        //    .attr('y', 10)
+        //    .attr('x', 5)
+        //    .attr('font-size', '13px')
+        //    .attr('fill', 'green')
+        //    .attr('font-weight', 'bold')
+        //    .text(extra.a);
+        //svg.append('text')
+        //    .attr('y', 25)
+        //    .attr('x', 5)
+        //    .attr('font-size', '13px')
+        //    .attr('fill', 'steelblue')
+        //    .attr('font-weight', 'bold')
+        //    .text(extra.b);
+        //svg.append('text')
+        //    .attr('y', 42)
+        //    .attr('x', 5)
+        //    .attr('font-size', '13px')
+        //    .text('jaccard: ' + extra.j);
 
         var diagram = svg.append( "g" );
 

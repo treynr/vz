@@ -156,6 +156,7 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
     //var colorScale = d3.interpolateRgb('#0AAAF5', '#FFF');
     //var colorScale = d3.interpolateRgb('#0767F8', '#EDF3FE');
     var colorScale = d3.interpolateRgb( '#EDF3FE','#0767F8');
+    //var colorScale = d3.interpolateRgb( '#fecc5c','#fd8d3c');
     //var colorScale = d3.scale.linear()
     //    .domain(opts.domain)
     //    .range(d3.range
@@ -164,6 +165,7 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
 
     if (grps) {
 
+		var keywidth = 300;
          //var keysvg = d3.select('#dsvg').append('svg')
          var keysvg = d3.select('body').append('svg')
                         .style('font-weight', 'bold')
@@ -176,7 +178,8 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
                     'font-family': 'sans-serif',
                     'font-size': '15px',
                     'y': '15',
-                    'x': 85//(width / 2)
+                    //'x': 85//(width / 2)
+                    'x': (keywidth / 2)
                 })
                 .text('Geneset Group Legend');
 
@@ -193,7 +196,8 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
                 .attr('cy', function(d, i){ return (i * 20) + 30; })
                 .attr('r', 6)
                 .attr('fill', function(d, i){
-                    return grpcolors(grps[0].indexOf(d));
+                    return 'rgb(31, 119, 180);'
+                    //return grpcolors(grps[0].indexOf(d));
                     //return colors(keymap[d]);
                     //return colors(d.old_index);
                 });
@@ -220,7 +224,8 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
               })
       .style('fill', function(d){ 
             if (grps)
-                return grpcolors(grps[0].indexOf(grps[1][d])); 
+                //return grpcolors(grps[0].indexOf(grps[1][d])); 
+                return '#1F77B4';//grpcolors(grps[0].indexOf(grps[1][d])); 
             else
                 return 'black';
         })
@@ -245,7 +250,7 @@ var heatmap = function(data, rlabels, clabels, title, grps, opts) {
       .append("text")
       .style('fill', function(d){ 
             if (grps)
-                return grpcolors(grps[0].indexOf(grps[1][d])); 
+                return '#1F77B4';//grpcolors(grps[0].indexOf(grps[1][d])); 
             else
                 return 'black';
                 })

@@ -169,9 +169,11 @@ function makeBar(data, opts) {
     var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
     var color = (opts.color === undefined) ? 'steelblue' : opts.color;
     var bpad = (opts.padding === undefined) ? -1 : opts.padding;
+    var ytext = (opts.ytext === undefined) ? 'tf-idf' : opts.ytext;
+    var ydom = (opts.ydom === undefined) ? [] : opts.ydom;
 
     var formatCount = d3.format(",.0f");
-    var margin = {top: 10, right: 30, bottom: 80, left: 50};
+    var margin = {top: 50, right: 30, bottom: 140, left: 50};
 
     height = height - margin.top - margin.bottom;
     width = width - margin.left - margin.right;
@@ -190,15 +192,30 @@ function makeBar(data, opts) {
     //var y = d3.scale.linear()
     //    .domain([0, d3.max(data, function(d) { return d.y; })])
     //    .range([height, margin.bottom]);
-    var y = d3.scale.linear()
-        //.domain([0, d3.max(data, function(d) { return +d.freq; })])
-        //.range([height, margin.bottom]);
-        .range([height, 0]);
+    //var y = d3.scale.linear()
+    //    //.domain([0, d3.max(data, function(d) { return +d.freq; })])
+    //    //.range([height, margin.bottom]);
+    //    .range([height, 0]);
 
-    console.log(y(1));
-    console.log(y(10));
-    console.log(y(100));
-    console.log(y(1000));
+	if (!opts.ydom) {
+		console.log('wut');
+		console.log(opts.ydom);
+
+		var y = d3.scale.linear()
+			//.domain([0, d3.max(data, function(d) { return +d.freq; })])
+			//.range([height, margin.bottom]);
+			.range([height, 0]);
+
+	} else {
+
+		console.log('wut2');
+		var y = d3.scale.linear()
+			.domain([0,1.0])
+			//.range([height, margin.bottom]);
+			.range([height, 0]);
+
+	}
+
     var xAxis = d3.svg.axis()
         .scale(x)
         .orient("bottom");
@@ -216,7 +233,11 @@ function makeBar(data, opts) {
     }
 
     x.domain(names);
-    y.domain([0, d3.max(data, function(d) { return +d.freq; })])
+
+	if (!opts.ydom)
+		y.domain([0, d3.max(data, function(d) { return +d.freq; })]);
+	else
+		y.domain(opts.ydom);
 
     svg.append('g')
         .attr('class', 'x axis')
@@ -240,7 +261,7 @@ function makeBar(data, opts) {
         .attr("dy", ".71em")
         .attr('shape-rendering', 'crispEdges')
         .style("text-anchor", "end")
-        .text("Frequency");
+        .text(ytext);
 
     svg.selectAll(".bar")
         .data(data)
@@ -277,8 +298,8 @@ function makeBar(data, opts) {
     if (opts.title !== undefined) {
 
         svg.append('text')
-            .attr('x', (width + margin.right)/ 2)
-            .attr('y', margin.top)
+            .attr('x', (width )/ 2)
+            .attr('y', -10)
             .attr('text-anchor', 'middle')
             .style('font-size', '14px')
             .style('text-decoration', 'underline')

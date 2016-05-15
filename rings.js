@@ -15,6 +15,8 @@ var ring = function(data, mlabel, title, opts) {
     //var in_width = (opts.dimensions === undefined) ? 700 : opts.dimensions[1];
     var height = (opts.dimensions === undefined) ? 700 : opts.dimensions[0];
     var width = (opts.dimensions === undefined) ? 700 : opts.dimensions[1];
+    var rHeight = (opts.rdims === undefined) ? 400 : opts.rdims[0];
+    var rWidth = (opts.rdims === undefined) ? 400 : opts.rdims[1];
     var inner = (opts.inner === undefined) ? 120 : opts.inner
     //var height = in_height + 100;
     //var width = in_width + 50;
@@ -52,16 +54,20 @@ var ring = function(data, mlabel, title, opts) {
         .append('svg')
         .attr('height', height)
         .attr('width', width);
+
     var arc = d3.svg.arc()
         .innerRadius(inner)
-        .outerRadius(width / 2);
+        //.outerRadius(width / 2);
+        .outerRadius(rWidth / 2);
+
     var arcs = svg.selectAll('g.arc')
         .data(ring(data))
         .enter()
         .append('g')
         .attr('class', 'arc')
         .attr('stroke', '#fff')
-        .attr('transform', 'translate(' + (width/2)  + ',' + (width - 150) + ')');
+        //.attr('transform', 'translate(' + (width/2)  + ',' + (width - 150) + ')');
+        .attr('transform', 'translate(' + (width/2)  + ',' + (rWidth - 150) + ')');
     
 
     arcs.append('path')
@@ -107,6 +113,7 @@ var ring = function(data, mlabel, title, opts) {
     //    .text('blah');
 
     var center = svg.append('g')
+        //.attr('transform', 'translate(' + (width / 2) + ',' + (10) + ')');
         .attr('transform', 'translate(' + (width / 2) + ',' + (10) + ')');
 
     center.append('text')
@@ -190,7 +197,9 @@ var rings = function(data, mlabel, title, opts) {
             .attr('font-size', '12px')
             .text(function(d) { 
                 
-                return d[0] + ' (' + round(d[1] / total)  + '% - ' + d[1] + ')'; 
+				console.log(d[0]);
+				return d[0];
+                //return d[0] + ' (' + round(d[1] / total)  + '% - ' + d[1] + ')'; 
             });
         //var color = d3.scale.ordinal()
             //.range(['#438ab2', '#28536a', '#193849', '#f4d765', '#a9544d']);
