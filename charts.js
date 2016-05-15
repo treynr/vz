@@ -192,29 +192,10 @@ function makeBar(data, opts) {
     //var y = d3.scale.linear()
     //    .domain([0, d3.max(data, function(d) { return d.y; })])
     //    .range([height, margin.bottom]);
-    //var y = d3.scale.linear()
-    //    //.domain([0, d3.max(data, function(d) { return +d.freq; })])
-    //    //.range([height, margin.bottom]);
-    //    .range([height, 0]);
-
-	if (!opts.ydom) {
-		console.log('wut');
-		console.log(opts.ydom);
-
-		var y = d3.scale.linear()
-			//.domain([0, d3.max(data, function(d) { return +d.freq; })])
-			//.range([height, margin.bottom]);
-			.range([height, 0]);
-
-	} else {
-
-		console.log('wut2');
-		var y = d3.scale.linear()
-			.domain([0,1.0])
-			//.range([height, margin.bottom]);
-			.range([height, 0]);
-
-	}
+    var y = d3.scale.linear()
+        //.domain([0, d3.max(data, function(d) { return +d.freq; })])
+        //.range([height, margin.bottom]);
+        .range([height, 0]);
 
     var xAxis = d3.svg.axis()
         .scale(x)
@@ -267,6 +248,7 @@ function makeBar(data, opts) {
         .data(data)
         .enter().append("rect")
         .attr("class", "bar")
+        .attr('fill', color)
         .attr("x", function(d) { return x(d.name); })
         .attr("width", x.rangeBand())
         .attr("y", function(d) { return y(d.freq); })
