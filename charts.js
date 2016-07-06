@@ -13,7 +13,7 @@ function makeHistogram(data, opts) {
 
     var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
     var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
-    var color = (opts.color === undefined) ? 'steelblue' : opts.color;
+    var color = (opts.color === undefined) ? '#02d272' : opts.color;
     var bpad = (opts.padding === undefined) ? -1 : opts.padding;
 
     var formatCount = d3.format(",.0f");
@@ -76,7 +76,7 @@ function makeHistogram(data, opts) {
         .attr('shape-rendering', 'crispEdges')
         .attr('stroke', 'black')
         .attr('stroke-width', '1px')
-        .attr('fill', color)
+        .attr('fill', '#02d272')
         //.attr('fill', '#f00')
         .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
 
@@ -167,16 +167,19 @@ function makeBar(data, opts) {
 
     var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
     var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
-    var color = (opts.color === undefined) ? 'steelblue' : opts.color;
+    var color = (opts.color === undefined) ? '#002d72' : opts.color;
     var bpad = (opts.padding === undefined) ? -1 : opts.padding;
-    var ytext = (opts.ytext === undefined) ? 'tf-idf' : opts.ytext;
+    var ytext = (opts.ytext === undefined) ? '' : opts.ytext;
     var ydom = (opts.ydom === undefined) ? [] : opts.ydom;
+    var tickVals = (opts.tickVals === undefined) ? null : opts.tickVals;
 
     var formatCount = d3.format(",.0f");
-    var margin = {top: 50, right: 30, bottom: 140, left: 50};
+    var margin = {top: 50, right: 30, bottom: 160, left: 50};
 
     height = height - margin.top - margin.bottom;
     width = width - margin.left - margin.right;
+	var fullHeight = height + margin.top + margin.bottom;
+	var fullWidth = width + margin.left + margin.right;
 
     var svg = d3.select("body").append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -187,24 +190,28 @@ function makeBar(data, opts) {
     //    .domain(opts.domain)
     //    .range([margin.left, width]);
     var x = d3.scale.ordinal()
-        .rangeRoundBands([0, width], 0.1);
+        .rangeRoundBands([0, width], 0.3);
 
     //var y = d3.scale.linear()
     //    .domain([0, d3.max(data, function(d) { return d.y; })])
     //    .range([height, margin.bottom]);
     var y = d3.scale.linear()
         //.domain([0, d3.max(data, function(d) { return +d.freq; })])
+        .domain([0, 4000])
         //.range([height, margin.bottom]);
         .range([height, 0]);
 
     var xAxis = d3.svg.axis()
         .scale(x)
+		.outerTickSize(0)
         .orient("bottom");
 
     var yAxis = d3.svg.axis()
         .scale(y)
         //.tickFormat(d3.format('s'))
-        .ticks(10)
+        //.ticks(10)
+		//.outerTickSize(0)
+		.tickValues(y.ticks(8).concat(y.domain()))
         .orient("left");
 
     var names = [];
@@ -215,10 +222,88 @@ function makeBar(data, opts) {
 
     x.domain(names);
 
-	if (!opts.ydom)
-		y.domain([0, d3.max(data, function(d) { return +d.freq; })]);
-	else
-		y.domain(opts.ydom);
+	//if (!opts.ydom)
+	//	y.domain([0, d3.max(data, function(d) { return +d.freq; })]);
+	//else
+	//	y.domain(opts.ydom);
+
+    svg.append('rect')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', width)
+        .attr('height', height)
+        .attr('fill', 'rgb(180, 180, 180)');
+
+    //ticks = x.ticks(10);
+
+    //for (var i = 0; i < ticks.length; i++) {
+
+    //    if (ticks[i] == 0)
+    //        continue;
+    //    svg.append('line')
+    //        //.attr('x1', xscale(ticks[i]) + xpad)
+    //        //.attr('y1', ypad + 1)
+    //        //.attr('x2', xscale(ticks[i]) + xpad)
+    //        //.attr('y2', ypad + in_height - 1)
+    //        .attr('x1', x(ticks[i]))
+    //        .attr('y1', 0)
+    //        .attr('x2', x(ticks[i]))
+    //        .attr('y2', height - 1)
+    //        .attr('class', 'xline');
+    //}
+	var defs = svg.append("defs");
+
+  var filter = defs.append("filter")
+      .attr("id", "dropshadow")
+
+  filter.append("feGaussianBlur")
+      .attr("in", "SourceAlpha")
+      .attr("stdDeviation", 4)
+      .attr("result", "blur");
+  filter.append("feOffset")
+      .attr("in", "blur")
+      .attr("dx", 2)
+      .attr("dy", 0)
+      .attr("result", "offsetBlur");
+
+  var feMerge = filter.append("feMerge");
+
+  feMerge.append("feMergeNode")
+      .attr("in", "offsetBlur")
+  feMerge.append("feMergeNode")
+      .attr("in", "SourceGraphic");
+
+    ticks = y.ticks(8);
+    // Draw white X axis lines, these are based on tick values
+    for (var i = 0; i < ticks.length; i++) {
+
+        if (ticks[i] == 0)
+            continue;
+
+        //var div = in_width / (data.length + 1);
+        var div = width / (data.length + 1);
+        svg.append('line')
+            .attr('x1', 0)
+            .attr('y1', y(ticks[i]))
+            .attr('x2', width )
+            .attr('y2', y(ticks[i]))
+            .attr('class', 'xline');
+    }
+
+    svg.selectAll(".bar")
+        .data(data)
+        .enter().append("rect")
+        .attr("class", "bar")
+        //.attr('fill', color)
+        .attr('fill', '#0085ca')
+        .attr('stroke-width', '1px')
+        .attr('stroke', 'black')
+		//.attr('filter', 'url(#dropshadow)')
+        //.attr('stroke', '#0085ca')
+        .attr("x", function(d) { return x(d.name); })
+        .attr("width", x.rangeBand())
+        .attr("y", function(d) { return y(d.freq); })
+        .attr("height", function(d) { return height - y(d.freq); });
 
     svg.append('g')
         .attr('class', 'x axis')
@@ -226,11 +311,13 @@ function makeBar(data, opts) {
         //.attr("transform", "rotate(-90)")
         .call(xAxis)
         .selectAll('text')
+        .attr('shape-rendering', 'crispEdges')
+		.style('font-size', '22px')
         .style("text-anchor", "end")
-            .attr("dx", "-.8em")
-            .attr("dy", ".15em")
+            .attr("dx", "-.18em")
+            .attr("dy", ".85em")
             .attr("transform", function(d) {
-                return "rotate(-65)" 
+                return "rotate(-35)" 
             });
 
     svg.append('g')
@@ -244,15 +331,7 @@ function makeBar(data, opts) {
         .style("text-anchor", "end")
         .text(ytext);
 
-    svg.selectAll(".bar")
-        .data(data)
-        .enter().append("rect")
-        .attr("class", "bar")
-        .attr('fill', color)
-        .attr("x", function(d) { return x(d.name); })
-        .attr("width", x.rangeBand())
-        .attr("y", function(d) { return y(d.freq); })
-        .attr("height", function(d) { return height - y(d.freq); });
+
 
     if (opts.xlabel !== undefined) {
 

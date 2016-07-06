@@ -30,10 +30,10 @@ var ring = function(data, mlabel, title, opts) {
     width = width - margin.left - margin.right;
 
 	// Sort by greatest values, decreasing order
-	data.sort(function(la, lb) {
+	//data.sort(function(la, lb) {
 
-		return lb[1] - la[1];
-	});
+	//	return lb[1] - la[1];
+	//});
 
     var ring = d3.layout.pie()
         .value(function(d, i) {return d[1];});
@@ -57,15 +57,48 @@ var ring = function(data, mlabel, title, opts) {
 
     var arc = d3.svg.arc()
         .innerRadius(inner)
+		.padAngle(0.02)
         //.outerRadius(width / 2);
-        .outerRadius(rWidth / 2);
+        .outerRadius(rWidth / 2.2);
+
+
+	//
+	//
+	var defs = svg.append("defs");
+
+  var filter = defs.append("filter")
+      .attr("id", "dropshadow")
+
+  filter.append("feGaussianBlur")
+      .attr("in", "SourceAlpha")
+      .attr("stdDeviation", 4)
+      .attr("result", "blur");
+  filter.append("feOffset")
+      .attr("in", "blur")
+      .attr("dx", 2)
+      .attr("dy", 0)
+      .attr("result", "offsetBlur");
+
+  var feMerge = filter.append("feMerge");
+
+  feMerge.append("feMergeNode")
+      .attr("in", "offsetBlur")
+  feMerge.append("feMergeNode")
+      .attr("in", "SourceGraphic");
+  //
+  //
 
     var arcs = svg.selectAll('g.arc')
         .data(ring(data))
         .enter()
         .append('g')
+		.attr('filter', 'url(#dropshadow)')
+		
         .attr('class', 'arc')
-        .attr('stroke', '#fff')
+        .attr('shape-rendering', 'auto')
+        .attr('stroke', '#000')
+        .attr('stroke-width', '1px')
+        //.attr('stroke', '#fff')
         //.attr('transform', 'translate(' + (width/2)  + ',' + (width - 150) + ')');
         .attr('transform', 'translate(' + (width/2)  + ',' + (rWidth - 150) + ')');
     
@@ -134,24 +167,29 @@ var ring = function(data, mlabel, title, opts) {
     }
 
     var key = d3.select('body').append('svg')
-        .attr('width', 350)
-        .attr('height', 200)
+        .attr('width', 500)
+        .attr('height', 510)
         .selectAll('g')
         .data(data)
         .enter().append('g')
-        .attr("transform", function(d, i) { return "translate(40," + i * 20 + ")"; });
+        .attr("transform", function(d, i) { return "translate(40," + (i + 1) * 40 + ")"; });
     key.append('rect')
-        .attr('width', 18)
-        .attr('height', 18)
+        .attr('width', 25)
+        .attr('height', 25)
+		.attr('stroke', '#000')
+        .attr('shape-rendering', 'crispEdges')
+		.attr('stroke-width', '1px')
         .style('fill', function(d, i) {return color(i);});
     key.append("text")
-        .attr("x", 24)
-        .attr("y", 9)
+        .attr("x", 28)
+        .attr("y", 12)
         .attr("dy", ".35em")
-        .attr('font-size', '12px')
+        .attr('font-size', '15px')
+        .attr('font-weight', 'bold')
         .text(function(d) { 
             
-            return d[0] + ' (' + round(d[1] / total)  + '% - ' + d[1] + ')'; 
+            //return d[0] + ' (' + round(d[1] / total)  + '% - ' + d[1] + ')'; 
+			return d[0];
         });
 }
 
