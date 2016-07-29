@@ -110,6 +110,7 @@ var validateLegendOptions = function(opts) {
  */
 var pieChart = function(data, opts) {
 
+
     opts = validateOptions(opts);
 
     var width = opts.width - opts.margin.left - opts.margin.right;
@@ -119,6 +120,33 @@ var pieChart = function(data, opts) {
         .append('svg')
         .attr('height', opts.height)
         .attr('width', opts.width);
+
+	// Ugly once off shadow shit for a viz for some slides
+    // Remove and don't commit kthx
+	//
+	var defs = svg.append("defs");
+
+  var filter = defs.append("filter")
+      .attr("id", "dropshadow")
+
+  filter.append("feGaussianBlur")
+      .attr("in", "SourceAlpha")
+      .attr("stdDeviation", 4)
+      .attr("result", "blur");
+  filter.append("feOffset")
+      .attr("in", "blur")
+      .attr("dx", 2)
+      .attr("dy", 0)
+      .attr("result", "offsetBlur");
+
+  var feMerge = filter.append("feMerge");
+
+  feMerge.append("feMergeNode")
+      .attr("in", "offsetBlur")
+  feMerge.append("feMergeNode")
+      .attr("in", "SourceGraphic");
+  //
+  //
 
     var arc = d3.arc()
         .outerRadius(opts.radius)
@@ -131,6 +159,7 @@ var pieChart = function(data, opts) {
         .data(pie(data))
         .enter()
         .append('g')
+        .attr('filter', 'url(#dropshadow)')
         .attr('shape-rendering', 'auto')
         .attr('stroke', opts.stroke)
         .attr('stroke-width', opts.strokeWidth)

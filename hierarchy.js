@@ -10,19 +10,30 @@
 /**
  * Validates the visualization options with sensible defaults when required.
  * The option struct has the following fields:
- *      height: int, the height of the SVG in pixels
- *      width: int, the width of the SVG in pixels
- *      radius: int, the radius of the pie chart in pixels
- *      inRadius: int, the inner radius of the donut in pixels.
+ *      height: 
+ *          int, the height of the SVG in pixels
+ *      width: 
+ *          int, the width of the SVG in pixels
+ *      radius: 
+ *          int, the radius of the pie chart in pixels
+ *      inRadius: 
+ *          int, the inner radius of the donut in pixels.
  *          If 0, a pie chart is generated, otherwise a it's a donut.
- *      title: string, the chart's title
- *      padding: float, padding between pie sections
- *      colors: an array of color strings, ensure this is the same size as the
+ *      title: 
+ *          string, the chart's title
+ *      padding: 
+ *          float, padding between pie sections
+ *      colors: 
+ *          an array of color strings, ensure this is the same size as the
  *          number of data points.
- *      margin: an object of margin values
- *      opacity: float, the opacity of the fill colors
- *      stroke: string, color used to outline the visualization
- *      strokeWidth: string, size in pixels of the stroke outline
+ *      margin: 
+ *          an object of margin values
+ *      opacity: 
+ *          float, the opacity of the fill colors
+ *      stroke: 
+ *          string, color used to outline the visualization
+ *      strokeWidth: 
+ *          string, size in pixels of the stroke outline
  */
 var validateOptions = function(opts) {
 
@@ -36,6 +47,10 @@ var validateOptions = function(opts) {
     opts.charge = -200;
     // The (link) distance between nodes
     opts.distance = 40;
+    // Use a fixed, static layout
+    opts.fixed = opts.fixed || false;
+    // The size of each layer in the heirarchy if the layout is fixed
+    opts.layerSize = opts.fixed || false;
     opts.x = opts.width / 2;
     opts.y = opts.height / 2;
     opts.title = opts.title || '';
@@ -88,10 +103,8 @@ var fixLayout = function(nodes, opts) {
         if (layerCounts[node.depth] > maxCount)
             maxCount = layerCounts[node.depth];
 
-            console.log(node.radius);
         if (node.radius === undefined) {
             maxRadius = opts.radius;
-            console.log(node);
             
         } else {
 
@@ -157,6 +170,7 @@ var hierarchy = function(graph, opts) {
                    return d.id;
                }).distance(opts.distance))
         //
+        //;
         .force('x', d3.forceX(width / 2))
         .force('y', d3.forceY(height / 2));
 
@@ -207,10 +221,33 @@ var hierarchy = function(graph, opts) {
                 return opts.nodeColor;
 
             return d.color;
-        });
+        })
+        // Enables nodes to be dragged and moved
+        .call(d3.drag()
+            .on('start', function(d) {
+
+                if (!d3.event.active)
+                    simulation.alphaTarget(0.3).restart();
+
+                d.fx = d.x;
+                d.fy = d.y;
+            })
+            .on('drag', function(d) {
+
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            })
+            .on('end', function(d) {
+
+                if (!d3.event.active)
+                    simulation.alphaTarget(0);
+
+                d.fx = null;
+                d.fy = null;
+            }));
 
     var shit = fixLayout(graph.nodes, opts);
-    var layerSize = ((shit.maxRadius * 2) + 10) * shit.maxCount + 350;
+    var layerSize = ((shit.maxRadius * 2) + 10) * shit.maxCount + opts.layerSize;
 
     simulation.on('tick', function() {
 
@@ -222,7 +259,9 @@ var hierarchy = function(graph, opts) {
         nodes.attr('transform', function(d, i) {
             var layerChunk = layerSize / (shit.nodeCounts[d.depth] );
 
-            d.x = layerChunk * shit.countMap[d.id];
+            // Forces even spacing between nodes in a layer
+            if (opts.fixed)
+                d.x = layerChunk * shit.countMap[d.id];
         });
 
         edges
@@ -281,14 +320,6 @@ var legend = function(data, opts) {
         .text(function(d) { 
 			return d.name;
         });
-};
-
-var initializeLayout = function(nodes) {
-
-    // Decreasing depth size
-    //nodes = sorted(nodes, function(a, b) { return b.depth - a.depth; });
-
-
 };
 
 /**
