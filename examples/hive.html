@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <script src="../d3/d3.min.js" type="text/javascript"></script>
+        <script src="../viz.js" type="text/javascript"></script>
+        <script src="../hive.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+		var nodes = [
+			{id: 'a', category: '1', radius: 8, color: '#1d91c0', depth: 1},
+			{id: 'b', category: '1', radius: 8, color: '#1d91c0', depth: 2},
+			{id: 'c', category: '2', radius: 8, color: '#1d91c0', depth: 2},
+			{id: 'd', category: '3', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'e', category: '3', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'f', category: '3', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'g', category: '3', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'h', category: '3', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'i', category: '3', radius: 8, color: '#1d91c0', depth: 3}
+		];
+
+		var edges = [
+			{source: 'a', target: 'b', width: '2px'},
+			{source: 'a', target: 'c', width: '2px'},
+			{source: 'b', target: 'd', width: '2px'},
+			{source: 'c', target: 'd', width: '2px'},
+			{source: 'b', target: 'e', width: '2px'},
+			{source: 'c', target: 'e', width: '2px'}
+		];
+			
+		var hive = viz.hive()
+			.nodes(nodes)
+			.draw();
+
+		/*
+		var svg = d3.select('body')
+			.append('svg')
+			.attr('height', 500)
+			.attr('width', 500);
+
+		svg.append('circle')
+			.attr('r', 45)
+			.attr('cx', 100)
+			.attr('cy', 100)
+			.style('stroke', '#000')
+			.style('stroke-width', '1px')
+			.style('fill', '#fff');
+
+		var spacing = 360 / 3;
+		console.log(spacing);
+
+		var degrees = function(d) { return d * (Math.PI / 180); };
+
+		svg.append('circle')
+			.attr('r', 10)
+			.attr('cx', function() {
+				return 100 + 45 * Math.sin(spacing * 0);
+			})
+			.attr('cy', function() {
+				return 100 - 45 * Math.cos(spacing * 0);
+			})
+			.style('stroke', '#000')
+			.style('stroke-width', '1px')
+			.style('fill', '#fff');
+
+		svg.append('circle')
+			.attr('r', 10)
+			.attr('cx', function() {
+				return 100 + (45 * Math.sin(degrees(spacing * 1)));
+				//return 100 + (45 * Math.sin(360));
+			})
+			.attr('cy', function() {
+				return 100 - (45 * Math.cos(degrees(spacing * 1)));
+				//return 100 - (45 * Math.cos(360));
+			})
+			.style('stroke', '#000')
+			.style('stroke-width', '1px')
+			.style('fill', '#fff');
+
+		svg.append('circle')
+			.attr('r', 10)
+			.attr('cx', function() {
+				return 100 + (45 * Math.sin(degrees(spacing * 2)));
+			})
+			.attr('cy', function() {
+				return 100 - (45 * Math.cos(degrees(spacing * 2)));
+			})
+			.style('stroke', '#000')
+			.style('stroke-width', '1px')
+			.style('fill', '#fff');
+		*/
+			
+		
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>

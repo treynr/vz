@@ -254,6 +254,7 @@ var hierarchy = function(graph, opts) {
         // Forces a hierarchical structure
         nodes.attr('transform', function(d) {
             d.y = d.depth * 50 + 100;
+
         });
 
         nodes.attr('transform', function(d, i) {
