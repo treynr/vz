@@ -104,8 +104,8 @@ viz.hive = function() {
 
         //console.log(nbc);
         drawAxes();
-        drawNodes();
         drawEdges();
+        drawNodes();
     };
 
     var degrees = function(d) {
@@ -195,8 +195,10 @@ viz.hive = function() {
 
         edges.forEach(function(d) {
 
-            d.sourceNode = nodeMap[d.source];
-            d.targetNode = nodeMap[d.target];
+            //d.sourceNode = nodeMap[d.source];
+            //d.targetNode = nodeMap[d.target];
+            d.source = {node: nodeMap[d.source], category: nodeMap[d.source].category};
+            d.target = {node: nodeMap[d.target], category: nodeMap[d.target].category};
         });
     };
 
@@ -225,42 +227,24 @@ viz.hive = function() {
 
     var drawEdges = function() {
 
-        //var line = d3.line()
-        //    .angle(function(d) { return categoryAngle(d.category); })
-        //    .radius(function(d) { return axisScale(d.node.index); })
-        //    .curve(d3.curveBasis)
-        //    ;
         updateEdegs();
 
-        var line = d3.radialLine()
-            //.angle(function(d) { return categoryAngle(d.category); })
-            //.radius(function(d) { return axisScale(d.node.index); })
-            //.angle(function(d) { console.log(d.category); return categoryAngle(d.category); })
-            //.angle(function(d) { return categoryAngle(d.angle); })
-            //.radius(function(d) { return axisScale(d.radius); })
-            //.radius(function(d) { return (d.radius); })
-            //.angle(function(d) { return (d.angle); })
-            .radius(function(d) { return Math.cos(degrees(d.angle)) * d.radius; })
-            .angle(function(d) { return Math.sin(degrees(d.angle)) * d.radius; })
-            .curve(d3.curveBundle.beta(1))
-            //.curve(d3.curveBasis)
-            ;
+        //var line = d3.radialLine()
+        //    .radius(function(d) { return Math.cos(degrees(d.angle)) * d.radius; })
+        //    .angle(function(d) { return Math.sin(degrees(d.angle)) * d.radius; })
+        //    .curve(d3.curveBundle.beta(1))
+        //    ;
            
-        line = d3.line()
-            //.angle(function(d) { return categoryAngle(d.category); })
-            //.radius(function(d) { return axisScale(d.node.index); })
-            //.angle(function(d) { console.log(d.category); return categoryAngle(d.category); })
-            //.x(function(d) { return axisScale(d.radius); })
-            //.y(function(d) { return categoryAngle(d.angle); })
-            //.x(function(d) { return (d.radius); })
-            //.y(function(d) { return (d.angle); })
+       var line = d3.line()
             .x(function(d) { return Math.cos(degrees(d.angle)) * d.radius; })
             .y(function(d) { return Math.sin(degrees(d.angle)) * d.radius; })
-            .curve(d3.curveBundle.beta(1))
+            .curve(d3.curveLinear)
+            //.curve(d3.curveBundle.beta(1))
             //.curve(d3.curveBasis)
             //.curve(d3.curveCatmullRom.alpha(1))
             ;
 
+       /*
         edges.forEach(function(d) {
 
             var edge = [
@@ -279,32 +263,76 @@ viz.hive = function() {
                 edge[0] = edge[1];
                 edge[1] = x;
             }
+            var px0 = Math.cos(degrees(edge[0].angle)) * edge[0].radius;
+            var py0 = Math.sin(degrees(edge[0].angle)) * edge[0].radius;
+            var px1 = Math.cos(degrees(edge[1].angle)) * edge[1].radius;
+            var py1 = Math.sin(degrees(edge[1].angle)) * edge[1].radius;
+
+            var pp = d3.path();
+                pp.moveTo(px0, py0);
+                //pp.lineTo(px1, py1);
+                //pp.quadraticCurveTo(px0, py0, px1, py1);
+                pp.arcTo(px1, py1, px0, py0, 40);
+                pp.closePath();
+                console.log(pp.toString());
 
             //if (edge[1].angle - edge[0].angle > Math.PI)
             //    edge[0].angle += 2 * Math.PI;
 
-            if (count === 0) {
             svg.append('path')
                 .datum(edge)
+                .style('stroke', '#000')
+                .style('stroke-width', '1px')
+                .style('fill', 'none')
                 .attr('d', line)
-                .style('stroke', '#000')
-                .style('stroke-width', '1px')
                 ;
-            }
-            //count++;
-            /* this sorta works
-            svg
-                .append('line')
-                .datum(edge)
-                .style('stroke', '#000')
-                .style('stroke-width', '1px')
-                .attr('class', 'edge')
-                .attr('x1', function(d) { return axisScale(d[0].radius); })
-                .attr('y1', function(d) { return categoryAngle(d[0].angle); })
-                .attr('x2', function(d) { return axisScale(d[1].radius); })
-                .attr('y2', function(d) { return categoryAngle(d[1].angle); })
-            */
-        });
+                /*
+                .attr('d', function(d) {
+
+                    var sx = Math.cos(degrees(d[0].angle)) * d[0].radius;
+                    var sy = Math.sin(degrees(d[0].angle)) * d[0].radius;
+                    var tx = Math.cos(degrees(d[1].angle)) * d[1].radius;
+                    var ty = Math.sin(degrees(d[1].angle)) * d[1].radius;
+                    var c0 = degrees(d[0].angle) + (degrees(d[1].angle) - degrees(d[0].angle)) / 3;
+                    var c1 = degrees(d[1].angle) - (degrees(d[1].angle) - degrees(d[0].angle)) / 3;
+                    var c0x = Math.cos(c0) * d[0].radius;
+                    var c0y = Math.sin(c0) * d[0].radius;
+                    var c1x = Math.cos(c1) * d[0].radius;
+                    var c1y = Math.sin(c1) * d[0].radius;
+
+                    return "M" + sx + "," + sy
+                        //+ "C" + (sx + tx) / 2 + "," + sy
+                        + "C" + c0x + "," + c0y
+                        //+ " " + (sx + tx) / 2 + "," + ty
+                        + " " + c1x + "," + c1y
+                        + " " + sx + "," + ty;
+                /*
+                    return "M" + d.source.y + "," + d.source.x
+                        + "C" + (d.source.y + d.target.y) / 2 + "," + d.source.x
+                        + " " + (d.source.y + d.target.y) / 2 + "," + d.target.x
+                        + " " + d.target.y + "," + d.target.x;
+                        */
+                //})
+       //         ;
+       // });
+        //svg.append('path')
+        svg.selectAll('.edge')
+            .data(edges)
+            .enter()
+            .append('path')
+            .style('stroke', '#000')
+            .style('stroke-width', '1px')
+            .style('fill', 'none')
+            .attr('d', link()
+                .angle(function(d) { return degrees(categoryAngle(d.category)); })
+                .radius(function(d) { return axisScale(d.node.index); }))
+            // Super hack-ish but Bostock's link code won't work without it.
+            // Other than that we use my link code, but it doesn't look as good
+            // since it doesn't generate curves, just straight lines
+            .attr('transform', function(d, i) {
+                return 'rotate(' + -270 + ')';
+            })
+            ;
 
         //svg.append('g')
         //svg.append('path')
@@ -358,3 +386,84 @@ viz.hive = function() {
     return hive;
 };
 
+        function link() {
+  var source = function(d) { return d.source; },
+      target = function(d) { return d.target; },
+      angle = function(d) { return d.angle; },
+      startRadius = function(d) { return d.radius; },
+      endRadius = startRadius,
+      arcOffset = -Math.PI / 2;
+
+  function link(d, i) {
+    var s = node(source, this, d, i),
+        t = node(target, this, d, i),
+        x;
+    if (t.a < s.a) x = t, t = s, s = x;
+    if (t.a - s.a > Math.PI) s.a += 2 * Math.PI;
+    var a1 = s.a + (t.a - s.a) / 3,
+        a2 = t.a - (t.a - s.a) / 3;
+    return s.r0 - s.r1 || t.r0 - t.r1
+        ? "M" + Math.cos(s.a) * s.r0 + "," + Math.sin(s.a) * s.r0
+        + "L" + Math.cos(s.a) * s.r1 + "," + Math.sin(s.a) * s.r1
+        + "C" + Math.cos(a1) * s.r1 + "," + Math.sin(a1) * s.r1
+        + " " + Math.cos(a2) * t.r1 + "," + Math.sin(a2) * t.r1
+        + " " + Math.cos(t.a) * t.r1 + "," + Math.sin(t.a) * t.r1
+        + "L" + Math.cos(t.a) * t.r0 + "," + Math.sin(t.a) * t.r0
+        + "C" + Math.cos(a2) * t.r0 + "," + Math.sin(a2) * t.r0
+        + " " + Math.cos(a1) * s.r0 + "," + Math.sin(a1) * s.r0
+        + " " + Math.cos(s.a) * s.r0 + "," + Math.sin(s.a) * s.r0
+        : "M" + Math.cos(s.a) * s.r0 + "," + Math.sin(s.a) * s.r0
+        + "C" + Math.cos(a1) * s.r1 + "," + Math.sin(a1) * s.r1
+        + " " + Math.cos(a2) * t.r1 + "," + Math.sin(a2) * t.r1
+        + " " + Math.cos(t.a) * t.r1 + "," + Math.sin(t.a) * t.r1;
+  }
+
+  function node(method, thiz, d, i) {
+      console.log(method);
+      console.log(thiz);
+      console.log(angle);
+    var node = method.call(thiz, d, i),
+        a = +(typeof angle === "function" ? angle.call(thiz, node, i) : angle) + arcOffset,
+        r0 = +(typeof startRadius === "function" ? startRadius.call(thiz, node, i) : startRadius),
+        r1 = (startRadius === endRadius ? r0 : +(typeof endRadius === "function" ? endRadius.call(thiz, node, i) : endRadius));
+    return {r0: r0, r1: r1, a: a};
+  }
+
+  link.source = function(_) {
+    if (!arguments.length) return source;
+    source = _;
+    return link;
+  };
+
+  link.target = function(_) {
+    if (!arguments.length) return target;
+    target = _;
+    return link;
+  };
+
+  link.angle = function(_) {
+    if (!arguments.length) return angle;
+    angle = _;
+    return link;
+  };
+
+  link.radius = function(_) {
+    if (!arguments.length) return startRadius;
+    startRadius = endRadius = _;
+    return link;
+  };
+
+  link.startRadius = function(_) {
+    if (!arguments.length) return startRadius;
+    startRadius = _;
+    return link;
+  };
+
+  link.endRadius = function(_) {
+    if (!arguments.length) return endRadius;
+    endRadius = _;
+    return link;
+  };
+
+  return link;
+}
