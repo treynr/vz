@@ -11,19 +11,19 @@
         <script type="text/javascript">
 
 		var nodes = [
-			{id: 'a', category: '1', radius: 8, color: '#1d91c0', depth: 1},
-			{id: 'b', category: '1', radius: 8, color: '#1d91c0', depth: 2},
-			{id: 'c', category: '2', radius: 8, color: '#1d91c0', depth: 2},
-			{id: 'd', category: '3', radius: 8, color: '#1d91c0', depth: 3},
-			{id: 'e', category: '3', radius: 8, color: '#1d91c0', depth: 3},
-			{id: 'f', category: '3', radius: 8, color: '#1d91c0', depth: 3},
-			{id: 'g', category: '3', radius: 8, color: '#1d91c0', depth: 3},
-			{id: 'h', category: '3', radius: 8, color: '#1d91c0', depth: 3},
-			{id: 'i', category: '3', radius: 8, color: '#1d91c0', depth: 3}
+			{id: 'a', category: '1', class: 'a', radius: 8, color: '#1d91c0', depth: 1},
+			{id: 'b', category: '1', class: 'b', radius: 8, color: '#1d91c0', depth: 2},
+			{id: 'c', category: '2', class: 'a', radius: 8, color: '#1d91c0', depth: 2},
+			{id: 'd', category: '3', class: 'a', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'e', category: '3', class: 'a', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'f', category: '3', class: 'a', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'g', category: '3', class: 'b', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'h', category: '3', class: 'c', radius: 8, color: '#1d91c0', depth: 3},
+			{id: 'i', category: '3', class: 'c', radius: 8, color: '#1d91c0', depth: 3}
 		];
 
 		var edges = [
-			{source: 'a', target: 'b', width: '2px'},
+			{source: 'a', target: 'g', width: '2px'},
 			{source: 'a', target: 'c', width: '2px'},
 			{source: 'b', target: 'd', width: '2px'},
 			{source: 'c', target: 'd', width: '2px'},
@@ -32,9 +32,44 @@
 		];
 			
 		var hive = viz.hive()
+			.outerRadius(150)
 			.nodes(nodes)
+			.edges(edges)
 			.draw();
+			;
 
+		var svg = d3.select('body')
+			.append('svg')
+			.attr('height', 500)
+			.attr('width', 500)
+			.append('g')
+			//.attr('transform', 'translate(' + 250 + ',' + 250 + ')')
+			;
+
+		//var lines = [[5,5], [10,30], [20,50], [40,80], [62,70]];
+		var lines = [[5,5], [30,30], [60,60]];
+
+		var line = d3.line()
+			//.x(function(d) { console.log('x: ' + d); return d; })
+			//.y(function(d) { console.log('y: ' + d); return d; })
+			.curve(d3.curveCatmullRom.alpha(0));
+
+		//console.log(line([5,5]));
+		//svg.append('g')
+		//	.attr('class', 'edges')
+			svg
+			//.selectAll('edge')
+			//.data(lines)
+			//.enter()
+			//.datum(lines)
+			.append('path')
+			.datum(lines)
+			.attr('d', line)
+			//.attr('d', function(d) { console.log(d); return line; })
+			.style('stroke', '#000')
+			.style('stroke-width', '2px')
+			.style('fill', 'none')
+			;
 		/*
 		var svg = d3.select('body')
 			.append('svg')
