@@ -236,22 +236,20 @@ viz.hive = function() {
         //    ;
            
        var line = d3.line()
-            .x(function(d) { return Math.cos(degrees(d.angle)) * d.radius; })
-            .y(function(d) { return Math.sin(degrees(d.angle)) * d.radius; })
-            .curve(d3.curveLinear)
-            //.curve(d3.curveBundle.beta(1))
-            //.curve(d3.curveBasis)
-            //.curve(d3.curveCatmullRom.alpha(1))
+            //.x(function(d) { return Math.cos(degrees(d.angle)) * d.radius; })
+            //.y(function(d) { return Math.sin(degrees(d.angle)) * d.radius; })
+            .x(function(d) { return d.x;})//Math.cos(degrees(d.angle)) * d.radius; })
+            .y(function(d) { return d.y;})//Math.sin(degrees(d.angle)) * d.radius; })
+            .curve(d3.curveBundle.beta(1))
             ;
 
-       /*
         edges.forEach(function(d) {
 
             var edge = [
                 //{angle: d.targetNode.category, radius: d.targetNode.index},
                 //{angle: d.sourceNode.category, radius: d.sourceNode.index}
-                {angle: categoryAngle(d.sourceNode.category), radius: axisScale(d.sourceNode.index)},
-                {angle: categoryAngle(d.targetNode.category), radius: axisScale(d.targetNode.index)}
+                {angle: categoryAngle(d.source.category), radius: axisScale(d.source.node.index)},
+                {angle: categoryAngle(d.target.category), radius: axisScale(d.target.node.index)}
             ];
 
             //if (edge[0].angle < edge[1].angle) {
@@ -263,6 +261,7 @@ viz.hive = function() {
                 edge[0] = edge[1];
                 edge[1] = x;
             }
+            /*
             var px0 = Math.cos(degrees(edge[0].angle)) * edge[0].radius;
             var py0 = Math.sin(degrees(edge[0].angle)) * edge[0].radius;
             var px1 = Math.cos(degrees(edge[1].angle)) * edge[1].radius;
@@ -275,6 +274,7 @@ viz.hive = function() {
                 pp.arcTo(px1, py1, px0, py0, 40);
                 pp.closePath();
                 console.log(pp.toString());
+                */
 
             //if (edge[1].angle - edge[0].angle > Math.PI)
             //    edge[0].angle += 2 * Math.PI;
@@ -313,9 +313,10 @@ viz.hive = function() {
                         + " " + d.target.y + "," + d.target.x;
                         */
                 //})
-       //         ;
-       // });
-        //svg.append('path')
+                ;
+        });
+      
+        /*
         svg.selectAll('.edge')
             .data(edges)
             .enter()
@@ -327,12 +328,13 @@ viz.hive = function() {
                 .angle(function(d) { return degrees(categoryAngle(d.category)); })
                 .radius(function(d) { return axisScale(d.node.index); }))
             // Super hack-ish but Bostock's link code won't work without it.
-            // Other than that we use my link code, but it doesn't look as good
+            // Other than that we use my edge code, but it doesn't look as good
             // since it doesn't generate curves, just straight lines
             .attr('transform', function(d, i) {
                 return 'rotate(' + -270 + ')';
             })
             ;
+        */
 
         //svg.append('g')
         //svg.append('path')
