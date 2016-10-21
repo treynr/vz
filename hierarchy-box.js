@@ -62,6 +62,8 @@ var validateOptions = function(opts) {
     opts.margin.right = opts.margin.right || 30;
     opts.margin.left = opts.margin.left || 30;
 
+    // Rounded rectangular nodes
+    opts.round = opts.round || false;
     // Node color
     opts.nodeColor = opts.color || '#1d91c0';
     // Use a node color range instead of a single color
@@ -229,60 +231,73 @@ var hierarchy = function(graph, opts) {
          .enter()
          .append('g');
 
-    var nodes = nodeGroups
-        //.data(graph.nodes)
-        //.enter()
-        .append('rect')
-        .attr('class', 'node')
-        .attr('height', opts.nodeHeight)
-        .attr('width', opts.nodeWidth)
-        .attr('shape-rendering', 'auto')
-        .attr('stroke', function(d) {
-            if (d.stroke === undefined)
-                return opts.nodeStroke;
+    if (opts.round) {
 
-            return d.stroke;
-        })
-        .attr('stroke-width', function(d) {
-            if (d.strokeWidth === undefined)
-                return opts.nodeStrokeWidth;
+        var nodes = nodeGroups
+            .append('path')
+            //.attr('d', function(d) {
+            //    console.log(d);
+            //    return makeRoundRect(d.x, d.y, opts.nodeWidth, opts.nodeHeight, 20);
+            //})
+            .attr('class', 'node')
+            .attr('shape-rendering', 'auto')
+            .attr('stroke', function(d) {
+                if (d.stroke === undefined)
+                    return opts.nodeStroke;
 
-            return d.strokeWidth;
-        })
-        .style('fill', function(d) {
+                return d.stroke;
+            })
+            .attr('stroke-width', function(d) {
+                if (d.strokeWidth === undefined)
+                    return opts.nodeStrokeWidth;
 
-            if (opts.useColorRange)
-                return opts.nodeColor(opts.colorScale(d.colorValue));
+                return d.strokeWidth;
+            })
+            .style('fill', function(d) {
 
-            if (d.color)
-                return d.color;
+                if (opts.useColorRange)
+                    return opts.nodeColor(opts.colorScale(d.colorValue));
 
-            return opts.nodeColor;
-        })
-        // Enables nodes to be dragged and moved
-        //.call(d3.drag()
-        //    .on('start', function(d) {
+                if (d.color)
+                    return d.color;
 
-        //        if (!d3.event.active)
-        //            simulation.alphaTarget(0.3).restart();
+                return opts.nodeColor;
+            });
 
-        //        d.fx = d.x;
-        //        d.fy = d.y;
-        //    })
-        //    .on('drag', function(d) {
+    } else {
+        var nodes = nodeGroups
+            //.data(graph.nodes)
+            //.enter()
+            .append('rect')
+            .attr('class', 'node')
+            .attr('height', opts.nodeHeight)
+            .attr('width', opts.nodeWidth)
+            .attr('shape-rendering', 'auto')
+            .attr('stroke', function(d) {
+                if (d.stroke === undefined)
+                    return opts.nodeStroke;
 
-        //        d.fx = d3.event.x;
-        //        d.fy = d3.event.y;
-        //    })
-        //    .on('end', function(d) {
+                return d.stroke;
+            })
+            .attr('stroke-width', function(d) {
+                if (d.strokeWidth === undefined)
+                    return opts.nodeStrokeWidth;
 
-        //        if (!d3.event.active)
-        //            simulation.alphaTarget(0);
+                return d.strokeWidth;
+            })
+            .style('fill', function(d) {
 
-        //        d.fx = null;
-        //        d.fy = null;
-        //    }))
-        ;
+                if (opts.useColorRange)
+                    return opts.nodeColor(opts.colorScale(d.colorValue));
+
+                if (d.color)
+                    return d.color;
+
+                return opts.nodeColor;
+            })
+            ;
+    }
+
      var widthMap = {};
      var heightMap = {};
 
@@ -316,10 +331,12 @@ var hierarchy = function(graph, opts) {
          })
          ;
 
+    if (!opts.round) {
     d3.selectAll('.node')
        .attr('width', function(d) { return widthMap[d.id] + 'px'; })
        .attr('height', function(d) { return heightMap[d.id] + 'px'; })
        ;
+    }
 
     var shit = fixLayout(graph.nodes, opts);
     var layerSize = ((opts.nodeHeight * 2) + 10) * shit.maxCount + 120;
@@ -341,7 +358,20 @@ var hierarchy = function(graph, opts) {
 
             d.y = d.depth * (opts.nodeWidth + 20);
             d.x = layerChunk * shit.countMap[d.id];
+        if (opts.round) {
+            nodes.attr('d', function(d) {
+
+            var dx = d.x - (widthMap[d.id] / 2);
+            var dy = d.y - (heightMap[d.id] / 2);
+            //d3.select(this).attr('d', function(d2) {
+                //return makeRoundRect(d.x, d.y, opts.nodeHeight, opts.nodeWidth, 20);
+                //return makeRoundRect(d.x, d.y, widthMap[d.id], heightMap[d.id], 20);
+                return makeRoundRect(dx - 10, dy - 20, widthMap[d.id] + 10, heightMap[d.id], 20);
+            });
+        }
+            return '';
         });
+
 
         edges
             .attr('x1', function(d) { return d.source.x; })
@@ -364,42 +394,24 @@ var hierarchy = function(graph, opts) {
 
             return 'translate(' + dx + ',' + dy + ')';
         });
+
+        /* Required for round
+         *
+        nodeText.attr('transform', function(d) {
+
+            var dx = d.x - (widthMap[d.id] / 2);
+            var dy = d.y - (heightMap[d.id] / 2);
+
+            return 'translate(' + dx + ',' + dy + ')';
+        });
+        *
+        */
+
     });
-
-
-    //var layerSize = ((shit.maxRadius * 2) + 10) * shit.maxCount + opts.layerSize;
-
-    //simulation.on('tick', function() {
-
-    //    // Forces a hierarchical structure
-    //    nodes.attr('transform', function(d) {
-    //        d.y = d.depth * 50 + 100;
-    //    });
-
-    //    nodes.attr('transform', function(d, i) {
-    //        var layerChunk = layerSize / (shit.nodeCounts[d.depth] );
-
-    //        // Forces even spacing between nodes in a layer
-    //        if (opts.fixed)
-    //            d.x = layerChunk * shit.countMap[d.id];
-    //    });
-
-    //    edges
-    //        .attr('x1', function(d) { return d.source.x; })
-    //        .attr('y1', function(d) { return d.source.y; })
-    //        .attr('x2', function(d) { return d.target.x; })
-    //        .attr('y2', function(d) { return d.target.y; });
-
-    //    nodes
-    //        .attr('cx', function(d) { return d.x; })
-    //        .attr('cy', function(d) { return d.y; });
-    //});
 
 
     simulation.nodes(graph.nodes);
     simulation.force('link').links(graph.edges);
-
-   // fixLayout(nodes);
 };
 
 var legend = function(data, opts) {
