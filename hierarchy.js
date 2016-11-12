@@ -7,6 +7,25 @@
  * auth:    TR
  */
 
+/*
+ * The graph data structure necessary for this viz is an object containing two
+ * lists, 'nodes' and 'edges'. Each node object can have the following fields:
+ *  node {
+ *      id:         [required] node ID 
+ *      depth:      [required] int used to represent depth in the hierarchy
+ *      colorValue: [optional] int value used to generate a range of colors
+ *      label:      [optional] text label to append to the node
+ *      radius:     [optional] size of the node
+ *      color:      [optional] node color
+ * }
+ *
+ * edge {
+ *      source: [required] ID of the source node
+ *      target: [required] ID of the source node
+ *      width:  [optional] width of the edge in pixels
+ * }
+ *
+ */
 var hierarchy = function() {
 
     var exports = {},
