@@ -13,9 +13,13 @@ var hierarchy = function() {
         svg = null,
         // d3js Force directed simulation
         simulation = null,
+        // Interpolated color scale used for coloring nodes
         colorScale = null,
+        // Node objects constructed with d3js
         d3Nodes = null,
+        // Edge objects constructed with d3js
         d3Edges = null,
+        // Fixed layout structure containing layout and position parameters
         fixedStruct = null,
         //
         // Everything below can be accessed and modified using getters/setters
@@ -38,12 +42,6 @@ var hierarchy = function() {
         layerSize = 100,
         // Vertical spacing between node layers
         verticalSpacing = 50,
-        // Margin between the actual visualization and SVG borders
-        //margin = {},
-        //margin.top = 10,
-        //margin.bottom = 30,
-        //margin.right = 30,
-        //margin.left = 30,
         // Node color
         nodeColor = '#1d91c0',
         // Node color opacity
@@ -236,6 +234,7 @@ var hierarchy = function() {
                 return d.radius + 3;
             })
             .style('fill', '#FFFDD0')
+            //.style('fill', '#FFF')
             .style('stroke', 'none');
 
         // Actual colored node
@@ -538,6 +537,12 @@ var hierarchy = function() {
     exports.nodeOpacity = function(_) {
         if (!arguments.length) return nodeOpacity;
         nodeOpacity = +_;
+        return exports;
+    };
+
+    exports.scaleFxn = function(_) {
+        if (!arguments.length) return scaleFxn;
+        scaleFxn = _;
         return exports;
     };
 
