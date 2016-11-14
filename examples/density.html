@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <script src="../d3/d3.min.js" type="text/javascript"></script>
+        <script src="../density-new.js" type="text/javascript"></script>
+		<style>
+
+		</style>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+		var values = [];
+
+		for (var i = 0; i < 500; i++)
+			values.push(Math.round(Math.random() * (100 - 0) + 0));
+
+		var values2 = [];
+
+		for (var i = 0; i < 500; i++)
+			values2.push(Math.round(Math.random() * (100 - 0) + 0));
+
+		var data = [
+			{
+				group: 'group a',
+				values: values
+			},
+			{
+				group: 'group b',
+				values: values2
+			}
+		];
+			
+		var densityPlot = density()
+			.data(data)
+			.marginLeft(40)
+			.xlabel('Z-scores')
+			.draw()
+			;
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>

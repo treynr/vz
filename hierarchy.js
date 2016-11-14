@@ -1,10 +1,10 @@
 /**
- * file:    hierarchy.js
- * desc:    d3js 4.0 implementation of hierarchical graph structures. Very 
- *          similar to other graph or tree implementations, but forces a strict
- *          hierarchy and spacing between nodes.
- * vers:    0.2.0
- * auth:    TR
+ * file: hierarchy.js
+ * desc: d3js 4.0 implementation of hierarchical graph structures. Very 
+ *       similar to other graph or tree implementations, but forces a strict
+ *       hierarchy and spacing between nodes.
+ * vers: 0.2.0
+ * auth: TR
  */
 
 /*

@@ -461,6 +461,8 @@ var density = function(data, opts, grps) {
 
     for (var i = 0; i < data.length; i++) {
 
+        console.log(data[i]);
+        console.log(kde(data[i]));
         svg.append("path")
             //.datum(kde(faithful))
             //.datum(kde(data[0]))
