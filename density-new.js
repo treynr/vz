@@ -14,6 +14,7 @@ var density = function() {
         yaxis = null,
         xscale = null,
         yscale = null,
+        kernelScale = 0.5,
         // Default colors for shading in areas
         colors = ['#1f77b4', '#2ca02c', '#d62728', '#9467bd', '#ff7f0e'],
         // SVG width in pixels
@@ -55,7 +56,7 @@ var density = function() {
         var dataValues = [].concat.apply([], getDataValues());
 
         //var kde = kernelDensity(KERNELS.epanechnikov(0.5), xscale.ticks(50));
-        var kde = kernelDensity(KERNELS.triweight(0.5), xscale.ticks(50));
+        var kde = kernelDensity(KERNELS.epanechnikov(kernelScale), xscale.ticks(50));
 
         //dataValues = kernelDensity(dataValues)
         //    .map(function(e, i, a) { return e[1]; });
@@ -80,7 +81,9 @@ var density = function() {
 
         return function(sample) {
             return x.map(function(x) {
-                return [x, d3.mean(sample, function(v) { return kernel(x - v); })];
+                return [x, d3.mean(sample, function(v) { 
+                    return kernel(x - v); 
+                })];
             });
         };
     };
@@ -104,7 +107,7 @@ var density = function() {
 
     var drawLines = function() {
 
-        var kde = kernelDensity(KERNELS.epanechnikov(0.5), xscale.ticks(50));
+        var kde = kernelDensity(KERNELS.epanechnikov(kernelScale), xscale.ticks(50));
 
         var line = d3.line()
             .x(function(d) { return xscale(d[0]); })
@@ -119,14 +122,13 @@ var density = function() {
                 .style('stroke', '#000')
                 .attr('shape-rendering', 'geometricPrecision')
 				.attr('d', line)
-				.style('stroke-width', 1)
-                ;
+				.style('stroke-width', 1);
         }
     };
 
     var drawAreas = function() {
 
-        var kde = kernelDensity(KERNELS.epanechnikov(0.5), xscale.ticks(50));
+        var kde = kernelDensity(KERNELS.epanechnikov(kernelScale), xscale.ticks(50));
 
         var area = d3.area()
             .x(function(d) { return xscale(d[0]); })
@@ -147,8 +149,7 @@ var density = function() {
 
                     return d.color;
                 })
-				.attr('d', area)
-				;
+				.attr('d', area);
         }
     };
 
@@ -181,8 +182,8 @@ var density = function() {
             .attr('height', height)
             .attr('width', width)
             .attr('transform', 
-                  'translate(' + margin.left + ',' + margin.top + ')')
-            ;
+                  'translate(' + margin.left + ',' + margin.top + ')'
+            );
 
         // Place a margin around the SVG so elements aren't cut off
         height = height - margin.top - margin.bottom;
@@ -222,6 +223,12 @@ var density = function() {
     exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
+        return exports;
+    };
+
+    exports.kernelScale = function(_) {
+        if (!arguments.length) return kernelScale;
+        kernelScale = +_;
         return exports;
     };
 

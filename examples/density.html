@@ -33,12 +33,18 @@
 			}
 		];
 			
-		var densityPlot = density()
-			.data(data)
-			.marginLeft(40)
-			.xlabel('Z-scores')
-			.draw()
-			;
+		d3.json('sub-shit.json', function(error, json) {
+
+			var densityPlot = density()
+				.data(json)
+				.marginLeft(40)
+				.kernelScale(0.15)
+				//.xlabel('Z-scores')
+				.xlabel('Gene Depth Scores')
+				.draw()
+				;
+
+		});
 
         </script>
     <div class="simple_example"></div>
