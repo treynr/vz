@@ -18,6 +18,9 @@ function makeHistogram(data, opts) {
 
     var formatCount = d3.format(",.0f");
 
+    width = 500;
+    height = 500;
+
     var svg = d3.select("body").append("svg")
         //.attr("width", width + margin.left + margin.right)
         //.attr("height", height + margin.top + margin.bottom)
@@ -46,8 +49,8 @@ function makeHistogram(data, opts) {
 
     // Generate a histogram using twenty uniformly-spaced bins.
     var data = d3.layout.histogram()
-        //.bins(x.ticks(50))
-        .bins(x.ticks(opts.nbins))
+        .bins(x.ticks(50))
+        //.bins(x.ticks(opts.nbins))
         (data);
 
     var y = d3.scale.linear()
