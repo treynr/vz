@@ -69,6 +69,8 @@ var hierarchy = function() {
         scaleFxn = d3.scaleLinear,
         // Use a node color range instead of a single color
         useColorRange = false,
+        // Use a gradient for node colors
+        gradient = [],
         // Use a darkened version of the node color as its stroke
         useDarkStroke = false,
         // Apply a drop shadow to the nodes
@@ -79,6 +81,8 @@ var hierarchy = function() {
         nodeStrokeWidth = '1px',
         // Use an alternate, pretty node style
         prettifyNodes = false,
+        // Curved or straight edges
+        edgeCurve = true,
         // Edge color
         edgeColor = '#1d91c0',
         // Edge color opacity
@@ -86,7 +90,7 @@ var hierarchy = function() {
         // Edge color
         edgeStroke = '#000',
         // Edge width
-        edgeWidth = '1px';
+        edgeWidth = 1;
 
     /** private **/
 
@@ -130,6 +134,43 @@ var hierarchy = function() {
             .attr('mode', 'normal');
     };
 
+    /**
+     * Generates a unique gradient that can be used to color nodes.
+     *
+     * arguments
+     *      svg: svg object the gradient is appended to
+     *      gid: gradient object ID
+     *      type: gradient type; linearGradient, radialGradient
+     *      c0: color to use
+     *      c1: color to use
+     *
+     */
+    var makeGradient = function(svg, gid, type, c0, c1) {
+
+        gid = (gid === undefined) ? 'gradient' : gid;
+        type = (type === undefined) ? 'linearGradient' : type;
+        c0 = (c0 === undefined) ? '#FFFFFF' : c0;
+        c1 = (c1 === undefined) ? '#DD0000' : c1;
+
+        var gradient = svg.append(type)
+            .attr('id', gid)
+            .attr('x1', '0%')
+            .attr('y1', '0%')
+            .attr('x2', '100%')
+            .attr('y2', '100%')
+            .attr('spreadMethod', 'pad');
+
+        gradient.append('stop')
+            .attr('offset', '0%')
+            .attr('stop-color', c0)
+            .attr('stop-opacity', 1);
+
+        gradient.append('stop')
+            .attr('offset', '100%')
+            .attr('stop-color', c1)
+            .attr('stop-opacity', 1);
+    }
+
     var dragNodes = function() {
 
     };
@@ -156,16 +197,43 @@ var hierarchy = function() {
                 .style('filter', 'url(#drop-shadow)');
         }
 
+        // Actual colored node. This selects nodes that don't have a symbol key
+        // in their object.
         nodeGroups
+            .filter(function(d) { return d.symbol === undefined; })
             .append('circle')
-            .attr('shape-rendering', 'auto')
-            .attr('title', function(d) { return d.label; })
             .attr('r', function(d) {
                 if (d.radius === undefined)
                     return radius;
 
                 return d.radius;
             })
+            ;
+
+        // In case symbols are used
+        nodeGroups
+            .filter(function(d) { return d.symbol !== undefined; })
+            .append('path')
+            .attr('d', d3.symbol()
+                .type(function(d) { return d3.symbolSquare; })
+                .size(function(d) {
+                    if (d.radius === undefined)
+                        return radius * 22;
+
+                    return d.radius * 22;
+                }))
+            ;
+
+        nodeGroups
+            //.append('circle')
+            .attr('shape-rendering', 'auto')
+            .attr('title', function(d) { return d.label; })
+            //.attr('r', function(d) {
+            //    if (d.radius === undefined)
+            //        return radius;
+
+            //    return d.radius;
+            //})
             .style('stroke', function(d) {
                 if (useColorRange && useDarkStroke)
                     return d3.rgb(nodeColor(colorScale(d.colorValue))).darker(1.5);
@@ -185,6 +253,18 @@ var hierarchy = function() {
                 return d.width;
             })
             .style('fill', function(d) {
+                if (d.gradient) {
+
+                    makeGradient(
+                        svg, 
+                        d.id + '-grad', 'radialGradient', 
+                        d.gradient[0], 
+                        d.gradient[1]
+                    );
+
+                    return 'url(#' + (d.id + '-grad') + ')';
+                }
+
                 if (useColorRange)
                     return nodeColor(colorScale(d.colorValue));
 
@@ -256,16 +336,34 @@ var hierarchy = function() {
             //.style('fill', '#FFF')
             .style('stroke', 'none');
 
-        // Actual colored node
+        // Actual colored node. This selects nodes that don't have a symbol key
+        // in their object.
         nodeGroups
+            .filter(function(d) { return d.symbol === undefined; })
             .append('circle')
-            .attr('title', function(d) { return d.label; })
             .attr('r', function(d) {
                 if (d.radius === undefined)
                     return radius;
 
                 return d.radius;
             })
+            ;
+        // In case symbols are used
+        nodeGroups
+            .filter(function(d) { return d.symbol !== undefined; })
+            .append('path')
+            .attr('d', d3.symbol()
+                .type(function(d) { return d3.symbolSquare; })
+                .size(function(d) {
+                    if (d.radius === undefined)
+                        return radius * 22;
+
+                    return d.radius * 22;
+                }))
+            ;
+
+        nodeGroups
+            .attr('title', function(d) { return d.label; })
             .style('stroke', function(d) {
                 if (useColorRange)
                     return d3.color(nodeColor(colorScale(d.colorValue))).darker(1.5);
@@ -317,7 +415,7 @@ var hierarchy = function() {
         var edges = svg.selectAll('path')
             .data(graph.edges)
             .enter()
-            .append('path')
+            .append(edgeCurve ? 'path' : 'line')
             .attr('shape-rendering', 'auto')
             .attr('stroke', function(d) {
                 if (d.stroke === undefined)
@@ -336,6 +434,11 @@ var hierarchy = function() {
         return edges;
     };
 
+    /**
+     * Generates a color range based on specific color values attached to each
+     * node object.
+     *
+     */
     var interpolateColors = function() {
 
         var cmin = d3.min(graph.nodes, function(n) { return n.colorValue; });
@@ -571,6 +674,12 @@ var hierarchy = function() {
         return exports;
     };
 
+    exports.gradient = function(_) {
+        if (!arguments.length) return gradient;
+        gradient = _;
+        return exports;
+    };
+
     exports.useDarkStroke = function(_) {
         if (!arguments.length) return useDarkStroke;
         useDarkStroke = _;
@@ -601,6 +710,12 @@ var hierarchy = function() {
         return exports;
     };
 
+    exports.edgeCurve = function(_) {
+        if (!arguments.length) return edgeCurve;
+        edgeCurve = _;
+        return exports;
+    };
+
     exports.edgeColor = function(_) {
         if (!arguments.length) return edgeColor;
         edgeColor = _;
@@ -619,9 +734,9 @@ var hierarchy = function() {
         return exports;
     };
 
-    exports.edgeStrokeWidth = function(_) {
-        if (!arguments.length) return edgeStrokeWidth;
-        edgeStrokeWidth = +_;
+    exports.edgeWidth = function(_) {
+        if (!arguments.length) return edgeWidth;
+        edgeWidth = +_;
         return exports;
     };
 
