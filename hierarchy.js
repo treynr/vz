@@ -90,7 +90,15 @@ var hierarchy = function() {
         // Edge color
         edgeStroke = '#000',
         // Edge width
-        edgeWidth = 1;
+        edgeWidth = 1,
+        // X offset for text placement
+        tx = 0,
+        // Y offset for text placement
+        ty = 0,
+        // Font parameters for node labels
+        font = 'sans-serif',
+        fontSize = '12px',
+        fontWeight = 'normal';
 
     /** private **/
 
@@ -435,6 +443,35 @@ var hierarchy = function() {
     };
 
     /**
+     * Appends text labels (if they exist) to each node.
+     *
+     */
+    var addNodeLabels = function(nodeGroups) {
+
+        nodeGroups.append('text')
+            .attr('stroke', 'none')
+            .attr('fill', '#000000')
+            .style('font-family', font)
+            .style('font-size', fontSize)
+            .style('font-weight', fontWeight)
+            .attr('dx', function(d) {
+
+                if (d.tx)
+                    return d.tx;
+
+                return tx;
+            })
+            .attr('dy', function(d) {
+
+                if (d.ty)
+                    return d.ty;
+
+                return ty;
+            })
+            .text(function(d) { return d.label; });
+    };
+
+    /**
      * Generates a color range based on specific color values attached to each
      * node object.
      *
@@ -582,6 +619,8 @@ var hierarchy = function() {
             d3Nodes = makePrettyNodes();
         else
             d3Nodes = makeRegularNodes();
+
+        addNodeLabels(d3Nodes);
 
         fixedStruct = fixLayout(graph.nodes);
 
@@ -740,10 +779,41 @@ var hierarchy = function() {
         return exports;
     };
 
+    exports.tx = function(_) {
+        if (!arguments.length) return tx;
+        tx = +_;
+        return exports;
+    };
+
+    exports.ty = function(_) {
+        if (!arguments.length) return ty;
+        ty = +_;
+        return exports;
+    };
+
+    exports.font = function(_) {
+        if (!arguments.length) return font;
+        font = _;
+        return exports;
+    };
+
+    exports.fontSize = function(_) {
+        if (!arguments.length) return fontSize;
+        fontSize = _;
+        return exports;
+    };
+
+    exports.fontWeight = function(_) {
+        if (!arguments.length) return fontWeight;
+        fontWeight = _;
+        return exports;
+    };
+
     return exports;
 };
 
-var legend = function(data, opts) {
+
+var legend2 = function(data, opts) {
 
     opts = validateLegendOptions(opts);
 
