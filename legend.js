@@ -65,6 +65,33 @@ var legend = function() {
             .attr('stop-opacity', 1);
     }
 
+    var makeSplitColor = function(svg, gid, c0, c1) {
+
+        gid = (gid === undefined) ? 'gradient' : gid;
+        c0 = (c0 === undefined) ? '#FFFFFF' : c0;
+        c1 = (c1 === undefined) ? '#DD0000' : c1;
+
+        var gradient = svg.append('linearGradient')
+            .attr('id', gid)
+            .attr('x1', '0%')
+            //.attr('y1', '0%')
+            .attr('y1', '100%')
+            .attr('x2', '100%')
+            //.attr('y2', '100%')
+            .attr('y2', '0%')
+            .attr('spreadMethod', 'pad');
+
+        gradient.append('stop')
+            .attr('offset', '50%')
+            .attr('stop-color', c0)
+            .attr('stop-opacity', 1);
+
+        gradient.append('stop')
+            .attr('offset', '50%')
+            .attr('stop-color', c1)
+            .attr('stop-opacity', 1);
+    }
+
     exports.draw = function() {
 
         var legend = d3.select('body')
@@ -101,6 +128,18 @@ var legend = function() {
                         d.text + '-grad', 'radialGradient', 
                         d.gradient[0], 
                         d.gradient[1]
+                    );
+
+                    return 'url(#' + (d.text + '-grad') + ')';
+                }
+
+                if (d.colors && d.colors.length >= 2) {
+
+                    makeSplitColor(
+                        legend, 
+                        d.text + '-grad',
+                        d.colors[0], 
+                        d.colors[1]
                     );
 
                     return 'url(#' + (d.text + '-grad') + ')';

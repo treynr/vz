@@ -468,7 +468,7 @@ var hierarchy = function() {
 
                 return ty;
             })
-            .text(function(d) { return d.label; });
+            .text(function(d) { return d.label ? d.label : ''; });
     };
 
     /**
