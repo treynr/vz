@@ -1,666 +1,835 @@
+/**
+ * file: hierarchy.js
+ * desc: d3js 4.0 implementation of force directed graphs.
+ * vers: 0.2.0
+ * auth: TR
+ */
 
-function initialize_layout(nodes) {
-        var nextdepths = [0];
-        var previous = [-1];
-        for (i = 0; i < nodes.length; i++) {
-            while (nodes[i].depth > nextdepths.length - 1) {
-                nextdepths.push(0);
-                previous.push(-1);
-            }
-            if (previous[nodes[i].depth] >= 0) {
-                prevNode = getNodeByID(nodes, previous[nodes[i].depth]);
-                prevNode.below = nodes[i].id;
-                nodes[i].above = prevNode.id;
-            }
-            previous[nodes[i].depth] = nodes[i].id;
-            nodes[i].x = nodes[i].depth * 100 + 100;
-            nodes[i].y = nextdepths[nodes[i].depth] * 20 + 100;
-            nextdepths[nodes[i].depth]++;
+/*
+ * The graph data structure necessary for this viz is an object containing two
+ * lists, 'nodes' and 'edges'. Each node object can have the following fields:
+ *  node {
+ *      id:         [required] node ID 
+ *      depth:      [required] int used to represent depth in the hierarchy
+ *      colorValue: [optional] int value used to generate a range of colors
+ *      label:      [optional] text label to append to the node
+ *      radius:     [optional] size of the node
+ *      color:      [optional] node color
+ * }
+ *
+ * edge {
+ *      source: [required] ID of the source node
+ *      target: [required] ID of the source node
+ *      width:  [optional] width of the edge in pixels
+ * }
+ *
+ */
+var graph = function() {
+
+    var exports = {},
+        svg = null,
+        svgLabel = null,
+        // d3js Force directed simulation
+        simulation = null,
+        // Interpolated color scale used for coloring nodes
+        colorScale = null,
+        // Node objects constructed with d3js
+        d3Nodes = null,
+        // Edge objects constructed with d3js
+        d3Edges = null,
+        // Fixed layout structure containing layout and position parameters
+        fixedStruct = null,
+        //
+        // Everything below can be accessed and modified using getters/setters
+        //
+        // Graph data struct which should contain a key for nodes and edges
+        graph = null,
+        // SVG width
+        width = 800,
+        // SVG height
+        height = 500,
+        // Node radius
+        radius = 8,
+        // Node charge, negative numbers repel, positive attracts
+        charge = -200,
+        // The (link) distance between nodes
+        distance = 40,
+        // Use a fixed, static layout
+        fixed = false,
+        // The size of each layer in the heirarchy if the layout is fixed
+        layerSize = 100,
+        // Vertical spacing between node layers
+        verticalSpacing = 50,
+        // Node color
+        nodeColor = '#1d91c0',
+        // Node color opacity
+        nodeOpacity = 1.0,
+        // The d3 scale function to use when generating colors
+        scaleFxn = d3.scaleLinear,
+        // Use a node color range instead of a single color
+        useColorRange = false,
+        // Use a gradient for node colors
+        gradient = [],
+        // Use a darkened version of the node color as its stroke
+        useDarkStroke = false,
+        // Apply a drop shadow to the nodes
+        useShadow = false,
+        // Node stroke color
+        nodeStroke = '#000',
+        // Node stroke thickness
+        nodeStrokeWidth = '1px',
+        // Use an alternate, pretty node style
+        prettifyNodes = false,
+        // Curved or straight edges
+        edgeCurve = true,
+        // Edge color
+        edgeColor = '#1d91c0',
+        // Edge color opacity
+        edgeOpacity = 1.0,
+        // Edge color
+        edgeStroke = '#000',
+        // Edge width
+        edgeWidth = 1,
+        // X offset for text placement
+        tx = 0,
+        // Y offset for text placement
+        ty = 0,
+        // Font parameters for node labels
+        font = 'sans-serif',
+        fontSize = '12px',
+        fontWeight = 'normal';
+
+    /** private **/
+
+    /**
+     * Generates a drop shadow and appends it to the SVG element so it can be
+     * applied to any drawn shapes. The generated shadow element has the ID
+     * "#drop-shadow" and can be applied to an element using
+     * url('#drop-shadow').
+     *
+     */
+    var makeDropShadow = function() {
+
+        var defs = svg.append('defs');
+
+        var filter = defs.append('filter')
+            .attr('id', 'drop-shadow')
+            .attr('filterUnits', 'userSpaceOnUse')
+            .attr('height', '250%')
+            .attr('width', '250%');
+
+        filter.append('feGaussianBlur')
+            .attr('in', 'SourceGraphic')
+            .attr('stdDeviation', 2.5)
+            .attr('result', 'blur-out');
+
+        filter.append('feColorMatrix')
+            .attr('in', 'blur-out')
+            .attr('type', 'hueRotate')
+            .attr('values', 180)
+            .attr('result', 'color-out');
+
+        filter.append('feOffset')
+            .attr('in', 'color-out')
+            .attr('dx', 3)
+            .attr('dy', 3)
+            .attr('result', 'the-shadow');
+
+        filter.append('feBlend')
+            .attr('in', 'SourceGraphic')
+            .attr('in2', 'the-shadow')
+            .attr('mode', 'normal');
+    };
+
+    /**
+     * Generates a unique gradient that can be used to color nodes.
+     *
+     * arguments
+     *      svg: svg object the gradient is appended to
+     *      gid: gradient object ID
+     *      type: gradient type; linearGradient, radialGradient
+     *      c0: color to use
+     *      c1: color to use
+     *
+     */
+    var makeGradient = function(svg, gid, type, c0, c1) {
+
+        gid = (gid === undefined) ? 'gradient' : gid;
+        type = (type === undefined) ? 'linearGradient' : type;
+        c0 = (c0 === undefined) ? '#FFFFFF' : c0;
+        c1 = (c1 === undefined) ? '#DD0000' : c1;
+
+        var gradient = svg.append(type)
+            .attr('id', gid)
+            .attr('x1', '0%')
+            .attr('y1', '0%')
+            .attr('x2', '100%')
+            .attr('y2', '100%')
+            .attr('spreadMethod', 'pad');
+
+        gradient.append('stop')
+            .attr('offset', '0%')
+            .attr('stop-color', c0)
+            .attr('stop-opacity', 1);
+
+        gradient.append('stop')
+            .attr('offset', '100%')
+            .attr('stop-color', c1)
+            .attr('stop-opacity', 1);
+    }
+
+    var dragNodes = function() {
+
+    };
+
+    var makeRegularNodes = function() {
+
+        var nodeGroups = svg.selectAll('circle')
+            .data(graph.nodes)
+            .enter()
+            .append('g');
+
+        if (useShadow) {
+
+            nodeGroups
+                .append('circle')
+                .attr('r', function(d) {
+                    if (d.radius === undefined)
+                        return radius - 1;
+
+                    return d.radius - 1;
+                })
+                .style('stroke', 'none')
+                .style('fill', '#000000')
+                .style('filter', 'url(#drop-shadow)');
         }
-}
 
-function initTreeLayout(nodes) {
-        var nextdepths = [0];
-        var previous = [-1];
-        for (i = 0; i < nodes.length; i++) {
-            while (nodes[i].depth > nextdepths.length - 1) {
-                nextdepths.push(0);
-                previous.push(-1);
-            }
-            if (previous[nodes[i].depth] >= 0) {
-                prevNode = getNodeByID(nodes, previous[nodes[i].depth]);
-                prevNode.below = nodes[i].id;
-                nodes[i].above = prevNode.id;
-            }
-            previous[nodes[i].depth] = nodes[i].id;
-            nodes[i].y = nodes[i].depth * 100 + 100;
-            nodes[i].x = nextdepths[nodes[i].depth] * 20 + 100;
-            nextdepths[nodes[i].depth]++;
-        }
-}
+        // Actual colored node. This selects nodes that don't have a symbol key
+        // in their object.
+        nodeGroups
+            .filter(function(d) { return d.symbol === undefined; })
+            .append('circle')
+            .attr('r', function(d) {
+                if (d.radius === undefined)
+                    return radius;
 
+                return d.radius;
+            })
+            ;
 
-//// Generates a unique gradient for a given SVG.
-//
-//// :type svg: string
-//// :type gid: string
-//// :type type: string
-//// :type c0: string
-//// :type c0: string
-//
-var makeGradient = function(svg, gid, type, c0, c1) {
+        // In case symbols are used
+        nodeGroups
+            .filter(function(d) { return d.symbol !== undefined; })
+            .append('path')
+            .attr('d', d3.symbol()
+                .type(function(d) { return d3.symbolSquare; })
+                .size(function(d) {
+                    if (d.radius === undefined)
+                        return radius * 22;
 
-    gid = (gid === undefined) ? 'gradient' : gid;
-    type = (type === undefined) ? 'linearGradient' : type;
-    c0 = (c0 === undefined) ? '#FFFFFF' : c0;
-    c1 = (c1 === undefined) ? '#DD0000' : c1;
+                    return d.radius * 22;
+                }))
+            ;
 
-	var gradient = svg.append(type)
-		.attr('id', gid)
-		.attr('x1', '0%')
-		.attr('y1', '0%')
-		.attr('x2', '100%')
-		.attr('y2', '100%')
-		.attr('spreadMethod', 'pad')
-		;
+        nodeGroups
+            //.append('circle')
+            .attr('shape-rendering', 'auto')
+            .attr('title', function(d) { return d.label; })
+            //.attr('r', function(d) {
+            //    if (d.radius === undefined)
+            //        return radius;
 
-	gradient.append('stop')
-		.attr('offset', '0%')
-		.attr('stop-color', c0)
-		.attr('stop-opacity', 1);
+            //    return d.radius;
+            //})
+            .style('stroke', function(d) {
+                if (useColorRange && useDarkStroke)
+                    return d3.rgb(nodeColor(colorScale(d.colorValue))).darker(1.5);
 
-	gradient.append('stop')
-		.attr('offset', '100%')
-		.attr('stop-color', c1)
-		.attr('stop-opacity', 1);
-}
+                if (d.stroke === undefined)
+                    return nodeStroke;
 
-// key is a list of objects containing a title and color.
-// if gradients are used then each object in key contains a single unique
-// string with no spaces which specifies the color class it belongs to.
-var makeLegend = function(key, opts) {
+                if (d.color && useDarkStroke)
+                    return d3.rgb(d.color).darker(1.5);
 
-    var height = (opts.dimensions === undefined) ? 500 : opts.dimensions[0];
-    var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
-    var gradient = (opts.gradient === undefined) ? false : opts.gradient;
+                return d.stroke;
+            })
+            .style('stroke-width', function(d) {
+                if (d.width === undefined)
+                    return nodeStrokeWidth;
 
-    var svg = d3.select('body').append('svg')
-		.style('font-weight', 'bold')
-		.style('border', '2px solid #222')
-        .attr('width', width)
-        .attr('height', height);
+                return d.width;
+            })
+            .style('fill', function(d) {
+                if (d.gradient) {
 
-	//svg.append('text')
-	//	.attr({
-	//		'text-anchor': 'middle',
-	//		'font-family': 'sans-serif',
-	//		'font-size': '15px',
-	//		'y': '15',
-	//		'x': (width / 2)
-	//	})
-	//	.text('Legend');
+                    makeGradient(
+                        svg, 
+                        d.id + '-grad', 'radialGradient', 
+                        d.gradient[0], 
+                        d.gradient[1]
+                    );
 
-	if (gradient) {
+                    return 'url(#' + (d.id + '-grad') + ')';
+                }
 
-		var gradients = {};
+                if (useColorRange)
+                    return nodeColor(colorScale(d.colorValue));
 
-		for (var i = 0; i < key.length; i++) {
-			gradients[key[i]['class']] = key[i]['color'];
-		}
+                if (d.color)
+                    return d.color;
 
-		for (var gc in gradients)
-			makeGradient(svg, gc, 'radialGradient', '#eee', gradients[gc]);
-	}
-			
-	var key = svg.selectAll('g')
-		.data(key)
-		.enter()
-		.append('g')
-		.attr('class', 'legend');
+                return nodeColor;
+            })
+            // Enables nodes to be dragged and moved
+            .call(d3.drag()
+                .on('start', function(d) {
 
-	key.append('circle')
-		.attr('cx', 10)
-		//.attr('cy', function(d, i){ return (i * 20) + 30; })
-		.attr('cy', function(d, i){ return (i * 20) + 15; })
-		.attr('r', 6)
-		.attr('stroke', '#333')
-		.attr('stroke-width', '1px')
-		.attr('fill', function(d, i){
-			if (gradient)
-				return 'url(#' + d.class + ')';
-			else
-				return d.color;
-			//return colors(keymap[d]);
-			//return colors(d.old_index);
-		});
+                    if (!d3.event.active)
+                        simulation.alphaTarget(0.3).restart();
 
-	key.append('text')
-		.attr('x', 30)
-		//.attr('y', function(d, i){ return (i * 20) + 34; })
-		.attr('y', function(d, i){ return (i * 20) + 18; })
-		.attr('font-family', 'sans-serif')
-		.attr('font-size', '12px')
-		//.text(function(d){ return d.name });
-		.text(function(d){ return d.title; });
-}
-
-var makeBipartiteGraph = function(graph, opts) {
-
-    var height = (opts.height === undefined) ? 600 : opts.height;
-    var width = (opts.width === undefined) ? 600 : opts.width;
-    var linkdist = (opts.linkdist === undefined) ? 20 : opts.linkdist;
-    var distance = (opts.distance === undefined) ? 80 : opts.distance;
-    var charge = (opts.charge === undefined) ? -30 : opts.charge;
-    var use_cut = ((opts.cut !== undefined) && (opts.weights !== undefined));
-    var isTree = (opts.isTree === undefined) ? false : opts.isTree;
-    var classColor = (opts.classColor === undefined) ? {} : opts.classColor;
-    var nope = (opts.nope === undefined) ? false : opts.nope;
-    if (opts.cmin !== undefined && opts.cmax !== undefined)
-        var colors = d3.scale.linear().domain([opts.cmin, opts.cmax]).range(['#FF0000', '#330000']);
-
-    // Nodes have a 'size' field; we can scale their radius based on this.
-    if (opts.size === true) {
-
-        var ns = [];
-		var size = 0;
-
-        for (var i = 0; i < graph.nodes.length; i++)
-            ns.push(graph.nodes[i]['size']);
-
-		if (d3.min(ns) === d3.max(ns))
-			size = function(x) { return x; };
-		else
-			size = d3.scale.linear()
-				.domain([d3.min(ns), d3.max(ns)])
-				.range([8, 17]);
-    }
-
-	console.log(width);
-	console.log(height);
-
-    var svg = d3.select('body').append('svg')
-        .attr('width', width)
-        .attr('height', height);
-    
-    var force = d3.layout.force()
-        .nodes(graph.nodes)
-        .links(graph.edges)
-        .size([width, height])
-        .linkDistance(linkdist)
-        .charge(charge)
-        .distance(80)
-        //.start();
-		;
-
-
-    // If the meights option is true, then we draw edge thickness based on
-    // normalized weight values
-    if (opts.weights === true) {
-
-        var wts = [];
-		var ethick = 0;
-
-        for (var i = 0; i < graph['edges'].length; i++)
-            wts.push(parseFloat(graph['edges'][i]['weight']));
-
-		if (d3.min(wts) === d3.max(wts))
-			ethick = function(x) { return x; };
-		else
-			ethick = d3.scale.linear()
-				.domain([d3.min(wts), d3.max(wts)])
-				.range([1, 8]);
-
-    } else {
-
-      // not really a scale
-      var ethick = d3.scale.linear()
-          .domain([0, 1])
-          .range([4, 4]);
-    }
-	    function tick() {
-    }
-
-    force.on('tick', function() {
-
-		if (!nope) {
-        nodes.attr("transform", function (d) {
-            //collide(d);
-			if (isTree)
-				d.y = d.depth * 50 + 100;
-			else
-				d.x = d.depth * 120 + 100;
-            return ("translate(" + d.x + "," + d.y + ")");
-        });
-		} else {
-
-        nodes.attr('cx', function(d) {return d.x;})
-            .attr('cy', function(d) {return d.y;});
-		}
-
-        //redraw position of every link within the link set:
-        edges.attr("x1", function (d) {
-                    return d.source.x;
+                    d.fx = d.x;
+                    d.fy = d.y;
                 })
-                .attr("y1", function (d) {
-                    return d.source.y;
+                .on('drag', function(d) {
+
+                    d.fx = d3.event.x;
+                    d.fy = d3.event.y;
                 })
-                .attr("x2", function (d) {
-                    return d.target.x;
+                .on('end', function(d) {
+
+                    if (!d3.event.active)
+                        simulation.alphaTarget(0);
+
+                    d.fx = null;
+                    d.fy = null;
+                }));
+
+        return nodeGroups;
+    };
+
+    var makePrettyNodes = function() {
+
+        var nodeGroups = svg.selectAll('circle')
+            .data(graph.nodes)
+            .enter()
+            .append('g');
+
+        // Shadow circle
+        nodeGroups
+            .append('circle')
+            .attr('shape-rendering', 'auto')
+            .attr('r', function(d) {
+                if (d.radius === undefined)
+                    return radius + 2;
+
+                return d.radius + 2;
+            })
+            .style('stroke', 'none')
+            .style('fill', '#000000')
+            .style('filter', function() { 
+                return useShadow ? 'url(#drop-shadow)' : ''; 
+            });
+
+        // Cream colored outline
+        nodeGroups
+            .append('circle')
+            .attr('r', function(d) {
+                if (d.radius === undefined)
+                    return radius + 3;
+
+                return d.radius + 3;
+            })
+            .style('fill', '#FFFDD0')
+            //.style('fill', '#FFF')
+            .style('stroke', 'none');
+
+        // Actual colored node. This selects nodes that don't have a symbol key
+        // in their object.
+        nodeGroups
+            .filter(function(d) { return d.symbol === undefined; })
+            .append('circle')
+            .attr('r', function(d) {
+                if (d.radius === undefined)
+                    return radius;
+
+                return d.radius;
+            })
+            ;
+        // In case symbols are used
+        nodeGroups
+            .filter(function(d) { return d.symbol !== undefined; })
+            .append('path')
+            .attr('d', d3.symbol()
+                .type(function(d) { return d3.symbolSquare; })
+                .size(function(d) {
+                    if (d.radius === undefined)
+                        return radius * 22;
+
+                    return d.radius * 22;
+                }))
+            ;
+
+        nodeGroups
+            .attr('title', function(d) { return d.label; })
+            .style('stroke', function(d) {
+                if (useColorRange)
+                    return d3.color(nodeColor(colorScale(d.colorValue))).darker(1.5);
+
+                if (d.color)
+                    return d3.color(d.color).darker(1.5);
+
+                return d3.color(nodeColor).darker(1.5);
+            })
+            .style('stroke-width', '1px')
+            .style('fill', function(d) {
+                if (useColorRange)
+                    return nodeColor(colorScale(d.colorValue));
+
+                if (d.color)
+                    return d.color;
+
+                return nodeColor;
+            })
+            // Enables nodes to be dragged and moved
+            .call(d3.drag()
+                .on('start', function(d) {
+
+                    if (!d3.event.active)
+                        simulation.alphaTarget(0.3).restart();
+
+                    d.fx = d.x;
+                    d.fy = d.y;
                 })
-                .attr("y2", function (d) {
-                    return d.target.y;
-                });
-        //edges.attr('x1', function(d) {return d.source.x;})
-        //    .attr('y1', function(d) {return d.source.y;})
-        //    .attr('x2', function(d) {return d.target.x;})
-        //    .attr('y2', function(d) {return d.target.y;});
+                .on('drag', function(d) {
 
-        //nodes.attr('cx', function(d) {return d.x;})
-        //    .attr('cy', function(d) {return d.y;});
-    });
+                    d.fx = d3.event.x;
+                    d.fy = d3.event.y;
+                })
+                .on('end', function(d) {
 
-    //var edgeOn = function(d, i) {
+                    if (!d3.event.active)
+                        simulation.alphaTarget(0);
 
-    //    var xpos = parseFloat(d3.select(this).attr('x1'));
-    //    var ypos = parseFloat(d3.select(this).attr('y1'));
+                    d.fx = null;
+                    d.fy = null;
+                }));
 
-    //    d3.select('#edgetip')
-    //        .style('left', (xpos + 30) + 'px')
-    //        .style('top', (ypos + 30) + 'px')
-    //        .select('#cond')
-    //        .text(d.weight);
+        return nodeGroups;
+    };
 
-    //    d3.select('#edgetip').classed('hidden', false);
-    //}
+    var makeEdges = function() {
 
-    //var edgeOut = function(d, i) {
+        var edges = svg.selectAll('path')
+            .data(graph.edges)
+            .enter()
+            .append(edgeCurve ? 'path' : 'line')
+            .attr('shape-rendering', 'auto')
+            .attr('stroke', function(d) {
+                if (d.stroke === undefined)
+                    return edgeColor;
 
-    //    d3.select('#edgetip').classed('hidden', true);
-    //}
+                return d.stroke;
+            })
+            .attr('stroke-width', function(d) {
+                if (d.width === undefined)
+                    return edgeWidth;
 
-    var edges = svg.selectAll('line')
-        .data(graph.edges)
-        .enter()
-        .append('line')
-        .style('stroke', '#aaa')
-        //.on('mouseover', edgeOn)
-        //.on('mouseout', edgeOut)
-        .style('stroke-width', function(d) {
-            return ethick(d.weight);
-        });
+                return d.width;
+            })
+            .attr('fill', 'none');
 
-    var onBox = function(d, i) {
+        return edges;
+    };
 
-        var xpos = parseFloat(d3.select(this).attr('cx'));
-        var ypos = parseFloat(d3.select(this).attr('cy'));
+    /**
+     * Appends text labels (if they exist) to each node.
+     *
+     */
+    var addNodeLabels = function(nodeGroups) {
 
-        d3.select('#tooltip')
-            .style('left', (xpos + 30) + 'px')
-            .style('top', (ypos + 30) + 'px')
-            .select('#name')
-            .text(d.name);
+        nodeGroups.append('text')
+            .attr('stroke', 'none')
+            .attr('fill', '#000000')
+            .style('font-family', font)
+            .style('font-size', fontSize)
+            .style('font-weight', fontWeight)
+            .attr('dx', function(d) {
 
-        d3.select('#tooltip')
-            .select('#group')
-            .text(d.group);
+                if (d.tx)
+                    return d.tx;
 
-        d3.select('#tooltip')
-            .select('#gsid')
-            .text(d.id);
+                return tx;
+            })
+            .attr('dy', function(d) {
 
-        d3.select('#tooltip').classed('hidden', false);
-    }
+                if (d.ty)
+                    return d.ty;
 
-    var outBox = function(d, i) {
+                return ty;
+            })
+            .text(function(d) { return d.label ? d.label : ''; });
+    };
 
-        d3.select('#tooltip').classed('hidden', true);
-    }
+    /**
+     * Generates a color range based on specific color values attached to each
+     * node object.
+     *
+     */
+    var interpolateColors = function() {
 
-    var drag = force.drag().on('dragstart', dragstart);
+        var cmin = d3.min(graph.nodes, function(n) { return n.colorValue; });
+        var cmax = d3.max(graph.nodes, function(n) { return n.colorValue; });
 
-    function dragstart(d) {
-        d3.select(this).classed('fixed', d.fixed = true);
-    }
+        if (Array.isArray(nodeColor) && nodeColor.length >= 2)
+            nodeColor = d3.interpolate(nodeColor[0], nodeColor[1]);
+        else
+            nodeColor = d3.interpolate('#FFF', nodeColor);
 
-    function dblclick(d) {
-        d3.select(this).classed('fixed', d.fixed = false);
-    }
+        colorScale = scaleFxn()
+            .domain([cmin, cmax])
+            .range([0, 1]);
+    };
 
-	var gradients = {};
+    /**
+     * Fixes the node and edge layout into a single, static position. Returns a
+     * structure containing information about the nodes and layout.
+     *
+     */
+    var fixLayout = function(nodes) {
 
-	for (var i = 0; i < graph.nodes.length; i++) {
-		if (classColor) {
-			for (cl in classColor) {
-				gradients[cl] = classColor[cl];
-			}
-		} else {
-			gradients[graph.nodes[i]['class']] = graph.nodes[i]['color'];
-		}
-	}
+        var layerCounts = {};
+        var nodeCounts = {};
+        var countMap = {};
+        var maxCount = 0;
+        var maxRadius = 0;
 
-	for (var gc in gradients)
-		makeGradient(svg, gc, 'radialGradient', '#eee', gradients[gc]);
-        
-    var nodes = svg.selectAll('circle')
-        .data(graph.nodes)
-        .enter()
-        .append('circle')
-        .attr('class', 'node')
-        .attr('r', function(d, i){ 
+        // Determine the largest layer and keep track of nodes per layer, this way
+        // we can determine x-axis positions
+        for (var i = 0; i < nodes.length; i++) {
 
-            if (use_cut && (hasedge[i] === undefined))
-                return 0;
-            if (opts.size === true)
-                return size(d.size);
+            var node = nodes[i];
+
+            if (layerCounts[node.depth] === undefined)
+                layerCounts[node.depth] = 1;
             else
-                return 9;
-        })
-		.attr('stroke', '#333')
-		.attr('stroke-width', '1.5px')
-        .attr('fill', function(d, i) { 
-			return 'url(#' + d.class + ')';
-            //if (opts.ckey !== undefined)
-            //    return colors(d[opts.ckey]);
-            ////return colors(i);
-            //if (d.depth == 2)
-            //    return '#FFCCCC';
-            //if (d.depth == 3)
-            //    return '#FF0000';
-            //if (d.depth == 4)
-            //    return '#8B0000';
-            //if (d.depth == 5)
-            //    return '#330000';
+                layerCounts[node.depth] += 1;
 
-            //return '#8B7D7B';
-        })
-        //.on('mouseover', onBox)
-        //.on('mouseout', outBox)
-        .on('dblclick', dblclick)
-        .call(drag);
-	
-	if (!nope) {
-	if (isTree)
-		initTreeLayout(nodes);
-	else
-		initialize_layout(nodes);
-	}
-	//initTreeLayout(nodes);
-	force.start();
+            if (layerCounts[node.depth] > maxCount)
+                maxCount = layerCounts[node.depth];
 
-    if (opts.grps)
-        return [svg, keysvg];
-    else
-        return svg
+            if (node.radius === undefined) {
+                maxRadius = radius;
+                
+            } else {
+
+                if (node.radius > maxRadius)
+                    maxRadius = node.radius;
+            }
+
+            countMap[node.id] = layerCounts[node.depth];
+            nodeCounts[node.depth] = 1;
+        }
+
+        // Cushioning between nodes in the same layer
+        //var nodePadding = 10;
+        //var diameter = maxRadius * 2;
+
+        for (var i = 0; i < nodes.length; i++)
+            nodeCounts[nodes[i].depth] += 1;
+
+        return {
+            maxRadius: maxRadius,
+            maxCount: maxCount,
+            nodeCounts: nodeCounts,
+            countMap: countMap
+        };
+    };
+
+    var tick = function() {
+
+        // Forces a hierarchical structure
+        //d3Nodes.attr('transform', function(d) {
+
+        //    var layerChunk = layerSize / (fixedStruct.nodeCounts[d.depth]);
+
+        //    // Forces even spacing between nodes in a layer otherwise the
+        //    // nodes are positioned (and move) according to the force layout
+        //    if (fixed)
+        //        d.x = layerChunk * fixedStruct.countMap[d.id];
+
+        //    d.y = d.depth * verticalSpacing + 100;
+
+        //    return 'translate(' + d.x + ',' + d.y + ')';
+        //});
+
+        d3Nodes
+            .attr('transform', function(d) { return 'translate(' + d.x + ',' + d.y + ')'; })
+            .attr('cx', function(d) { return d.x; })
+            .attr('cy', function(d) { return d.x; });
+
+        // Here for posterity. If I ever need to take the nodes out of their
+        // groups they must be positioned using cx/cy.
+        //d3Nodes
+        //    .attr('cx', function(d) { return d.x; })
+        //    .attr('cy', function(d) { return d.y; });
+
+        d3Edges
+            .attr('x1', function(d) { return d.source.x; })
+            .attr('y1', function(d) { return d.source.y; })
+            .attr('x2', function(d) { return d.target.x; })
+            .attr('y2', function(d) { return d.target.y; })
+            //.attr('d', function(d) {
+            //    return line([{x: d.source.x, y: d.source.y}, {x: d.target.x, y: d.target.y}]);
+            //})
+            .attr('d', function(d) {
+                return 'M' + d.source.x + ',' + d.source.y
+                     + 'C' + (d.target.x) + ',' + (d.source.y + 50)
+                     + ' ' + (d.target.x) + ',' + (d.target.y)
+                     + ' ' + d.target.x + ',' + d.target.y;
+            });
+    };
+
+    /** public **/
+
+    exports.draw = function() {
+
+        svg = d3.select('body')
+            .append('svg')
+            .attr('height', height)
+            .attr('width', width);
+
+        if (svgLabel) {
+
+            svg.append('text')
+                .attr('x', 10)
+                .attr('y', 15)
+                .style('font-family', 'sans-serif')
+                .style('font-size', '15px')
+                .style('font-weight', 'bold')
+                .text(svgLabel);
+        }
+
+        simulation = d3.forceSimulation()
+            .force('charge', d3.forceManyBody().strength(charge))
+            //
+            // This lets us link nodes using their identifiers and not array
+            // indices
+            .force('link', 
+                   d3.forceLink().id(function(d) { 
+                       return d.id;
+                   }).distance(distance))
+            //
+            .force('x', d3.forceX(width / 2))
+            .force('y', d3.forceY(height / 2));
+
+        if (useColorRange)
+            interpolateColors();
+
+        if (useShadow)
+            makeDropShadow();
+
+        d3Edges = makeEdges();
+
+        if (prettifyNodes)
+            d3Nodes = makePrettyNodes();
+        else
+            d3Nodes = makeRegularNodes();
+
+        addNodeLabels(d3Nodes);
+
+        //fixedStruct = fixLayout(graph.nodes);
+
+        simulation.on('tick', tick);
+        simulation.nodes(graph.nodes);
+        simulation.force('link').links(graph.edges);
+
+        //fixLayout(graph.nodes);
+    };
+
+    /**
+     * Setters and getters.
+     */
+
+    exports.graph = function(_) {
+        if (!arguments.length) return graph;
+        graph = _;
+        return exports;
+    };
+
+    exports.width = function(_) {
+        if (!arguments.length) return width;
+        width = +_;
+        return exports;
+    };
+
+    exports.height = function(_) {
+        if (!arguments.length) return height;
+        height = +_;
+        return exports;
+    };
+
+    exports.radius = function(_) {
+        if (!arguments.length) return radius;
+        radius = +_;
+        return exports;
+    };
+
+    exports.charge = function(_) {
+        if (!arguments.length) return charge;
+        charge = +_;
+        return exports;
+    };
+
+    exports.distance = function(_) {
+        if (!arguments.length) return distance;
+        distance = +_;
+        return exports;
+    };
+
+    exports.fixed = function(_) {
+        if (!arguments.length) return fixed;
+        fixed = _;
+        return exports;
+    };
+
+    exports.layerSize = function(_) {
+        if (!arguments.length) return layerSize;
+        layerSize = +_;
+        return exports;
+    };
+
+    exports.verticalSpacing = function(_) {
+        if (!arguments.length) return verticalSpacing;
+        verticalSpacing = +_;
+        return exports;
+    };
+
+    exports.nodeColor = function(_) {
+        if (!arguments.length) return nodeColor;
+        nodeColor = _;
+        return exports;
+    };
+
+    exports.nodeOpacity = function(_) {
+        if (!arguments.length) return nodeOpacity;
+        nodeOpacity = +_;
+        return exports;
+    };
+
+    exports.scaleFxn = function(_) {
+        if (!arguments.length) return scaleFxn;
+        scaleFxn = _;
+        return exports;
+    };
+
+    exports.useColorRange = function(_) {
+        if (!arguments.length) return useColorRange;
+        useColorRange = _;
+        return exports;
+    };
+
+    exports.gradient = function(_) {
+        if (!arguments.length) return gradient;
+        gradient = _;
+        return exports;
+    };
+
+    exports.useDarkStroke = function(_) {
+        if (!arguments.length) return useDarkStroke;
+        useDarkStroke = _;
+        return exports;
+    };
+
+    exports.useShadow = function(_) {
+        if (!arguments.length) return useShadow;
+        useShadow = _;
+        return exports;
+    };
+
+    exports.nodeStroke = function(_) {
+        if (!arguments.length) return nodeStroke;
+        nodeStroke = _;
+        return exports;
+    };
+
+    exports.nodeStrokeWidth = function(_) {
+        if (!arguments.length) return nodeStrokeWidth;
+        nodeStrokeWidth = +_;
+        return exports;
+    };
+
+    exports.prettifyNodes = function(_) {
+        if (!arguments.length) return prettifyNodes;
+        prettifyNodes = _;
+        return exports;
+    };
+
+    exports.edgeCurve = function(_) {
+        if (!arguments.length) return edgeCurve;
+        edgeCurve = _;
+        return exports;
+    };
+
+    exports.edgeColor = function(_) {
+        if (!arguments.length) return edgeColor;
+        edgeColor = _;
+        return exports;
+    };
+
+    exports.edgeOpacity = function(_) {
+        if (!arguments.length) return edgeOpacity;
+        edgeOpacity = +_;
+        return exports;
+    };
+
+    exports.edgeStroke = function(_) {
+        if (!arguments.length) return edgeStroke;
+        edgeStroke = _;
+        return exports;
+    };
+
+    exports.edgeWidth = function(_) {
+        if (!arguments.length) return edgeWidth;
+        edgeWidth = +_;
+        return exports;
+    };
+
+    exports.tx = function(_) {
+        if (!arguments.length) return tx;
+        tx = +_;
+        return exports;
+    };
+
+    exports.ty = function(_) {
+        if (!arguments.length) return ty;
+        ty = +_;
+        return exports;
+    };
+
+    exports.font = function(_) {
+        if (!arguments.length) return font;
+        font = _;
+        return exports;
+    };
+
+    exports.fontSize = function(_) {
+        if (!arguments.length) return fontSize;
+        fontSize = _;
+        return exports;
+    };
+
+    exports.fontWeight = function(_) {
+        if (!arguments.length) return fontWeight;
+        fontWeight = _;
+        return exports;
+    };
+
+    exports.svgLabel = function(_) {
+        if (!arguments.length) return svgLabel;
+        svgLabel = _;
+        return exports;
+    };
+
+    return exports;
 };
 
-//// graph = {nodes: [...], edges: [...]}
-//
-//// opts :
-////    dimensions : [int, int]; height and width of the SVG 
-////    weights : boolean; indicates edges have weights
-////    size : boolean; indicates nodes have sizes
-////    cut : float; if edges have weights, all edges whose weight is below
-////        the value given by cut will not be drawn
-////    ntext : 
-////    ckey : 
-////    cmin : 
-////    cmax : 
-////    
-//
-var makeGraph = function(graph, opts) {
-
-    var height = (opts.dimensions === undefined) ? 600 : opts.dimensions[0];
-    var width = (opts.dimensions === undefined) ? 600 : opts.dimensions[1];
-    var linkdist = (opts.linkdist === undefined) ? 20 : opts.linkdist;
-    var charge = (opts.charge === undefined) ? -30 : opts.charge;
-    var use_cut = ((opts.cut !== undefined) && (opts.weights !== undefined));
-    if (opts.cmin !== undefined && opts.cmax !== undefined)
-        var colors = d3.scale.linear().domain([opts.cmin, opts.cmax]).range(['#FF0000', '#330000']);
-    //var colors = d3.scale.category20();
-    //var colors = d3.scale.linear().domain([opts.min, opts.max]).range(['#000080', '#F10800']);
-
-    // If a cut off is specified, remove all edges that fall below the cutoff
-    if (use_cut) {
-
-        var survivors = [];
-
-        for (var i = 0; i < graph.edges.length; i++)
-            if (graph.edges[i]['weight'] > opts.cut)
-                survivors.push(graph.edges[i]);
-
-        graph.edges = survivors;
-
-        var hasedge = {};
-
-        // Remove nodes that have no edges--well mark them so they aren't drawn later
-        for (var i = 0; i < graph.edges.length; i++) {
-
-            hasedge[graph.edges[i]['source']] = true;
-            hasedge[graph.edges[i]['target']] = true;
-        }
-    }
-
-    // Nodes have a 'size' field; we can scale their radius based on this.
-    if (opts.size === true) {
-
-        var ns = [];
-
-        for (var i = 0; i < graph.nodes.length; i++)
-            ns.push(graph.nodes[i]['size']);
-
-        var size = d3.scale.linear()
-            .domain([d3.min(ns), d3.max(ns)])
-            .range([8, 17]);
-    }
-
-    var svg = d3.select('#dsvg').append('svg')
-        .attr('width', width)
-        .attr('height', height);
-    
-    var force = d3.layout.force()
-        .nodes(graph.nodes)
-        .links(graph.edges)
-        .size([width, height])
-        .linkDistance(linkdist)
-        .charge(charge)
-        .distance(80)
-        .start();
-
-    if (opts.grps === true) {
-
-        var uniq = function (a) {
-            var seen = {};
-            return a.filter(function(item) {
-                return seen.hasOwnProperty(item) ? false : (seen[item] = true);
-            });
-        };
-
-        var keysvg = d3.select('#dsvg').append('svg')
-            .style('font-weight', 'bold')
-            .attr('width', 300)//width)
-            .attr('height', 250);//height);
-
-        // Find all possible groups
-        var grps = [];
-
-        for (var i = 0; i < graph['nodes'].length; i++) {
-            grps.push(graph['nodes'][i]['grp'])
-        }
-
-        grps = uniq(grps).sort();
-        console.log(grps);
-
-        keysvg.append('text')
-            .attr({
-                'text-anchor': 'middle',
-                'font-family': 'sans-serif',
-                'font-size': '15px',
-                'y': '15',
-                'x': 85//(width / 2)
-            })
-            .text('Geneset Group Legend');
-                
-        var key = keysvg.selectAll('g')
-            //.data(json.nodes)
-            //.data(keynodes)
-            .data(grps)
-            .enter()
-            .append('g')
-            .attr('class', 'legend');
-
-        key.append('circle')
-            .attr('cx', 10)
-            .attr('cy', function(d, i){ return (i * 20) + 30; })
-            .attr('r', 6)
-            .attr('fill', function(d, i){
-                return colors(grps.indexOf(d));
-                //return colors(keymap[d]);
-                //return colors(d.old_index);
-            });
-        key.append('text')
-            .attr('x', 30)
-            .attr('y', function(d, i){ return (i * 20) + 35; })
-            .attr('font-family', 'sans-serif')
-            .attr('font-size', '12px')
-            //.text(function(d){ return d.name });
-            .text(function(d){ return d; });
-    }
-
-    // If the meights option is true, then we draw edge thickness based on
-    // normalized weight values
-    if (opts.weights === true) {
-
-        var wts = [];
-
-        for (var i = 0; i < graph['edges'].length; i++)
-            wts.push(parseFloat(graph['edges'][i]['weight']));
-
-        var ethick = d3.scale.linear()
-            .domain([d3.min(wts), d3.max(wts)])
-            .range([1, 8]);
-
-    } else {
-
-        // not really a scale
-        var ethick = d3.scale.linear()
-            .domain([0, 1])
-            .range([4, 4]);
-    }
-
-    force.on('tick', function() {
-
-        edges.attr('x1', function(d) {return d.source.x;})
-            .attr('y1', function(d) {return d.source.y;})
-            .attr('x2', function(d) {return d.target.x;})
-            .attr('y2', function(d) {return d.target.y;});
-
-        nodes.attr('cx', function(d) {return d.x;})
-            .attr('cy', function(d) {return d.y;});
-    });
-
-    var edgeOn = function(d, i) {
-
-        var xpos = parseFloat(d3.select(this).attr('x1'));
-        var ypos = parseFloat(d3.select(this).attr('y1'));
-
-        d3.select('#edgetip')
-            .style('left', (xpos + 30) + 'px')
-            .style('top', (ypos + 30) + 'px')
-            .select('#cond')
-            .text(d.weight);
-
-        d3.select('#edgetip').classed('hidden', false);
-    }
-
-    var edgeOut = function(d, i) {
-
-        d3.select('#edgetip').classed('hidden', true);
-    }
-
-    var edges = svg.selectAll('line')
-        .data(graph.edges)
-        .enter()
-        .append('line')
-        .style('stroke', '#ccc')
-        .on('mouseover', edgeOn)
-        .on('mouseout', edgeOut)
-        .style('stroke-width', function(d) {
-            return ethick(d.weight);
-        });
-
-    var onBox = function(d, i) {
-
-        var xpos = parseFloat(d3.select(this).attr('cx'));
-        var ypos = parseFloat(d3.select(this).attr('cy'));
-
-        d3.select('#tooltip')
-            .style('left', (xpos + 30) + 'px')
-            .style('top', (ypos + 30) + 'px')
-            .select('#name')
-            .text(d.name);
-
-        d3.select('#tooltip')
-            .select('#group')
-            .text(d.group);
-
-        d3.select('#tooltip')
-            .select('#gsid')
-            .text(d.id);
-
-        d3.select('#tooltip').classed('hidden', false);
-    }
-
-    var outBox = function(d, i) {
-
-        d3.select('#tooltip').classed('hidden', true);
-    }
-
-    var drag = force.drag().on('dragstart', dragstart);
-
-    function dragstart(d) {
-        d3.select(this).classed('fixed', d.fixed = true);
-    }
-
-    function dblclick(d) {
-        d3.select(this).classed('fixed', d.fixed = false);
-    }
-        
-    var nodes = svg.selectAll('circle')
-        .data(graph.nodes)
-        .enter()
-        .append('circle')
-        .attr('class', 'node')
-        .attr('r', function(d, i){ 
-
-            if (use_cut && (hasedge[i] === undefined))
-                return 0;
-            if (opts.size === true)
-                return size(d.size);
-            else
-                return 9;
-        })
-        .attr('fill', function(d, i) { 
-            if (opts.ckey !== undefined)
-                return colors(d[opts.ckey]);
-            //return colors(i);
-            if (d.depth == 2)
-                return '#FFCCCC';
-            if (d.depth == 3)
-                return '#FF0000';
-            if (d.depth == 4)
-                return '#8B0000';
-            if (d.depth == 5)
-                return '#330000';
-
-            return '#8B7D7B';
-        })
-        .on('mouseover', onBox)
-        .on('mouseout', outBox)
-        .on('dblclick', dblclick)
-        .call(drag);
-
-    if (opts.grps)
-        return [svg, keysvg];
-    else
-        return svg
-}

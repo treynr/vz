@@ -30,6 +30,7 @@ var hierarchy = function() {
 
     var exports = {},
         svg = null,
+        svgLabel = '',
         // d3js Force directed simulation
         simulation = null,
         // Interpolated color scale used for coloring nodes
@@ -71,6 +72,8 @@ var hierarchy = function() {
         useColorRange = false,
         // Use a gradient for node colors
         gradient = [],
+        // Textures via textures.js
+        textures = [],
         // Use a darkened version of the node color as its stroke
         useDarkStroke = false,
         // Apply a drop shadow to the nodes
@@ -261,6 +264,9 @@ var hierarchy = function() {
                 return d.width;
             })
             .style('fill', function(d) {
+                if (textures.length >= 1 && d.texture)
+                    return d.texture.url();
+
                 if (d.gradient) {
 
                     makeGradient(
@@ -383,6 +389,9 @@ var hierarchy = function() {
             })
             .style('stroke-width', '1px')
             .style('fill', function(d) {
+                if (textures.length >= 1 && d.texture)
+                    return d.texture.url();
+
                 if (useColorRange)
                     return nodeColor(colorScale(d.colorValue));
 
@@ -558,7 +567,10 @@ var hierarchy = function() {
             if (fixed)
                 d.x = layerChunk * fixedStruct.countMap[d.id];
 
-            d.y = d.depth * verticalSpacing + 100;
+            d.y = d.depth * verticalSpacing + 5; // + 100;
+
+            if (d.ax && d.ay)
+                return 'translate(' + d.x + d.ax + ',' + d.y + d.ay + ')';
 
             return 'translate(' + d.x + ',' + d.y + ')';
         });
@@ -594,6 +606,21 @@ var hierarchy = function() {
             .attr('height', height)
             .attr('width', width);
 
+        if (svgLabel) {
+
+            svg.append('text')
+                .attr('x', 10)
+                .attr('y', 15)
+                .style('font-family', 'sans-serif')
+                .style('font-size', '15px')
+                .style('font-weight', 'bold')
+                .text(svgLabel);
+        }
+
+        if (textures)
+            for (var i = 0; i < textures.length; i++)
+                svg.call(textures[i]);
+
         simulation = d3.forceSimulation()
             .force('charge', d3.forceManyBody().strength(charge))
             //
@@ -605,7 +632,7 @@ var hierarchy = function() {
                    }).distance(distance))
             //
             .force('x', d3.forceX(width / 2))
-            .force('y', d3.forceY(height / 2));
+            .force('y', d3.forceY());
 
         if (useColorRange)
             interpolateColors();
@@ -624,11 +651,12 @@ var hierarchy = function() {
 
         fixedStruct = fixLayout(graph.nodes);
 
-        simulation.on('tick', tick);
         simulation.nodes(graph.nodes);
         simulation.force('link').links(graph.edges);
+        simulation.on('tick', tick);
 
         //fixLayout(graph.nodes);
+        return svg;
     };
 
     /**
@@ -809,97 +837,18 @@ var hierarchy = function() {
         return exports;
     };
 
+    exports.svgLabel = function(_) {
+        if (!arguments.length) return svgLabel;
+        svgLabel = _;
+        return exports;
+    };
+
+    exports.textures = function(_) {
+        if (!arguments.length) return textures;
+        textures = _;
+        return exports;
+    };
+
     return exports;
-};
-
-
-var legend2 = function(data, opts) {
-
-    opts = validateLegendOptions(opts);
-
-    var legend = d3.select('body').append('svg')
-        .attr('width', opts.width)
-        .attr('height', opts.height)
-        .selectAll('g')
-        .data(data)
-        .enter().append('g')
-        .attr("transform", function(d, i) { 
-            return "translate(40," + (i + 1) * opts.keyPadding + ")"; 
-        });
-
-    legend.append('rect')
-        .attr('width', opts.keyWidth)
-        .attr('height', opts.keyHeight)
-		.attr('stroke', opts.stroke)
-		.attr('stroke-width', opts.strokeWidth)
-        .attr('shape-rendering', 'crispEdges')
-        .style('fill-opacity', opts.opacity)
-        .style('fill', function(d, i) {
-            if (d.color === undefined)
-                return opts.colors[i];
-
-            return d.color;
-        });
-
-    legend.append("text")
-        .attr("x", opts.textX)
-        .attr("y", opts.textY)
-        .attr("dy", ".35em")
-        .attr('font-family', opts.font)
-        .attr('font-size', opts.fontSize)
-        .attr('font-weight', opts.fontWeight)
-        .text(function(d) { 
-			return d.name;
-        });
-};
-
-/**
- *      height: int, the height of the SVG in pixels
- *      width: int, the width of the SVG in pixels
- *      keyHeight: int, the height of the color box in pixels
- *      keyWidth: int, the width of the color box in pixels
- *      keyPadding: int, padding between color boxes
- *      title: string, legend title
- *      colors: an array of color strings, ensure this is the same size as the
- *          number of data points.
- *      margin: an object of margin values
- *      opacity: float, the opacity of the fill colors
- *      stroke: string, color used to outline the visualization
- *      strokeWidth: string, size in pixels of the stroke outline
- *      font: string, font to use for the legend text
- *      fontSize: string, font size in pixels
- *      fontWeight: string, font weight
- *      textX: int, x coordinate position of each key/color box text
- *      textY: int, y coordinate position of each key/color box text
- */
-var validateLegendOptions = function(opts) {
-
-    opts.height = opts.height || 500;
-    opts.width = opts.width || 800;
-    opts.keyHeight = opts.keyHeight || 20;
-    opts.keyWidth = opts.keyWidth || 20;
-    opts.keyPadding = opts.keyPadding || 30;
-    opts.title = opts.title || '';
-    opts.margin = (opts.margin === undefined) ? {} : opts.margin;
-
-    opts.margin.top = opts.margin.top || 10;
-    opts.margin.bottom = opts.margin.bottom || 30;
-    opts.margin.right = opts.margin.right || 30;
-    opts.margin.left = opts.margin.left || 30;
-
-    // These are all the visualization styling options and heavily dependent on
-    // the visualization type
-    opts.colors = (opts.colors === undefined) ? d3.schemeSet3 : opts.colors;
-    opts.opacity = opts.opacity || 1.0;
-    opts.stroke = (opts.stroke === undefined) ? '#000' : opts.stroke;
-    opts.strokeWidth = (opts.strokeWidth === undefined) ? '1px' : 
-                       opts.strokeWidth;
-    opts.font = opts.font || 'sans-serif';
-    opts.fontSize = opts.fontSize || '15px';
-    opts.fontWeight = opts.fontWeight || 'normal';
-    opts.textX = opts.textX || (opts.keyWidth + 2);
-    opts.textY = opts.textY || (opts.keyHeight / 2 - 2);
-
-    return opts;
 };
 

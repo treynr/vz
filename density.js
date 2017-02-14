@@ -240,7 +240,12 @@ var DensityPlot = (function() {
 				.datum(kde(data[i]))
 				.attr("class", "area")
 				.attr("d", area)
-				.style('fill', function() { return colors[i]; })
+				.style('fill', function() { 
+                    if (d.color)
+                        return d.color;
+
+                    return colors[i]; 
+                })
 				.style('opacity', 0.5)
 				;
 

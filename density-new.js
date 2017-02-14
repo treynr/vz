@@ -56,7 +56,8 @@ var density = function() {
         var dataValues = [].concat.apply([], getDataValues());
 
         //var kde = kernelDensity(KERNELS.epanechnikov(0.5), xscale.ticks(50));
-        var kde = kernelDensity(KERNELS.epanechnikov(kernelScale), xscale.ticks(50));
+        //var kde = kernelDensity(KERNELS.epanechnikov(kernelScale), xscale.ticks(50));
+        var kde = kernelDensity(KERNELS.triweight(kernelScale), xscale.ticks(50));
 
         //dataValues = kernelDensity(dataValues)
         //    .map(function(e, i, a) { return e[1]; });

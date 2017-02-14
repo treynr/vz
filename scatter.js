@@ -191,6 +191,9 @@ var scatter = function(data, xlabel, ylabel, title, grps, opts) {
         .on('mouseout', tip.hide)
         .attr('fill', function(d, i) {
 
+            if (opts.color)
+                return opts.color;
+
             if (grps.length === 1) {
                 return colors(single);
             }

@@ -10,9 +10,9 @@
  * Each key object has the following structure:
  *  key {
  *      text:       [required] text to display for the key
- *      symbol:     [required] symbol used to represent the key
  *      color:      [req//opt] key color, required if gradient is not used
  *      gradient:   [req//opt] key gradient color, required if color is not used
+ *      symbol:     [optional] symbol used to represent the key
  *      size:       [optional] size of the drawn key
  *      tx:         [optional] x-axis offset for text placement
  *      ty:         [optional] y-axis offset for text placement
@@ -30,13 +30,19 @@ var legend = function() {
         font = 'sans-serif',
         fontSize = '12px',
         fontWeight = 'normal',
-        tx = null,
-        ty = null,
-        keySize = 80,
+        tx = 15,
+        ty = 5,
+        keySize = 150,
         // Vertical padding in-between key objects
         keyPad = 30,
         stroke = '#000000',
-        strokeWidth = '1px'
+        strokeWidth = 1,
+        useRect = false,
+        rectWidth = 30,
+        rectHeight = 30,
+        // Use a d3 symbol for colored keys
+        symbol = null,
+        textures = null
         ;
 
     var makeGradient = function(svg, gid, type, c0, c1) {
@@ -106,20 +112,45 @@ var legend = function() {
                 return 'translate(40,' + (i + 1) * keyPad + ')'; 
             });
 
-        legend.append('path')
-            .attr('d', d3.symbol()
-                .type(function(d) { return d.symbol; })
-                .size(function(d) {
-                    if (d.size === undefined)
-                        return keySize;
+        if (textures)
+            for (var i = 0; i < textures.length; i++)
+                legend.call(textures[i]);
 
-                    return d.size;
-                }))
-            .attr('stroke', stroke)
+        if (useRect) {
+
+            var legendKey = legend.append('rect')
+                .attr('width', rectWidth)
+                .attr('height', rectHeight);
+
+        } else { 
+
+            var legendKey = legend.append('path')
+                .attr('d', d3.symbol()
+                    .type(function(d) { 
+                        if (d.symbol)
+                            return d.symbol;
+                        if (symbol)
+                            return symbol;
+
+                        return d3.symbolSquare;
+                    })
+                    .size(function(d) {
+                        if (d.size === undefined)
+                            return keySize;
+
+                        return d.size;
+                    })
+                );
+        }
+
+        legendKey.attr('stroke', stroke)
             .attr('stroke-width', strokeWidth)
             .attr('shape-rendering', 'auto')
             //.style('fill-opacity', opts.opacity)
             .style('fill', function(d, i) {
+
+                if (textures && d.texture)
+                    return d.texture.url();
 
                 if (d.gradient) {
 
@@ -152,8 +183,24 @@ var legend = function() {
             });
 
         legend.append("text")
-            .attr('dx', function(d) { return d.tx ? d.tx : tx; })
-            .attr('dy', function(d) { return d.ty ? d.ty : ty; })
+            .attr('dx', function(d) { 
+                if (useRect && d.tx)
+                    return rectWidth + 5 + d.tx;
+
+                if (useRect)
+                    return rectWidth + 5;
+
+                return d.tx ? d.tx : tx; 
+            })
+            .attr('dy', function(d) { 
+                if (useRect && d.ty)
+                    return (rectHeight / 2) + d.ty;
+
+                if (useRect)
+                    return rectHeight / 2;
+
+                return d.ty ? d.ty : ty; 
+            })
             .attr('font-family', font)
             .attr('font-size', fontSize)
             .attr('font-weight', fontWeight)
@@ -210,7 +257,7 @@ var legend = function() {
 
     exports.strokeWidth = function(_) {
         if (!arguments.length) return strokeWidth;
-        strokeWidth = _;
+        strokeWidth = +_;
         return exports;
     };
 
@@ -226,11 +273,35 @@ var legend = function() {
         return exports;
     };
 
-    //exports.font = function(_) {
-    //    if (!arguments.length) return font;
-    //    font = _;
-    //    return exports;
-    //};
+    exports.useRect = function(_) {
+        if (!arguments.length) return useRect;
+        useRect = _;
+        return exports;
+    };
+
+    exports.rectWidth = function(_) {
+        if (!arguments.length) return rectWidth;
+        rectWidth = _;
+        return exports;
+    };
+
+    exports.rectHeight = function(_) {
+        if (!arguments.length) return rectHeight;
+        rectHeight = _;
+        return exports;
+    };
+
+    exports.symbol = function(_) {
+        if (!arguments.length) return symbol;
+        symbol = _;
+        return exports;
+    };
+
+    exports.textures = function(_) {
+        if (!arguments.length) return textures;
+        textures = _;
+        return exports;
+    };
 
     return exports;
 }
