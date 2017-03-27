@@ -77,11 +77,11 @@ var graph = function() {
         // Node stroke color
         nodeStroke = '#000',
         // Node stroke thickness
-        nodeStrokeWidth = '1px',
+        nodeStrokeWidth = 1,
         // Use an alternate, pretty node style
         prettifyNodes = false,
         // Curved or straight edges
-        edgeCurve = true,
+        edgeCurve = false,
         // Edge color
         edgeColor = '#1d91c0',
         // Edge color opacity
@@ -467,7 +467,7 @@ var graph = function() {
 
                 return ty;
             })
-            .text(function(d) { return d.label ? d.label : ''; });
+            .text(function(d) { console.log(d); return d.label ? d.label : ''; });
     };
 
     /**
@@ -578,15 +578,18 @@ var graph = function() {
             .attr('y1', function(d) { return d.source.y; })
             .attr('x2', function(d) { return d.target.x; })
             .attr('y2', function(d) { return d.target.y; })
-            //.attr('d', function(d) {
-            //    return line([{x: d.source.x, y: d.source.y}, {x: d.target.x, y: d.target.y}]);
-            //})
+            /*
+            .attr('d', function(d) {
+                return line([{x: d.source.x, y: d.source.y}, {x: d.target.x, y: d.target.y}]);
+            })
+            */
             .attr('d', function(d) {
                 return 'M' + d.source.x + ',' + d.source.y
                      + 'C' + (d.target.x) + ',' + (d.source.y + 50)
                      + ' ' + (d.target.x) + ',' + (d.target.y)
                      + ' ' + d.target.x + ',' + d.target.y;
-            });
+            })
+            ;
     };
 
     /** public **/
@@ -642,6 +645,7 @@ var graph = function() {
         simulation.on('tick', tick);
         simulation.nodes(graph.nodes);
         simulation.force('link').links(graph.edges);
+        //simulation.force('link', d3.forceLink(graph.edges).strength(1));
 
         //fixLayout(graph.nodes);
     };

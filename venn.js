@@ -490,8 +490,8 @@
         parameters = parameters || {};
 
         var colours = d3.scale.category10(),
-            //circleFillColours = parameters.circleFillColours || colours,
-            circleFillColours = function(i){if (i) return 'steelblue'; else return 'green';},
+            circleFillColours = parameters.circleFillColours || colours,
+            //circleFillColours = function(i){if (i) return 'steelblue'; else return 'green';},
             //circleStrokeColours = parameters.circleStrokeColours || circleFillColours,
             circleStrokeColours = function(i) {return 'black';},
             circleStrokeWidth = parameters.circleStrokeWidth || function(i) { return 1; },

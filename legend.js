@@ -38,8 +38,10 @@ var legend = function() {
         stroke = '#000000',
         strokeWidth = 1,
         useRect = false,
+        useLine = false,
         rectWidth = 30,
         rectHeight = 30,
+        fillOpacity = 1.0,
         // Use a d3 symbol for colored keys
         symbol = null,
         textures = null
@@ -122,6 +124,11 @@ var legend = function() {
                 .attr('width', rectWidth)
                 .attr('height', rectHeight);
 
+        } else if (useLine) {
+
+            var legendKey = legend.append('path')
+                .attr('d', 'M0,0 L35,0');
+
         } else { 
 
             var legendKey = legend.append('path')
@@ -143,10 +150,16 @@ var legend = function() {
                 );
         }
 
-        legendKey.attr('stroke', stroke)
+        legendKey
+            .attr('stroke', function(d) {
+                if (useLine)
+                    return d.color;
+
+                return stroke;
+            })
             .attr('stroke-width', strokeWidth)
             .attr('shape-rendering', 'auto')
-            //.style('fill-opacity', opts.opacity)
+            .style('fill-opacity', fillOpacity)
             .style('fill', function(d, i) {
 
                 if (textures && d.texture)
@@ -279,6 +292,12 @@ var legend = function() {
         return exports;
     };
 
+    exports.useLine = function(_) {
+        if (!arguments.length) return useLine;
+        useLine = _;
+        return exports;
+    };
+
     exports.rectWidth = function(_) {
         if (!arguments.length) return rectWidth;
         rectWidth = _;
@@ -294,6 +313,12 @@ var legend = function() {
     exports.symbol = function(_) {
         if (!arguments.length) return symbol;
         symbol = _;
+        return exports;
+    };
+
+    exports.fillOpacity = function(_) {
+        if (!arguments.length) return fillOpacity;
+        fillOpacity = _;
         return exports;
     };
 

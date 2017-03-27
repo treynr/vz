@@ -8,425 +8,368 @@
 //   }
 //
 
-//// data [{
-//      x : [str]   // array of dates
-//      y : [num]   // array of values
-//      grp : str   // some group id that will be shown
-//  }]
-//// data is an array of objects with two keys x and y (the values for the 
-//// x/y axes). Each key is an array (either dates as strings, of values) and 
-//// both arrays should be the same length.
-//
-function makeLineTS(data, opts) {
+var line = function() {
 
-    var margin = {top: 8, right: 10, bottom: 2, left: 10};
-    var height = (opts.dimensions === undefined) ? 70 : opts.dimensions[0];
-    var width = (opts.dimensions === undefined) ? 800 : opts.dimensions[1];
-    width -= margin.left - margin.right;
-    height -= margin.top - margin.bottom;
+    var exports = {},
+        // Line plot input data
+        data = null,
+        // SVG object for this plot
+        svg = null,
+        svgLabel = '',
+        // SVG width
+        width = 800,
+        // SVG height
+        height = 500,
+        // Margin object
+        margin = {top: 10, right: 30, bottom: 50, left: 50},
+        // Line width
+        lineWidth = 2,
+        // Line color
+        //lineColor = '#98ABC5',
+        lineColors = d3.scaleOrdinal(d3.schemeCategory10),
+        // If nodes are drawn, the node fill color
+        nodeColor = '#F0F0F0',
+        //nodeColors = d3.scaleCategory10(),
+        // If nodes are drawn, the node stroke color
+        //nodeStroke = '#98ABC5',
+        nodeStrokes = d3.scaleOrdinal(d3.schemeCategory10),
+        // If nodes are drawn, the width of the node's stroke
+        nodeStrokeWidth = 2,
+        // If nodes are drawn, the node radius
+        nodeRadius = 5,
+        // Draws nodes at each X-axis point if true
+        useNodes = false,
+        // Boolean to draw or hide the outer x-axis ticks
+        outerTicks = false,
+        // Axis text size
+        fontSize = '11px',
+        // X-axis text
+        xText = '',
+        // Y-axis text
+        yText = ''
+        // Y-axis padding
+        yAxisPad = 35,
+        // Scale for the x-axis
+        xScale = null,
+        // Scale for the y-axis
+        yScale = null,
+        // Start the x-scale at zero if true, otherwise use min()
+        xScaleZero = null,
+        // Start the y-scale at zero if true, otherwise use min()
+        yScaleZero = null,
+        // Format string for y-axis labels
+        yFormat = ''
+        // y-axis tick values
+        yTickValues = null
+        ;
 
-    var parseDate = d3.time.format("%Y-%m").parse;
-    var xscale = d3.time.scale().range([0, width]);
-    var yscale = d3.scale.linear().range([height, 0]);
-    var area = d3.svg.area()
-        .x(function(d){ return xscale(d.x); })
-        .y0(height)
-        .y1(function(d){ return yscale(d.y); });
+    /** private **/
 
-    var line = d3.svg.line()
-        .x(function(d, i){ return xscale(d.x); })
-        .y(function(d, i){ return yscale(d.y); });
+    var getWidth = function() { return width - margin.left - margin.right; };
+    var getHeight = function() { return height - margin.top - margin.bottom; };
 
-    // Grouping
-    var symbols = d3.nest()
-        .key(function(d){ return d.grp; })
-        .entries(data);
+    var makeScales = function() {
 
-    symbols.forEach(function(s) {
-        s.maxadd = d3.max(s.values[0]['y']);
-        s.maxx = d3.max(s.values[0]['x']);
-        s.minx = d3.min(s.values[0]['x']);
-    });
+        // Retrieves all elements from the list of lists and flattens
+        // everything into a single array
+        var xdomain = data.reduce(function(acc, d) { 
+            return acc.concat(d.points.map(function(e) { return e.x; }));
+        }, []);
 
-    //xscale.domain([
-    //    d3.min(symbols, function(s){ return s.values[0]['x'][0]; }),
-    //    d3.max(symbols, function(s){ return s.values[0]['x'][(s.values[0]['x'].length - 1)]; })
-    //]);
+        // Removes duplicates
+        xdomain = xdomain.filter(function(item, dex) { 
+            return xdomain.indexOf(item) == dex;
+        });
 
-    var toPts = function(x, y) {
-        var pts = [];
+        // for linear x scale
+        xdomain = [
+            xScaleZero ? 0 : d3.min(data, function(d) { 
+                return d3.min(d.points, function(e) { return e.x; });
+            }),
+            d3.max(data, function(d) { 
+                return d3.max(d.points, function(e) { return e.x; });
+            })
+        ];
 
-        for (var i = 0; i < x.length; i++) {
-            pts.push({'x': x[i], 'y': y[i]});
+        var ydomain = [
+            yScaleZero ? 0 : d3.min(data, function(d) { 
+                return d3.min(d.points, function(e) { return e.y; });
+            }),
+            d3.max(data, function(d) { 
+                return d3.max(d.points, function(e) { return e.y; });
+            })
+        ];
+
+        //xScale = d3.scaleBand()
+        //    .domain(xdomain)
+        //    .range([margin.left, getWidth()])
+        //    .padding(0.2);
+
+        xScale = d3.scaleLinear()
+            .domain(xdomain)
+            .range([margin.left, getWidth()]);
+
+        yScale = d3.scaleLinear()
+            .domain(ydomain)
+            .range([getHeight(), 0]);
+    };
+
+    var makeAxes = function() {
+
+        xAxis = d3.axisBottom(xScale)
+            .tickSizeOuter(outerTicks ? 6 : 0);
+
+        yAxis = d3.axisLeft(yScale)
+            .tickValues(yTickValues)
+            .tickFormat(d3.format(yFormat));
+
+        var xAxisObject = svg.append('g')
+            .attr('class', 'axis')
+            .attr('transform', function() {
+                return 'translate(0' + ',' + (getHeight() + 1) + ')';
+            })
+            .style('font-family', 'sans-serif')
+            .style('font-size', fontSize)
+            .style('font-weight', 'normal')
+            .style('fill', 'none')
+            .call(xAxis)
+            .append('text')
+            .attr('x', function() { return (margin.left + getWidth()) / 2; })
+            .attr('y', 45)
+            .attr('fill', '#000')
+            .style('text-anchor', 'middle')
+            .text(xText)
+            ;
+
+        var yAxisObject = svg.append('g')
+            .attr('class', 'axis')
+            .attr('transform', function() {
+                return 'translate(' + yAxisPad + ',0)';
+            })
+            .style('font-family', 'sans-serif')
+            .style('font-size', fontSize)
+            .style('font-weight', 'normal')
+            .style('fill', 'none')
+            .call(yAxis)
+            .append('text')
+            // Weird x, y argumetnns cause of the -90 rotation
+            .attr('x', function() { return -getHeight() / 2; })
+            .attr('y', -50)
+            .attr('fill', '#000')
+            .attr('transform', 'rotate(-90)')
+            .style('text-anchor', 'middle')
+            .text(yText)
+            ;
+
+        return [xAxisObject, yAxisObject];
+    };
+
+    var drawLines = function() {
+
+        var linePath = d3.line()
+            //.curve(d3.curveBasis)
+            .curve(d3.curveCatmullRom)
+            .x(function(d) { return xScale(d.x); })
+            .y(function(d) { return yScale(d.y); });
+
+        var svgLine = svg.selectAll('aline')
+            .data(data)
+            .enter()
+            .append('g');
+
+        svgLine.append('path')
+            .attr('d', function(d) { return linePath(d.points); })
+            .style('stroke', function(d, i) { 
+
+                if (d.color)
+                    return d.color;
+
+                return lineColors(i); 
+            })
+            .style('stroke-width', function(d) { 
+
+                if (d.width)
+                    return d.width;
+
+                return lineWidth;
+            })
+            .style('fill', 'none')
+            ;
+    };
+
+    var drawNodes = function() {
+
+        for (var i = 0; i < data.length; i++) {
+
+            var nodes = svg.selectAll('node')
+                .data(data[i].points)
+                .enter()
+                .append('g');
+
+            nodes.append('circle')
+                .attr('cx', function(d) { return xScale(d.x); })
+                .attr('cy', function(d) { return yScale(d.y); })
+                .attr('r', function(d) {
+                    if (d.radius)
+                        return d.radius;
+
+                    return nodeRadius;
+                })
+                .style('fill', nodeColor)
+                //.style('stroke', nodeStroke)
+                .style('stroke', function() { return nodeStrokes(i); })
+                .style('stroke-width', nodeStrokeWidth)
+                ;
+        }
+    };
+
+    /** public **/
+
+    exports.draw = function() {
+
+        svg = d3.select('body')
+            .append('svg')
+            .attr('height', height)
+            .attr('width', width)
+            .append('g')
+            .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+            ;
+
+        if (svgLabel) {
+
+            svg.append('text')
+                //.attr('transform', 'translate(-' + margin.left + ',-' + margin.top + ')')
+                .attr('x', 10)
+                .attr('y', 15)
+                .style('font-family', 'sans-serif')
+                .style('font-size', '15px')
+                .style('font-weight', 'bold')
+                .text(svgLabel);
         }
 
-        return pts;
-    }
+        makeScales();
+        makeAxes();
+        drawLines();
 
-    var svg = d3.select('body').selectAll('svg')
-        .data(symbols)
-        .enter().append('svg')
-        .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
-        .append('g')
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        if (useNodes)
+            drawNodes();
+    };
 
-    svg.append('path')
-        .attr('class', 'area')
-        .attr('d', function(d, i){ xscale.domain([d.minx, d.maxx]); yscale.domain([0, d.maxadd]); return area(toPts(d.values[0]['x'], d.values[0]['y'])); });
+    /** setters/getters **/
 
-    svg.append('path')
-        .attr('class', 'line')
-        //.attr('d', function(d, i){ yscale.domain([0, d.maxadd]); console.log(d.values); return line({'x':d.values[0].x[i], 'y':d.values[0].y[i]});});//return line(d.values[0]['y']); });
-        .attr('d', function(d, i){ xscale.domain([d.minx, d.maxx]); yscale.domain([0, d.maxadd]); console.log(d.values); return line(toPts(d.values[0]['x'], d.values[0]['y'])); });
+    exports.data = function(_) {
+        if (!arguments.length) return data;
+        data = _;
+        return exports;
+    };
 
-    svg.append('text')
-      .attr("x", width - 6)
-      .attr("y", height - 6)
-      .style("text-anchor", "end")
-      .text(function(d) { return d.key; });
-}
+    exports.width = function(_) {
+        if (!arguments.length) return width;
+        width = +_;
+        return exports;
+    };
 
-//// opts {
-//      xdom : [a, b]
-//      ydom : [a, b]
-//      dimensions : [height, width]
-//      title : title string
-//      xlabel : x axis label
-//      ylabel : y axis label
-//      color : a color string, either a name (e.g. red) or hex (e.g. #ff0000)
-//   }
-//
-function makeLineDist(data, opts) {
+    exports.height = function(_) {
+        if (!arguments.length) return height;
+        height = +_;
+        return exports;
+    };
 
-    var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
-    var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
-    var color = (opts.color === undefined) ? 'steelblue' : opts.color;
-    var xdom = (opts.xdom === undefined) ? [d3.min(data), d3.max(data)] : opts.xdom;
-    var ydom = [1, data.length];
+    exports.lineWidth = function(_) {
+        if (!arguments.length) return lineWidth;
+        lineWidth = +_;
+        return exports;
+    };
 
-    //var formatCount = d3.format(",.0f");
+    exports.lineColors = function(_) {
+        if (!arguments.length) return lineColors;
+        lineColors = _;
+        return exports;
+    };
 
-    var svg = d3.select('body')
-        .append('svg')
-        .attr('height', height)
-        .attr('width', width);
+    exports.outerTicks = function(_) {
+        if (!arguments.length) return outerTicks;
+        outerTicks = _;
+        return exports;
+    };
 
-    var margin = {top: 10, right: 30, bottom: 30, left: 30};
-    height = height - margin.top - margin.bottom,
-    width = width - margin.left - margin.right;
+    exports.yAxisPad = function(_) {
+        if (!arguments.length) return yAxisPad;
+        yAxisPad = +_;
+        return exports;
+    };
 
-    var xscale = d3.scale.linear()
-        .domain(opts.xdom)
-        .range([margin.left, width]);
+    exports.fontSize = function(_) {
+        if (!arguments.length) return fontSize;
+        fontSize = _;
+        return exports;
+    };
 
-    var xaxis = d3.svg.axis()
-        .scale(xscale)
-        .orient('bottom')
-        .ticks(20)
-        .outerTickSize(0);
+    exports.xText = function(_) {
+        if (!arguments.length) return xText;
+        xText = _;
+        return exports;
+    };
 
-    var yscale = d3.scale.linear()
-        .domain(opts.ydom)
-        .range([height, 0]);
+    exports.yFormat = function(_) {
+        if (!arguments.length) return yFormat;
+        yFormat = _;
+        return exports;
+    };
 
-    svg.append('g')
-        .attr('class', 'axis')
-        .attr('transform', 'translate(0,' + height + ')')
-        .call(xaxis);
+    exports.yText = function(_) {
+        if (!arguments.length) return yText;
+        yText = _;
+        return exports;
+    };
 
-    var line = d3.svg.line()
-        .interpolate('basis')
-        .x(function(d, i){return xscale(d[0]);})
-        .y(function(d, i){return yscale(d[1]);});
+    exports.svgLabel = function(_) {
+        if (!arguments.length) return svgLabel;
+        svgLabel = _;
+        return exports;
+    };
 
-    svg.append('path')
-        .datum(data)
-        .attr('d', line)
-        .attr('class', 'line');
-    // Generate a histogram using twenty uniformly-spaced bins.
-    //var data = d3.layout.histogram()
-    //    //.bins(x.ticks(50))
-    //    .bins(x.ticks(opts.nbins))
-    //    (data);
+    exports.nodeColor = function(_) {
+        if (!arguments.length) return nodeColor;
+        nodeColor = _;
+        return exports;
+    };
 
-    //var y = d3.scale.linear()
-    //    .domain([0, d3.max(data, function(d) { return d.y; })])
-    //    .range([height, 0]);
+    exports.nodeStrokes = function(_) {
+        if (!arguments.length) return nodeStrokes;
+        nodeStrokes = d3.scaleOrdinal(_);
+        return exports;
+    };
 
-    //var xAxis = d3.svg.axis()
-    //    .scale(x)
-    //    .orient("bottom");
+    exports.nodeRadius = function(_) {
+        if (!arguments.length) return nodeRadius;
+        nodeRadius = +_;
+        return exports;
+    };
 
-    //var svg = d3.select("body").append("svg")
-    //    .attr("width", width + margin.left + margin.right)
-    //    .attr("height", height + margin.top + margin.bottom)
-    //    .append("g")
-    //    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    exports.useNodes = function(_) {
+        if (!arguments.length) return useNodes;
+        useNodes = _;
+        return exports;
+    };
 
-    //var bar = svg.selectAll(".bar")
-    //    .data(data)
-    //    .enter().append("g")
-    //    //.attr("class", "bar")
-    //    .attr('shape-rendering', 'crispEdges')
-    //    .attr('fill', color)
-    //    //.attr('fill', '#f00')
-    //    .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+    exports.xScaleZero = function(_) {
+        if (!arguments.length) return xScaleZero;
+        xScaleZero = _;
+        return exports;
+    };
 
-    //bar.append("rect")
-    //    .attr("x", 1)
-    //    .attr("width", x(data[0].dx) - 1)
-    //    .attr("height", function(d) { return height - y(d.y); });
+    exports.yScaleZero = function(_) {
+        if (!arguments.length) return yScaleZero;
+        yScaleZero = _;
+        return exports;
+    };
 
-    ////bar.append("text")
-    ////    .attr("dy", ".75em")
-    ////    .attr("y", 6)
-    ////    .attr("x", x(data[0].dx) / 2)
-    ////    .attr("text-anchor", "middle")
-    ////    .text(function(d) { return formatCount(d.y); });
+    exports.yTickValues = function(_) {
+        if (!arguments.length) return yTickValues;
+        yTickValues = _;
+        return exports;
+    };
 
-    //svg.append("g")
-    //    .attr("class", "x axis")
-    //    .attr("transform", "translate(0," + height + ")")
-    //    .call(xAxis);
-
-    //if (opts.title !== undefined) {
-
-    //    svg.append('text')
-    //        .attr('x', width / 2)
-    //        .attr('y', 0)
-    //        .attr('text-anchor', 'middle')
-    //        .style('font-size', '14px')
-    //        .style('text-decoration', 'underline')
-    //        .text(opts.title);
-    //}
-}
-
-//// opts {
-//      xdom : [a, b]
-//      dimensions : [height, width]
-//      title : title string
-//      xlabel : x axis label
-//      ylabel : y axis label
-//      color : a color string, either a name (e.g. red) or hex (e.g. #ff0000)
-//   }
-//
-function lineGraphSingle(data, opts) {
-
-    var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
-    var width = (opts.dimensions === undefined) ? 500 : opts.dimensions[1];
-    var color = (opts.color === undefined) ? 'steelblue' : opts.color;
-    //var xdom = [1, data.length];
-    var xdom = [0, data.length - 1];
-    var ydom = (opts.ydom === undefined) ? [d3.min(data), d3.max(data)] : opts.ydom;
-    var margin = (opts.marg === undefined) ? 
-                 {top: 10, right: 30, bottom: 30, left: 60} : opts.marg;
-
-    var svg = d3.select('body')
-        .append('svg')
-        .attr('height', height)
-        .attr('width', width);
-
-    height = height - margin.top - margin.bottom,
-    width = width - margin.left - margin.right;
-
-    var xscale = d3.scale.linear()
-        .domain(xdom)
-        .range([margin.left, width]);
-    var xaxis = d3.svg.axis()
-        .scale(xscale)
-        .orient('bottom')
-        //.ticks(10);
-        .ticks(data.length);
-
-    var yscale = d3.scale.linear()
-        .domain(ydom)
-        .range([height, margin.bottom]);
-    var yaxis = d3.svg.axis()
-        .scale(yscale)
-        .orient('left')
-        .ticks(20);
-
-    var line = d3.svg.line()
-        //.interpolate('basis')
-        .interpolate('basis')
-        .x(function(d, i){return xscale(i);})
-        .y(function(d, i){return yscale(d);});
-
-    svg.append('path')
-        .datum(data)
-        .attr('d', line)
-        .attr('stroke', color)
-        .attr('stroke-width', '3px')
-        .attr('fill', 'none')
-        .attr('class', 'line');
-
-    svg.append('g')
-        .attr('class', 'axis')
-        .attr('transform', 'translate(0,' + (height) + ')')
-        .call(xaxis);
-    svg.append('g')
-        .attr('class', 'axis')
-        .attr('transform', 'translate(' + (margin.left) + ',0)')
-        .call(yaxis);
-
-    if (opts.xlabel !== undefined) {
-
-        svg.append('text')
-            .attr('class', 'label')
-            .style('text-anchor', 'middle')
-            .attr('x', (margin.right + width) / 2)
-            .attr('y', height + margin.bottom)
-            .text(opts.xlabel);
-    }
-
-    if (opts.ylabel !== undefined) {
-
-        svg.append('text')
-            .attr('transform', 'rotate(-90)')
-            .attr('class', 'label')
-            .attr('text-anchor', 'middle')
-            .attr('x', -(height / 2))
-            .attr('y', 0)
-            .attr('dy', '1em')
-            .text(opts.ylabel);
-    }
-
-    if (opts.title !== undefined) {
-
-        svg.append('text')
-            .attr('x', (width + margin.right)/ 2)
-            .attr('y', margin.top)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '14px')
-            .style('text-decoration', 'underline')
-            .text(opts.title);
-    }
-}
-
-function maxx(arr) {
-    var m = [];
-    
-    for (var i = 0; i < arr.length; i++)
-        m.push(d3.max(arr[i]));
-
-    return d3.max(m);
-}
-
-function minn(arr) {
-    var m = [];
-    
-    for (var i = 0; i < arr.length; i++)
-        m.push(d3.min(arr[i]));
-
-    return d3.min(m);
-}
-
-// graph multiple lines, data is an array of arrays
-function lineGraphMult(data, opts) {
-
-    var height = (opts.dimensions === undefined) ? 400 : opts.dimensions[0];
-    var width = (opts.dimensions === undefined) ? 400 : opts.dimensions[1];
-    var color = (opts.color === undefined) ? 'steelblue' : opts.color;
-    //var xdom = [1, data.length];
-    var xdom = [1, data[0].length];
-    //var ydom = (opts.ydom === undefined) ? [d3.min(data), d3.max(data)] : opts.ydom;
-    var ydom = (opts.ydom === undefined) ? [minn(data), maxx(data)] : opts.ydom;
-
-    var svg = d3.select('body')
-        .append('svg')
-        .attr('height', height)
-        .attr('width', width);
-
-    var margin = {top: 10, right: 30, bottom: 30, left: 50};
-    height = height - margin.top - margin.bottom,
-    width = width - margin.left - margin.right;
-
-    var xscale = d3.scale.linear()
-        .domain(xdom)
-        .range([margin.left, width]);
-    var xaxis = d3.svg.axis()
-        .scale(xscale)
-        .orient('bottom')
-        .ticks(10);
-
-    var yscale = d3.scale.linear()
-        .domain(ydom)
-        .range([height, margin.bottom]);
-    var yaxis = d3.svg.axis()
-        .scale(yscale)
-        .orient('left')
-        .ticks(20);
-
-    var gs = svg.selectAll('aline')
-        .data(data)
-        .enter().append('g');
-
-    var line = d3.svg.line()
-        //.interpolate('basis')
-        .interpolate('basis')
-        .x(function(d, i){return xscale(i);})
-        .y(function(d, i){return yscale(d);});
-
-    var colors = d3.scale.category10();
-
-    gs.each(function(d, i) {
-
-        var e = d3.select(this);
-        e.append('path')
-            //.datum(data)
-            //.attr('d', line)
-            .attr('d', function(){ return line(d, i);})
-            .attr('stroke', function(){ 
-                console.log(i);
-                if (i === 0) return '#666';
-                else if (i === 1) return '#f00';
-                else return '#00E';
-            })
-            //.attr('d', function(d, i){)
-            .attr('class', 'line');
-    });
-
-    svg.append('g')
-        .attr('class', 'axis')
-        .attr('transform', 'translate(0,' + (height) + ')')
-        .call(xaxis);
-    svg.append('g')
-        .attr('class', 'axis')
-        .attr('transform', 'translate(' + (margin.left) + ',0)')
-        .call(yaxis);
-
-    if (opts.xlabel !== undefined) {
-
-        svg.append('text')
-            .attr('class', 'label')
-            .style('text-anchor', 'middle')
-            .attr('x', (margin.right + width) / 2)
-            .attr('y', height + margin.bottom)
-            .text(opts.xlabel);
-    }
-
-    if (opts.ylabel !== undefined) {
-
-        svg.append('text')
-            .attr('transform', 'rotate(-90)')
-            .attr('class', 'label')
-            .attr('text-anchor', 'middle')
-            //.attr('x', in_width / 2)
-            .attr('x', 0 - (height / 2) - 0)//0 - in_height)
-            .attr('y', 0)// - (in_width / 2))
-            .attr('dy', '1em')
-            .text(opts.ylabel);
-    }
-
-    if (opts.title !== undefined) {
-
-        svg.append('text')
-            .attr('x', (width + margin.right)/ 2)
-            .attr('y', margin.top)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '14px')
-            .style('text-decoration', 'underline')
-            .text(opts.title);
-    }
-}
+    return exports;
+};

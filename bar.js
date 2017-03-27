@@ -28,12 +28,14 @@ var bar = function() {
         data = null,
         svg = null,
         svgLabel = '',
+        // Top level bar chart title
+        title = '',
         // SVG width
         width = 800,
         // SVG height
         height = 500,
         // Margin object
-        margin = {top: 10, right: 30, bottom: 50, left: 50},
+        margin = {top: 40, right: 30, bottom: 50, left: 50},
         // Bar chart color
         barColor = '#98ABC5',
         // Bar chart edge color
@@ -58,12 +60,16 @@ var bar = function() {
         dropLastBin = false,
         // Calculate histogram y-axis values as percentages
         binPercent = false,
+        // Axis text size
+        fontSize = '11px',
         // X-axis text
         xText = '',
         // Y-axis text
         yText = ''
         // Y-axis padding
         yAxisPad = 35,
+        // Padding between bars
+        innerPadding = 0.1,
         // Scale for the x-axis
         xScale = null,
         // Grouped chart scale for the x-axis
@@ -72,6 +78,8 @@ var bar = function() {
         xHistoScale = null,
         // Scale for the y-axis
         yScale = null,
+        // Format string for y-axis labels
+        yFormat = '',
         // Bar chart object
         chart = null,
         textures = [],
@@ -100,7 +108,7 @@ var bar = function() {
             xScale = d3.scaleBand()
                 .domain(returnKeyUniques('group'))
                 .range([0, xGroupScale.bandwidth()])
-                .padding(0.05);
+                .padding(0.20);
 
         } else {
 
@@ -184,19 +192,23 @@ var bar = function() {
         else
             xAxis = d3.axisBottom(xScale).tickSizeOuter(outerTicks ? 6 : 0);
 
-        yAxis = d3.axisLeft(yScale);
+        yAxis = d3.axisLeft(yScale)
+            .tickFormat(d3.format(yFormat));
 
         var xAxisObject = svg.append('g')
             .attr('class', 'axis')
             .attr('transform', function() {
                 return 'translate(0' + ',' + (getHeight() + 1) + ')';
             })
-            .style('font', '11px sans-serif')
+            //.style('font', '11px sans-serif')
+            .style('font-family', 'sans-serif')
+            .style('font-size', fontSize)
+            //.style('font-weight', opts.fontWeight)
             .style('font-weight', 'normal')
             .style('fill', 'none')
             .call(xAxis)
             .append('text')
-            .attr('x', function() { return getWidth() / 2; })
+            .attr('x', function() { return (margin.left + getWidth()) / 2; })
             .attr('y', 45)
             .attr('fill', '#000')
             .style('text-anchor', 'middle')
@@ -208,14 +220,15 @@ var bar = function() {
             .attr('transform', function() {
                 return 'translate(' + yAxisPad + ',0)';
             })
-            .style('font', '11px sans-serif')
+            .style('font-family', 'sans-serif')
+            .style('font-size', fontSize)
             .style('font-weight', 'normal')
             .style('fill', 'none')
             .call(yAxis)
             .append('text')
             // Weird x, y argumetnns cause of the -90 rotation
             .attr('x', function() { return -getHeight() / 2; })
-            .attr('y', -55)
+            .attr('y', -50)
             .attr('fill', '#000')
             .attr('transform', 'rotate(-90)')
             .style('text-anchor', 'middle')
@@ -315,9 +328,9 @@ var bar = function() {
                 .attr('y', function(d) { 
                     if (asHistogram) {
                         if (binPercent)
-                            return yScale(d.length / binPercent);
+                            return yScale(d.length / binPercent) + 1;
                         else
-                            return yScale(d.length);
+                            return yScale(d.length) + 1;
                     } else { 
                         return yScale(d.y) + 1; 
                     }
@@ -382,6 +395,7 @@ var bar = function() {
                 .style('stroke', '#343434')
                 .style('stroke-width', 1)
                 .style('fill', function(d) { 
+                    console.log(d);
                     if (textures.length > 0 && d.texture)
                         return d.texture.url();
 
@@ -393,6 +407,201 @@ var bar = function() {
     };
 
     var drawText = function() {
+
+    };
+
+
+    var mean = function(data) {
+
+        return data
+            .reduce(function(a, d) { return a + d; }) / data.length;
+        //return data
+        //    .map(function(d) { return d.y; })
+        //    .reduce(function(a, d) { return a + d; }) / data.length;
+    };
+
+    var variance = function(data, mean) {
+
+        return data
+            .map(function(d) { return Math.pow(d - mean, 2); })
+            .reduce(function(a, d) { return a + d; }) / data.length;
+        //return data
+        //    .map(function(d) { return Math.pow(d.y - mean, 2); })
+        //    .reduce(function(a, d) { return a + d; }) / data.length;
+    };
+
+    var pdf = function(d, mean, variance, total) {
+
+        //return (1 / Math.sqrt(2 * variance * Math.PI)) * 
+        //       Math.exp(-(Math.pow(d - mean, 2) / (2 * variance)));
+        return (1 / Math.sqrt(2 * variance * Math.PI)) * 
+               Math.exp(-(Math.pow(d - mean, 2) / (2 * variance))) ;//*
+               //d * total;
+    };
+
+    var drawdist = function() {
+
+        var binVals = bins
+            .reduce(function(a, b) { return a.concat(b); }, [])
+            .sort(function(a, b) { return a - b; });
+        var u = mean(binVals);
+        var v = variance(binVals, u);
+        var binned = [];
+        var probs = [];
+
+        for (var i = 0; i < bins.length; i++) {
+            for (var j = 0; j < bins[i].length; j++) {
+
+            }
+        }
+        var allVals = [];
+        var binned = [];
+
+        for (var i = 0; i < bins.length; i++) {
+            for (var j = 0; j < bins[i].length; j++) {
+
+                allVals.push(i + 1);
+            }
+        }
+        var u = mean(allVals);
+        var v = variance(allVals, u);
+        var allProbs = [];
+
+        for (var i = 0; i < bins.length; i++) {
+            var probs = 0.0;
+            for (var j = 0; j < bins.length; j++) {
+
+                //probs.push(pdf(bins[i][j], u, v));
+                //probs += pdf(bins[i][j], u, v);
+                probs += pdf(i+1, u, v);
+            }
+            allProbs.push(probs);
+            binned.push({x: i+1, y: probs});
+            probs = 0.0;
+        }
+        var xDistScale = d3.scaleLinear()
+            .domain([d3.min(allVals), d3.max(allVals)])
+            .range([margin.left, getWidth()])
+            ;
+        var yDistScale = d3.scaleLinear()
+            .domain([d3.min(allProbs), d3.max(allProbs)])
+            .range([getHeight(), 0])
+            ;
+
+        var line = d3.line()
+            .curve(d3.curveCatmullRom.alpha(0.5))
+            .x(function(d) { return xDistScale(d.x); })
+            .y(function(d) { return yDistScale(d.y); })
+            ;
+
+        var svgLines = svg.selectAll('aline')
+            .data([binned])
+            .enter()
+            .append('g')
+            .attr('transform', function(d) { 
+                return 'translate(0,0)'; 
+            })
+            ;
+
+        svgLines.append('path')
+            .attr('d', function(d) { return line(d); })
+            .style('stroke', '#BB0000')
+            .style('stroke-width', 3)
+            .style('stroke-dasharray', '5,5')
+            .style('fill', 'none');
+
+        console.log(allVals);
+        console.log(binned);
+
+        console.log(u);
+        console.log(v);
+    };
+
+    var drawDistribution = function() {
+
+        var bs = bins.map(function(b) { return b.length; });
+        var tot = bs.reduce(function(a, b) { return a + b; });
+        var dbins = [];
+        var minlen = -1;
+
+        for (var i = 0; i < bins.length; i++) {
+            if (minlen === -1 || bins[i].length < minlen)
+                minlen = bins[i].length;
+
+            dbins.push({
+                x0: bins[i].x0,
+                x1: bins[i].x1,
+                length: bins[i].length
+            });
+        }
+
+        var line = d3.line()
+            .curve(d3.curveCatmullRom.alpha(0.5))
+            //.curve(d3.curveCatmullRom)
+            //.x(function(d) { return xScale(d.x); })
+            //.x(function(d) { console.log(xHistoScale((d.x0 + d.x1)/2)); return xHistoScale((d.x0 + d.x1) / 2); })
+            //.x(function(d) { console.log(xHistoScale((d.x0 + d.x1)/2)); return xHistoScale((d.x0 + d.x1) / 2); })
+            //.x(function(d) { return xScale((d.x0 + d.x1) / 2); })
+            .x(function(d) { return xScale(d.x1) + (xScale.bandwidth() / 2); })
+            //.x(function(d) { return xHistoScale((d.x0 + d.x1) / 2); })
+            //.y(function(d) { return yScale(pdf(d.y, u, v)); })
+            //.y(function(d) { return yScale(pdf(d.y, u, v, tot)); })
+            //.y(function(d) { return yScale(d.y); })
+            //.y(function(d) { console.log(yScale(d.length / tot)); return yScale(d.length); })
+            //.y(function(d) { return yScale(d.length / tot) - (yScale(minlen / tot) - getHeight()); })
+            .y(function(d) { return yScale(d.length / tot); })
+            ;
+
+
+        var svgLines = svg.selectAll('aline')
+            .data([dbins])
+            .enter()
+            .append('g')
+            .attr('transform', function(d) { 
+                return 'translate(0,0)'; 
+            })
+            ;
+
+        svgLines.append('path')
+            .attr('d', function(d) { return line(d); })
+            .style('stroke', '#BB0000')
+            .style('stroke-width', 3)
+            .style('stroke-dasharray', '5,5')
+            .style('fill', 'none');
+
+
+    };
+
+    var drawText = function() {
+
+        if (svgLabel) {
+
+            svg.append('text')
+                .attr('transform', 'translate(-' + margin.left + ',-' + margin.top + ')')
+                .attr('x', 10)
+                .attr('y', 15)
+                .style('font-family', 'sans-serif')
+                .style('font-size', '15px')
+                .style('font-weight', 'bold')
+                .text(svgLabel);
+        }
+
+        if (title) {
+
+            var ma = margin.left + margin.right;
+            svg.append('text')
+                //.attr('transform', 'translate(-' + margin.left  + ',-' + margin.top + ')')
+                .attr('transform', 'translate(' + 0  + ',-' + margin.top + ')')
+                //.attr('x', getWidth() / 2)
+                .attr('x', getWidth() / 2)
+                .attr('y', margin.top / 2)
+                .attr('text-anchor', 'middle')
+                .style('font-family', 'sans-serif')
+                .style('font-size', '17px')
+                .style('font-weight', 'normal')
+                .text(title);
+        }
+
 
     };
 
@@ -412,18 +621,6 @@ var bar = function() {
             for (var i = 0; i < textures.length; i++)
                 svg.call(textures[i]);
 
-        if (svgLabel) {
-
-            svg.append('text')
-                .attr('transform', 'translate(-' + margin.left + ',-' + margin.top + ')')
-                .attr('x', 10)
-                .attr('y', 15)
-                .style('font-family', 'sans-serif')
-                .style('font-size', '15px')
-                .style('font-weight', 'bold')
-                .text(svgLabel);
-        }
-
         grouped = checkGrouped();
 
         makeScales();
@@ -434,6 +631,9 @@ var bar = function() {
 
         makeAxes();
         drawBars();
+        //drawDistribution();
+        drawdist();
+        drawText();
     };
 
     /** setters/getters **/
@@ -522,15 +722,39 @@ var bar = function() {
         return exports;
     };
 
+    exports.innerPadding = function(_) {
+        if (!arguments.length) return innerPadding;
+        innerPadding = +_;
+        return exports;
+    };
+
+    exports.fontSize = function(_) {
+        if (!arguments.length) return fontSize;
+        fontSize = _;
+        return exports;
+    };
+
     exports.xText = function(_) {
         if (!arguments.length) return xText;
         xText = _;
         return exports;
     };
 
+    exports.yFormat = function(_) {
+        if (!arguments.length) return yFormat;
+        yFormat = _;
+        return exports;
+    };
+
     exports.yText = function(_) {
         if (!arguments.length) return yText;
         yText = _;
+        return exports;
+    };
+
+    exports.title = function(_) {
+        if (!arguments.length) return title;
+        title = _;
         return exports;
     };
 
@@ -553,95 +777,5 @@ var bar = function() {
     };
 
     return exports;
-};
-
-var legend = function(data, opts) {
-
-    opts = validateLegendOptions(opts);
-
-    var legend = d3.select('body').append('svg')
-        .attr('width', opts.width)
-        .attr('height', opts.height)
-        .selectAll('g')
-        .data(data)
-        .enter().append('g')
-        .attr("transform", function(d, i) { 
-            return "translate(40," + (i + 1) * opts.keyPadding + ")"; 
-        });
-
-    legend.append('rect')
-        .attr('width', opts.keyWidth)
-        .attr('height', opts.keyHeight)
-		.attr('stroke', opts.stroke)
-		.attr('stroke-width', opts.strokeWidth)
-        .attr('shape-rendering', 'crispEdges')
-        .style('fill-opacity', opts.opacity)
-        .style('fill', function(d, i) {
-            if (d.color === undefined)
-                return opts.colors[i];
-
-            return d.color;
-        });
-
-    legend.append("text")
-        .attr("x", opts.textX)
-        .attr("y", opts.textY)
-        .attr("dy", ".35em")
-        .attr('font-family', opts.font)
-        .attr('font-size', opts.fontSize)
-        .attr('font-weight', opts.fontWeight)
-        .text(function(d) { 
-			return d.name;
-        });
-};
-
-/**
- *      height: int, the height of the SVG in pixels
- *      width: int, the width of the SVG in pixels
- *      keyHeight: int, the height of the color box in pixels
- *      keyWidth: int, the width of the color box in pixels
- *      keyPadding: int, padding between color boxes
- *      title: string, legend title
- *      colors: an array of color strings, ensure this is the same size as the
- *          number of data points.
- *      margin: an object of margin values
- *      opacity: float, the opacity of the fill colors
- *      stroke: string, color used to outline the visualization
- *      strokeWidth: string, size in pixels of the stroke outline
- *      font: string, font to use for the legend text
- *      fontSize: string, font size in pixels
- *      fontWeight: string, font weight
- *      textX: int, x coordinate position of each key/color box text
- *      textY: int, y coordinate position of each key/color box text
- */
-var validateLegendOptions = function(opts) {
-
-    opts.height = opts.height || 500;
-    opts.width = opts.width || 800;
-    opts.keyHeight = opts.keyHeight || 20;
-    opts.keyWidth = opts.keyWidth || 20;
-    opts.keyPadding = opts.keyPadding || 30;
-    opts.title = opts.title || '';
-    opts.margin = (opts.margin === undefined) ? {} : opts.margin;
-
-    opts.margin.top = opts.margin.top || 10;
-    opts.margin.bottom = opts.margin.bottom || 30;
-    opts.margin.right = opts.margin.right || 30;
-    opts.margin.left = opts.margin.left || 30;
-
-    // These are all the visualization styling options and heavily dependent on
-    // the visualization type
-    opts.colors = (opts.colors === undefined) ? d3.schemeSet3 : opts.colors;
-    opts.opacity = opts.opacity || 1.0;
-    opts.stroke = (opts.stroke === undefined) ? '#000' : opts.stroke;
-    opts.strokeWidth = (opts.strokeWidth === undefined) ? '1px' : 
-                       opts.strokeWidth;
-    opts.font = opts.font || 'sans-serif';
-    opts.fontSize = opts.fontSize || '15px';
-    opts.fontWeight = opts.fontWeight || 'normal';
-    opts.textX = opts.textX || (opts.keyWidth + 2);
-    opts.textY = opts.textY || (opts.keyHeight / 2 - 2);
-
-    return opts;
 };
 

@@ -31,10 +31,13 @@ var hierarchy = function() {
     var exports = {},
         svg = null,
         svgLabel = '',
+        arrow = '',
         // d3js Force directed simulation
         simulation = null,
         // Interpolated color scale used for coloring nodes
         colorScale = null,
+        // Node size scale
+        sizeScale = null,
         // Node objects constructed with d3js
         d3Nodes = null,
         // Edge objects constructed with d3js
@@ -70,6 +73,8 @@ var hierarchy = function() {
         scaleFxn = d3.scaleLinear,
         // Use a node color range instead of a single color
         useColorRange = false,
+        // Make node sizes based on some value (like color range)
+        useSizeRange = false,
         // Use a gradient for node colors
         gradient = [],
         // Textures via textures.js
@@ -100,8 +105,9 @@ var hierarchy = function() {
         ty = 0,
         // Font parameters for node labels
         font = 'sans-serif',
+        fontColor = '#000000',
         fontSize = '12px',
-        fontWeight = 'normal';
+        fontWeight = 'bold';
 
     /** private **/
 
@@ -182,6 +188,30 @@ var hierarchy = function() {
             .attr('stop-opacity', 1);
     }
 
+    var makeArrow = function() {
+
+        var rand = '' + Math.floor((Math.random() * 100000000) + 1);
+
+        svg.append('svg:defs')
+            .append('svg:marker')
+            //.append('marker')
+            .attr('id', 'arrowhead' + rand)
+            .attr('viewBox', '0 -5 10 10')
+            //.attr('refX', 15)
+            .attr('refX', 18)
+            .attr('refY', 0)
+            .attr('markerWidth', 3)
+            .attr('markerHeight', 3)
+            .attr('orient', 'auto')
+            .append('path')
+            .attr('fill', '#555')
+            .attr('d', 'M0,-5L10,0L0,5');
+
+        arrow = 'arrowhead' + rand;
+
+        return arrow;
+    };
+
     var dragNodes = function() {
 
     };
@@ -214,6 +244,9 @@ var hierarchy = function() {
             .filter(function(d) { return d.symbol === undefined; })
             .append('circle')
             .attr('r', function(d) {
+                if (d.value !== undefined && useSizeRange)
+                    return sizeScale(d.value);
+                    
                 if (d.radius === undefined)
                     return radius;
 
@@ -226,7 +259,10 @@ var hierarchy = function() {
             .filter(function(d) { return d.symbol !== undefined; })
             .append('path')
             .attr('d', d3.symbol()
-                .type(function(d) { return d3.symbolSquare; })
+                .type(function(d) { 
+
+                    return d.symbol;
+                })
                 .size(function(d) {
                     if (d.radius === undefined)
                         return radius * 22;
@@ -263,14 +299,16 @@ var hierarchy = function() {
 
                 return d.width;
             })
-            .style('fill', function(d) {
+            .attr('fill', function(d) {
                 if (textures.length >= 1 && d.texture)
                     return d.texture.url();
 
                 if (d.gradient) {
 
                     makeGradient(
-                        svg, 
+                        //svg, 
+                        // otherwise shit doesn't render properly in inkscape
+                        d3.select(this), 
                         d.id + '-grad', 'radialGradient', 
                         d.gradient[0], 
                         d.gradient[1]
@@ -440,11 +478,31 @@ var hierarchy = function() {
 
                 return d.stroke;
             })
+            .attr('fill', function(d) {
+                if (d.stroke === undefined)
+                    return edgeColor;
+
+                return d.stroke;
+            })
             .attr('stroke-width', function(d) {
                 if (d.width === undefined)
                     return edgeWidth;
 
                 return d.width;
+            })
+            .attr('stroke-dasharray', function(d) {
+                if (d.dash === undefined)
+                    return 'none';
+
+                return '5, 5';
+            })
+            .attr('marker-end', function(d) {
+                if (d.arrow === undefined)
+                    return 'none';
+
+                var aurl = makeArrow();
+
+                return 'url(#' + aurl + ')'; //arrowhead)';
             })
             .attr('fill', 'none');
 
@@ -459,7 +517,7 @@ var hierarchy = function() {
 
         nodeGroups.append('text')
             .attr('stroke', 'none')
-            .attr('fill', '#000000')
+            .attr('fill', fontColor)
             .style('font-family', font)
             .style('font-size', fontSize)
             .style('font-weight', fontWeight)
@@ -498,6 +556,16 @@ var hierarchy = function() {
         colorScale = scaleFxn()
             .domain([cmin, cmax])
             .range([0, 1]);
+    };
+
+    var interpolateSizes = function() {
+
+        var smin = d3.min(graph.nodes, function(n) { return n.value; });
+        var smax = d3.max(graph.nodes, function(n) { return n.value; });
+
+        sizeScale = scaleFxn()
+            .domain([smin, smax])
+            .range([2, 7]);
     };
 
     /**
@@ -567,7 +635,7 @@ var hierarchy = function() {
             if (fixed)
                 d.x = layerChunk * fixedStruct.countMap[d.id];
 
-            d.y = d.depth * verticalSpacing + 5; // + 100;
+            d.y = d.depth * verticalSpacing + 15; // + 100;
 
             if (d.ax && d.ay)
                 return 'translate(' + d.x + d.ax + ',' + d.y + d.ay + ')';
@@ -606,6 +674,8 @@ var hierarchy = function() {
             .attr('height', height)
             .attr('width', width);
 
+        //makeArrow();
+
         if (svgLabel) {
 
             svg.append('text')
@@ -632,10 +702,13 @@ var hierarchy = function() {
                    }).distance(distance))
             //
             .force('x', d3.forceX(width / 2))
-            .force('y', d3.forceY());
+            .force('y', d3.forceY(height / 2));
 
         if (useColorRange)
             interpolateColors();
+
+        if (useSizeRange)
+            interpolateSizes();
 
         if (useShadow)
             makeDropShadow();
@@ -741,6 +814,12 @@ var hierarchy = function() {
         return exports;
     };
 
+    exports.useSizeRange = function(_) {
+        if (!arguments.length) return useSizeRange;
+        useSizeRange = _;
+        return exports;
+    };
+
     exports.gradient = function(_) {
         if (!arguments.length) return gradient;
         gradient = _;
@@ -822,6 +901,12 @@ var hierarchy = function() {
     exports.font = function(_) {
         if (!arguments.length) return font;
         font = _;
+        return exports;
+    };
+
+    exports.fontColor = function(_) {
+        if (!arguments.length) return fontColor;
+        fontColor = _;
         return exports;
     };
 
