@@ -60,6 +60,8 @@ var bar = function() {
         dropLastBin = false,
         // Calculate histogram y-axis values as percentages
         binPercent = false,
+        // Overlay chart with normalized distribution
+        distribution = false,
         // Axis text size
         fontSize = '11px',
         // X-axis text
@@ -80,6 +82,10 @@ var bar = function() {
         yScale = null,
         // Format string for y-axis labels
         yFormat = '',
+        // Y-axis tick values
+        yTickValues = null,
+        // Y-axis tick values
+        yDomain = null,
         // Bar chart object
         chart = null,
         textures = [],
@@ -95,7 +101,7 @@ var bar = function() {
     var makeScales = function() {
 
         var xdomain = data.map(function(d) { return d.x; });
-        var ydomain = [0, d3.max(data, function(d) { return d.y; })];
+        var ydomain = yDomain ? yDomain : [0, d3.max(data, function(d) { return d.y; })];
 
 
         if (grouped) {
@@ -193,7 +199,15 @@ var bar = function() {
             xAxis = d3.axisBottom(xScale).tickSizeOuter(outerTicks ? 6 : 0);
 
         yAxis = d3.axisLeft(yScale)
-            .tickFormat(d3.format(yFormat));
+            .tickFormat(d3.format(yFormat))
+            .tickValues(yTickValues)
+            //.tickValues( yScale.ticks(7).concat(parseFloat(yScale.domain()[1]).toFixed(2)) )
+            ;
+        //console.log(yScale.domain());
+        //console.log(yScale.ticks(7));
+        //console.log(yScale.ticks(7).concat(parseFloat(yScale.domain()[0])));
+        //console.log(typeof(yScale.domain()[1]));
+        //console.log( parseFloat(yScale.domain()[1]).toFixed(1) );
 
         var xAxisObject = svg.append('g')
             .attr('class', 'axis')
@@ -632,8 +646,10 @@ var bar = function() {
         makeAxes();
         drawBars();
         //drawDistribution();
-        drawdist();
         drawText();
+
+        if (distribution)
+            drawdist();
     };
 
     /** setters/getters **/
@@ -773,6 +789,24 @@ var bar = function() {
     exports.textures = function(_) {
         if (!arguments.length) return textures;
         textures = _;
+        return exports;
+    };
+
+    exports.distribution = function(_) {
+        if (!arguments.length) return distribution;
+        distribution = _;
+        return exports;
+    };
+
+    exports.yTickValues = function(_) {
+        if (!arguments.length) return yTickValues;
+        yTickValues = _;
+        return exports;
+    };
+
+    exports.yDomain = function(_) {
+        if (!arguments.length) return yDomain;
+        yDomain = _;
         return exports;
     };
 
