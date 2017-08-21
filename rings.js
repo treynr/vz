@@ -147,7 +147,7 @@ var ring = function(data, mlabel, title, opts) {
 
     var center = svg.append('g')
         //.attr('transform', 'translate(' + (width / 2) + ',' + (10) + ')');
-        .attr('transform', 'translate(' + (width / 2) + ',' + (10) + ')');
+        .attr('transform', 'translate(' + (width / 2) + ',' + (40) + ')');
 
     center.append('text')
         .attr('dy', '.35em')

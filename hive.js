@@ -47,6 +47,7 @@ viz.hive = function() {
         classColor = null,
         // Nodes organized by the category they belong to
         axisScale = null,
+        axisScaleMap = null,
         // Nodes organized by the category they belong to
         nodeMap = {}
         ;
@@ -102,10 +103,14 @@ viz.hive = function() {
 
         //var nbc = determineCategories();
 
+        determineCategories();
+        categoryAngles();
+        makeAxisScale();
+        makeAxisScales();
         //console.log(nbc);
-        drawAxes();
         drawEdges();
-        drawNodes();
+        drawAxes();
+        //drawNodes();
     };
 
     var degrees = function(d) {
@@ -145,7 +150,8 @@ viz.hive = function() {
                 nodeMap[v.id] = v;
             });
 
-            d.count = count - 1;
+            //d.count = count - 1;
+            d.count = count;
         });
     };
 
@@ -181,10 +187,38 @@ viz.hive = function() {
         var extent = d3.extent(nodesByCat, function(d) { return d.count; });
         var aMin = extent[0],
             aMax = extent[1];
+        console.log(aMin);
+        console.log(aMax);
         
         axisScale = d3.scaleLinear()
-            .domain([aMin, aMax + 1])
+            //.domain([aMin, aMax + 1])
+            .domain([0, aMax])
             .range([innerRadius, outerRadius]);
+    };
+
+    var makeAxisScales = function() {
+
+        console.log(nodesByCat);
+        axisScaleMap = {};
+        console.log(nodesByCat);
+        for (var i = 0; i < nodesByCat.length; i++) {
+            var cat = nodesByCat[i].key;
+            console.log(cat);
+            axisScaleMap[cat] = d3.scaleLinear()
+                .domain([-2, nodesByCat[i].count])
+                //.range([innerRadius, outerRadius])
+                //.range([axisScale(axisScale.domain()[0] - 0), 
+                //        axisScale(axisScale.domain()[0] - 0)+axisScale(nodesByCat[i].count + 1)])
+                //.range([axisScale.range()[0], axisScale.range()[1]])
+                .range([axisScale(axisScale.domain()[0]), axisScale(axisScale.domain()[1])])
+                ;
+            console.log(axisScaleMap[cat].range());
+        }
+            //.attr('x', function(d) { return axisScale(axisScale.domain()[0] - 1); })
+            ////.attr('x', function(d) { return axisScaleMap[d.key](axisScale.domain()[0] - 1); })
+            //.attr('y', function(d) { return 0; })
+            ////.attr('y', function(d) { return axisScale(axisScale.domain()[0] - 1); })
+            //.attr('width', function(d) { return axisScale(d.count + 1); })
     };
 
     /**
@@ -197,6 +231,9 @@ viz.hive = function() {
 
             //d.sourceNode = nodeMap[d.source];
             //d.targetNode = nodeMap[d.target];
+            //console.log(d.source);
+            //console.log(d.source);
+            //console.log(nodeMap[d.source]);
             d.source = {node: nodeMap[d.source], category: nodeMap[d.source].category};
             d.target = {node: nodeMap[d.target], category: nodeMap[d.target].category};
         });
@@ -211,16 +248,17 @@ viz.hive = function() {
             .selectAll('.node')
             .data(nodes)
             .enter()
+            .filter(function(d) { return d.category != 'gene'; })
             .append('g')
             .append('circle')
-            .attr('class', 'node')
+            .attr('class', function(d) { return d.id + '_' + d.category; })
             .style('fill', function(d) { return classColor(d.class); })
             .style('stroke', '#000')
             .style('stroke-width', '1px')
             .attr('transform', function(d, i) {
                 return 'rotate(' + categoryAngle(d.category) + ')';
             })
-            .attr('cx', function(d) { return axisScale(d.index); })
+            .attr('cx', function(d) { return axisScaleMap[d.category](d.index); })
             .attr('r', 4)
             ;
     };
@@ -235,6 +273,7 @@ viz.hive = function() {
         //    .curve(d3.curveBundle.beta(1))
         //    ;
            
+        /*
        var line = d3.line()
             //.x(function(d) { return Math.cos(degrees(d.angle)) * d.radius; })
             //.y(function(d) { return Math.sin(degrees(d.angle)) * d.radius; })
@@ -279,6 +318,7 @@ viz.hive = function() {
             //if (edge[1].angle - edge[0].angle > Math.PI)
             //    edge[0].angle += 2 * Math.PI;
 
+                /*
             svg.append('path')
                 .datum(edge)
                 .style('stroke', '#000')
@@ -286,7 +326,6 @@ viz.hive = function() {
                 .style('fill', 'none')
                 .attr('d', line)
                 ;
-                /*
                 .attr('d', function(d) {
 
                     var sx = Math.cos(degrees(d[0].angle)) * d[0].radius;
@@ -313,20 +352,25 @@ viz.hive = function() {
                         + " " + d.target.y + "," + d.target.x;
                         */
                 //})
+                //
+        /*
                 ;
         });
+            */
       
-        /*
         svg.selectAll('.edge')
             .data(edges)
             .enter()
             .append('path')
-            .style('stroke', '#000')
+            .style('stroke', '#333')
             .style('stroke-width', '1px')
             .style('fill', 'none')
+            .style('opacity', 0.4)
+            .style('stroke', function(d) { return d.source.node.index == 1113 ? '#ff0000' : '#000'; })
             .attr('d', link()
                 .angle(function(d) { return degrees(categoryAngle(d.category)); })
-                .radius(function(d) { return axisScale(d.node.index); }))
+                //.radius(function(d) { return axisScale(d.node.index); }))
+                .radius(function(d) { return axisScaleMap[d.category](d.node.index); }))
             // Super hack-ish but Bostock's link code won't work without it.
             // Other than that we use my edge code, but it doesn't look as good
             // since it doesn't generate curves, just straight lines
@@ -334,6 +378,7 @@ viz.hive = function() {
                 return 'rotate(' + -270 + ')';
             })
             ;
+        /*
         */
 
         //svg.append('g')
@@ -362,19 +407,18 @@ viz.hive = function() {
     var drawAxes = function() {
 
         //var nbc = determineCategories();
-        determineCategories();
-        categoryAngles();
-        makeAxisScale();
         //var angle = d3.scale.ordinal()
         //    .domain(nbc.map(function(d) { return d.key; }))
         //    .range(
         
+        /*
         svg.selectAll('.axis')
             .data(nodesByCat)
             .enter()
             .append('line')
             .style('stroke', '#000')
             .style('stroke-width', '3px')
+            .style('fill', '#000')
             .attr('class', 'axis')
             .attr('transform', function(d, i) {
                 return 'rotate(' + categoryAngle(d.key) + ')';
@@ -382,6 +426,30 @@ viz.hive = function() {
             //.attr('x1', axisScale(0))
             .attr('x1', function(d) { return axisScale(axisScale.domain()[0] - 1); })
             .attr('x2', function(d) { return axisScale(d.count + 1); });
+            */
+
+        svg.selectAll('.axis')
+            .data(nodesByCat)
+            .enter()
+            .append('rect')
+            .style('stroke', '#000')
+            .style('stroke-width', 1)
+            .style('fill', 'steelblue')
+            //.attr('class', 'axis')
+            .attr('transform', function(d, i) {
+                return 'rotate(' + categoryAngle(d.key) + ')';
+            })
+            //.attr('x1', axisScale(0))
+            .attr('x', function(d) { return axisScale(axisScale.domain()[0]); })
+            //.attr('x', function(d) { return axisScaleMap[d.key](axisScale.domain()[0] - 1); })
+            .attr('y', function(d) { return -3; })
+            //.attr('y', function(d) { return axisScale(axisScale.domain()[0] - 1); })
+            // correct one below
+            //.attr('width', function(d) { return axisScale(d.count + 1); })
+            .attr('width', function(d) { return axisScale(axisScale.domain()[1]); })
+            //.attr('width', function(d) { return axisScaleMap[d.key](d.count + 1); })
+            .attr('height', function(d) { return 7; })
+            ;
     };
 
 
@@ -421,9 +489,9 @@ viz.hive = function() {
   }
 
   function node(method, thiz, d, i) {
-      console.log(method);
-      console.log(thiz);
-      console.log(angle);
+      //console.log(method);
+      //console.log(thiz);
+      //console.log(angle);
     var node = method.call(thiz, d, i),
         a = +(typeof angle === "function" ? angle.call(thiz, node, i) : angle) + arcOffset,
         r0 = +(typeof startRadius === "function" ? startRadius.call(thiz, node, i) : startRadius),
