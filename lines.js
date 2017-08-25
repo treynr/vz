@@ -24,6 +24,8 @@ var line = function() {
         margin = {top: 10, right: 30, bottom: 50, left: 50},
         // Line width
         lineWidth = 2,
+        // Draw the line of no discrimination (for ROC curves)
+        drawDiscrimination = false,
         // Line color
         //lineColor = '#98ABC5',
         lineColors = d3.scaleOrdinal(d3.schemeCategory10),
@@ -58,7 +60,7 @@ var line = function() {
         // Start the y-scale at zero if true, otherwise use min()
         yScaleZero = null,
         // Format string for y-axis labels
-        yFormat = ''
+        yFormat = '',
         // y-axis tick values
         yTickValues = null
         ;
@@ -99,6 +101,9 @@ var line = function() {
                 return d3.max(d.points, function(e) { return e.y; });
             })
         ];
+
+        //xdomain = [0.0, 1.0];
+        //ydomain = [0.0, 1.0];
 
         //xScale = d3.scaleBand()
         //    .domain(xdomain)
@@ -168,7 +173,8 @@ var line = function() {
 
         var linePath = d3.line()
             //.curve(d3.curveBasis)
-            .curve(d3.curveCatmullRom)
+            //.curve(d3.curveCatmullRom.alpha(1.0))
+            .curve(d3.curveCatmullRom.alpha(0.5))
             .x(function(d) { return xScale(d.x); })
             .y(function(d) { return yScale(d.y); });
 
@@ -195,6 +201,20 @@ var line = function() {
             })
             .style('fill', 'none')
             ;
+
+    };
+
+    var drawDiscriminationLine = function() {
+
+        svg.append('g')
+            .append('line')
+            .attr('x1', function() { return xScale.range()[0]; })
+            .attr('y1', function() { return yScale.range()[0]; })
+            .attr('x2', function() { return xScale.range()[1]; })
+            .attr('y2', function() { return yScale.range()[1]; })
+            .attr('stroke-dasharray', '5,5')
+            .style('stroke', 'red')
+            .style('stroke-width', 1);
     };
 
     var drawNodes = function() {
@@ -251,6 +271,9 @@ var line = function() {
         makeAxes();
         drawLines();
 
+        if (drawDiscrimination)
+            drawDiscriminationLine();
+
         if (useNodes)
             drawNodes();
     };
@@ -272,6 +295,12 @@ var line = function() {
     exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
+        return exports;
+    };
+
+    exports.drawDiscrimination = function(_) {
+        if (!arguments.length) return drawDiscrimination;
+        drawDiscrimination = _;
         return exports;
     };
 
