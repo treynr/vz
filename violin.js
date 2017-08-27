@@ -5,7 +5,6 @@
   * auth: TR
   */
 
-
 /**
   * The data structure necessary for this viz is an array of objects. Each
   * object represents a separate violin plot which may have >= 1 violins.
@@ -63,6 +62,8 @@ var violin = function() {
         margin = {top: 30, right: 10, bottom: 40, left: 50},
         // SVG object
         svg = null,
+        // SVG object
+        violinSvg = null,
         // X value domain
         xDomain = null,
         // X value scale
@@ -113,16 +114,27 @@ var violin = function() {
     var getHeight = function() { return height - margin.top - margin.bottom; };
     var getWidth = function() { return width - margin.left - margin.right; };
 
+    var getCategories = function() { 
+        return data.map(function(d) { return d.category; });
+    };
+
+    var getAllValues = function() {
+        return [].concat.apply([], data.map(function(d) { return d.values; }));
+    };
+
     var makeScales = function() {
 
         if (xDomain === undefined || !xDomain)
-            var xDomain = data.categories;
+            xDomain = getCategories();
+            //var xDomain = data.categories;
 
         if (yDomain === undefined || !yDomain) {
 
-            var yDomain = [
-                d3.min(data.values, function(d) { return d.y; }), 
-                d3.max(data.values, function(d) { return d.y; })
+            yDomain = [
+                //d3.min(data.values, function(d) { return d.y; }), 
+                //d3.max(data.values, function(d) { return d.y; })
+                d3.min(getAllValues()), 
+                d3.max(getAllValues())
             ];
         }
 
@@ -141,7 +153,8 @@ var violin = function() {
             ;
 
         colorScale = d3.scaleOrdinal()
-            .domain(data.categories)
+            //.domain(data.categories)
+            .domain(xDomain)
             .range(d3.schemeCategory10)
             ;
 
@@ -199,22 +212,23 @@ var violin = function() {
         return [xAxisObject, yAxisObject];
     };
 
-    var drawQuartiles = function(svg, values) {
+    //var drawQuartiles = function(svg, values) {
+    var drawQuartiles = function() {
 
-        svg.append('line')
-            .attr('x1', function() { 
+        violinSvg.append('line')
+            .attr('x1', function(d) { 
                 //return xScale(values[0].x); 
-                return xScale(values[0].x) + (xScale.bandwidth() / 2); 
+                return xScale(d.category) + (xScale.bandwidth() / 2); 
             })
-            .attr('y1', function() { 
-                return yScale(getQ1(values));
+            .attr('y1', function(d) { 
+                return yScale(getQ1(d.values));
             })
-            .attr('x2', function() { 
+            .attr('x2', function(d) { 
                 //return xScale(values[0].x); 
-                return xScale(values[0].x) + (xScale.bandwidth() / 2); 
+                return xScale(d.category) + (xScale.bandwidth() / 2); 
             })
-            .attr('y2', function() {
-                return yScale(getQ3(values));
+            .attr('y2', function(d) {
+                return yScale(getQ3(d.values));
             })
             .style('stroke-linecap', 'round')
             .style('shape-rendering', 'auto')
@@ -225,30 +239,34 @@ var violin = function() {
 
     var getQ1 = function(values) {
 
-        return d3.quantile(values, 0.25, yAccess);
+        //return d3.quantile(values, 0.25, yAccess);
+        return d3.quantile(values, 0.25);
     };
 
     var getQ3 = function(values) {
 
-        return d3.quantile(values, 0.75, yAccess);
+        //return d3.quantile(values, 0.75, yAccess);
+        return d3.quantile(values, 0.75);
     };
 
     var getMedian = function(values) {
 
-        return d3.median(values, yAccess);
+        //return d3.median(values, yAccess);
+        return d3.median(values);
     };
 
-    var drawMedian = function(svg, values) {
+    //var drawMedian = function(svg, values) {
+    var drawMedian = function() {
 
-        svg.append('circle')
+        violinSvg.append('circle')
             //.attr('cx', xScale(quarts.x))
             //.attr('cy', yScale(quarts.median))
-            .attr('cx', function() { 
+            .attr('cx', function(d) { 
                 //return xScale(values[0].x); 
-                return xScale(values[0].x) + (xScale.bandwidth() / 2); 
+                return xScale(d.category) + (xScale.bandwidth() / 2); 
             })
-            .attr('cy', function() {
-                return yScale(getMedian(values));
+            .attr('cy', function(d) {
+                return yScale(getMedian(d.values));
             })
             .attr('r', 4)
             .style('fill', '#FFFFFF')
@@ -274,7 +292,7 @@ var violin = function() {
 
     var upperCI = function(ds) {
 
-        var median = d3.median(ds, yAccess);
+        var median = getMedian(ds);
         var iqr = interQuartileRange(ds)
 
         var upper = median + (1.75 * (iqr / Math.sqrt(ds.length)));
@@ -300,21 +318,24 @@ var violin = function() {
         }
     };
 
-    var drawCI = function(svg, values) {
+    //var drawCI = function(svg, values) {
+    var drawCI = function() {
 
-        svg.append('line')
+        violinSvg.append('line')
             // idk why everything is fucking off by one pixel
-            .attr('x1', function() { 
-                return xScale(values[0].x) + (xScale.bandwidth() / 2); 
+            .attr('x1', function(d) { 
+                return xScale(d.category) + (xScale.bandwidth() / 2); 
             })
-            .attr('y1', function() { 
-                return yScale(lowerCI(values)); 
+            .attr('y1', function(d) { 
+                console.log(lowerCI(d.values));
+                return yScale(lowerCI(d.values)); 
             })
-            .attr('x2', function() { 
-                return xScale(values[0].x) + (xScale.bandwidth() / 2); 
+            .attr('x2', function(d) { 
+                return xScale(d.category) + (xScale.bandwidth() / 2); 
             })
-            .attr('y2', function() { 
-                return yScale(upperCI(values)); 
+            .attr('y2', function(d) { 
+                console.log(upperCI(d.values));
+                return yScale(upperCI(d.values)); 
             })
             .style('stroke-linecap', 'round')
             .style('shape-rendering', 'auto')
@@ -323,18 +344,18 @@ var violin = function() {
             ;
     };
 
-    var drawDistribution = function(svg, values, category) {
+    var makeKDE = function(values) {
 
         var kdg = kernelDensityGenerator(
             KERNELS.epanechnikov(kernelBandwidth), yScale.ticks(100)
         );
-        var kde = kdg(values.map(function(d) { return d.y; }));
-
-
+        //var kde = kdg(values.map(function(d) { return d.y; }));
+        var kde = kdg(values);
         var kmid = Math.round(kde.length / 2);
         var kmin = 0;
         var kmax = kde.length - 1;
-        var median = getMedian(values);
+        //var median = getMedian(values);
+        var median = d3.median(values);
 
         // These next three loops attempt to find a good cut off point for the
         // distribution area drawing. There are cases where zero density gaps
@@ -374,55 +395,97 @@ var violin = function() {
 
         // Save these densities for drawing
         kde = kde.slice(kmin, kmax);
-        console.log(kde);
 
-        // The left and right boundaries for the drawn areas
-        var leftBound = xScale(values[0].x) - (xScale.bandwidth() / 2);
-        var rightBound = xScale(values[0].x) + (xScale.bandwidth() / 2);
+        return kde;
+    };
 
-        // The width of each violin based on their boundaries, which in turn is
-        // based on the banwdith of the x-axis band scale
-        var violinWidth = (rightBound - leftBound) / 2;
-        
-        // The x and y scales are reversed for the drawn areas since we're
-        // drawing them rotated @ 90 degrees
-        var xAreaScale = yScale.copy();
-        var yAreaScale = d3.scaleLinear()
-            .domain([0, d3.max(kde, function(d) { return d[1]; })])
-            .range([violinWidth, 0])
-            .clamp(true)
-            ;
+    //var drawDistribution = function(svg, values, category) {
+    var drawDistribution = function() {
 
-        var area = d3.area()
-            .x(function(d) { return xAreaScale(d[0]); })
-            .y0(violinWidth)
-            .y1(function(d) { return yAreaScale(d[1]); })
-            .curve(d3.curveCatmullRom.alpha(0.5))
-            ;
+        var distributionData = data.map(function(d) {
 
-        var line = d3.line()
-            .x(function(d) { return xAreaScale(d[0]); })
-            .y(function(d) { return yAreaScale(d[1]); })
-            .curve(d3.curveCatmullRom.alpha(0.5))
-            ;
+            var kde = makeKDE(d.values);
 
-        var rightSide = svg.append('g');
-        var leftSide = svg.append('g');
+            if (d.upperBound)
+                kde = kde.filter(function(a) { return a[0] <= d.upperBound; });
+
+            if (d.lowerBound)
+                kde = kde.filter(function(a) { return a[0] >= d.lowerBound; });
+
+            // The left and right boundaries for the drawn areas
+            var leftBound = xScale(d.category) - (xScale.bandwidth() / 2);
+            var rightBound = xScale(d.category) + (xScale.bandwidth() / 2);
+
+            // The width of each violin based on their boundaries, which in turn is
+            // based on the banwdith of the x-axis band scale
+            var violinWidth = (rightBound - leftBound) / 2;
+            
+            // The x and y scales are reversed for the drawn areas since we're
+            // drawing them rotated @ 90 degrees
+            var xAreaScale = yScale.copy();
+            var yAreaScale = d3.scaleLinear()
+                .domain([0, d3.max(kde, function(d) { return d[1]; })])
+                .range([violinWidth, 0])
+                .clamp(true)
+                ;
+
+            var area = d3.area()
+                .x(function(d) { return xAreaScale(d[0]); })
+                .y0(violinWidth)
+                .y1(function(d) { return yAreaScale(d[1]); })
+                .curve(d3.curveCatmullRom.alpha(0.5))
+                ;
+
+            var line = d3.line()
+                .x(function(d) { return xAreaScale(d[0]); })
+                .y(function(d) { return yAreaScale(d[1]); })
+                .curve(d3.curveCatmullRom.alpha(0.5))
+                ;
+
+            return {
+                kde: kde,
+                leftBound: leftBound,
+                rightBound: rightBound,
+                violinWidth: violinWidth,
+                area: area,
+                line: line
+            };
+        });
+
+        //var rightSide = svg.append('g');
+        //var leftSide = svg.append('g');
+        var rightSide = violinSvg.append('g');
+        var leftSide = violinSvg.append('g');
+
+        //rightSide.append('path')
+        //    .attr('class', 'right-area-' + data.cat2id[category])
+        //    .datum(kde)
+        //    .attr('d', area)
+        //    .style('fill', function() {
+
+        //        if (data.cat2color && data.cat2color[category])
+        //            return data.cat2color[category];
+        //        else
+        //            colorScale(category)
+        //    })
+        //    .style('opacity', 0.7)
+        //    ;
 
         rightSide.append('path')
-            .attr('class', 'right-area-' + data.cat2id[category])
-            .datum(kde)
-            .attr('d', area)
-            .style('fill', function() {
+            .attr('class', function(d) { return 'right-area-' + d.id; })
+            .datum(function(d, i) { return distributionData[i].kde; })
+            .style('fill', function(d, i) {
 
-                if (data.cat2color && data.cat2color[category])
-                    return data.cat2color[category];
+                if (data[i].color)
+                    return data[i].color;
                 else
-                    colorScale(category)
+                    return colorScale(data[i].category)
             })
+            .attr('d', function(d, i) { return distributionData[i].area(d); })
             .style('opacity', 0.7)
             ;
 
+            /*
         leftSide.append('path')
             .attr('class', 'left-area-' + data.cat2id[category])
             .datum(kde)
@@ -436,7 +499,23 @@ var violin = function() {
             })
             .style('opacity', 0.7)
             ;
+            */
+            console.log(distributionData[0].kde);
+        leftSide.append('path')
+            .attr('class', function(d) { return 'left-area-' + d.id; })
+            .datum(function(d, i) { return distributionData[i].kde; })
+            .style('fill', function(d, i) {
 
+                if (data[i].color)
+                    return data[i].color;
+                else
+                    return colorScale(data[i].category)
+            })
+            .attr('d', function(d, i) { return distributionData[i].area(d); })
+            .style('opacity', 0.7)
+            ;
+
+            /*
         rightSide.append('path')
             .datum(kde)
             .attr('class', 'right-path-' + data.cat2id[category])
@@ -446,7 +525,18 @@ var violin = function() {
             .style('stroke-width', 3)
             .style('fill', 'none')
             ;
+            */
+        rightSide.append('path')
+            .attr('class', function(d) { return 'right-path-' + d.id; })
+            .datum(function(d, i) { return distributionData[i].kde; })
+            .attr('d', function(d, i) { return distributionData[i].line(d); })
+            .style('shape-rendering', 'auto')
+            .style('stroke', '#666')
+            .style('stroke-width', 3)
+            .style('fill', 'none')
+            ;
 
+        /*
         leftSide.append('path')
             .datum(kde)
             .attr('d', line)
@@ -455,12 +545,29 @@ var violin = function() {
             .style('stroke-width', 3)
             .style('fill', 'none')
             ;
+            */
 
-        rightSide.attr('transform', function() { 
+        leftSide.append('path')
+            .datum(function(d, i) { return distributionData[i].kde; })
+            .attr('class', function(d) { return 'right-path-' + d.id; })
+            .attr('d', function(d, i) { return distributionData[i].line(d); })
+            .style('shape-rendering', 'auto')
+            .style('stroke', '#666')
+            .style('stroke-width', 3)
+            .style('fill', 'none')
+            ;
+
+        rightSide.attr('transform', function(d, i) { 
+            var rightBound = distributionData[i].rightBound;
+            var violinWidth = distributionData[i].violinWidth;
+
             return 'rotate(90,0,0) translate(0,-' + (rightBound + violinWidth) + ')'
         });
 
-        leftSide.attr('transform', function() {
+        leftSide.attr('transform', function(d, i) {
+            var leftBound = distributionData[i].leftBound;
+            var violinWidth = distributionData[i].violinWidth;
+
             return 'rotate(90,0,0) translate(0,-' + (leftBound + violinWidth) + 
                    ') scale(1,-1)';
         });
@@ -577,6 +684,7 @@ var violin = function() {
 
     exports.draw = function() {
 
+        /*
         data.groups = groupBy(data.values, 'x');
         data.categories = d3.keys(data.groups);
         data.valueList = d3.values(data.groups);
@@ -600,7 +708,9 @@ var violin = function() {
         data.valueList.forEach(function(d) {
             d.sort(function(a, b) { return a.y - b.y; });
         });
+        */
 
+        console.log(xDomain);
         svg = d3.select('body')
             .append('svg')
             .attr('height', height)
@@ -610,22 +720,44 @@ var violin = function() {
                   'translate(' + margin.left + ',' + margin.top + ')'
             )
             .datum(data)
+            //.data(data)
             ;
 
+        console.log(xDomain);
+        console.log(yDomain);
         var scales = makeScales();
+        console.log(xDomain);
         var axes = makeAxes();
 
         drawBackground();
 
-        for (var i = 0; i < data.valueList.length; i++) {
+        violinSvg = svg.selectAll('violins')
+            .append('g')
+            .data(data)
+            .enter()
+            .append('g');
 
-            drawDistribution(svg, data.valueList[i], data.categories[i]);
+        drawDistribution();
+        drawQuartiles();
+        drawCI();
+        drawMedian();
+        //for (var i = 0; i < data.valueList.length; i++) {
+        for (var i = 0; i < data.length; i++) {
+
+            var values = data[i].values;
+
+        /*
+            drawDistribution(svg, values, data.categories[i]);
             drawQuartiles(svg, data.valueList[i]);
             drawCI(svg, data.valueList[i]);
             drawMedian(svg, data.valueList[i]);
+            */
         }
 
+        /*
         drawSignificance();
+        */
+        return exports;
     };
 
     /**
@@ -683,6 +815,18 @@ var violin = function() {
     exports.textures = function(_) {
         if (!arguments.length) return textures;
         textures = _;
+        return exports;
+    };
+
+    exports.xDomain = function(_) {
+        if (!arguments.length) return xDomain;
+        xDomain = _;
+        return exports;
+    };
+
+    exports.yDomain = function(_) {
+        if (!arguments.length) return yDomain;
+        yDomain = _;
         return exports;
     };
 
