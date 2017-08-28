@@ -57,6 +57,8 @@ var line = function() {
         yScale = null,
         // Start the x-scale at zero if true, otherwise use min()
         xScaleZero = null,
+        // Format string for x-axis labels
+        xFormat = '',
         // Start the y-scale at zero if true, otherwise use min()
         yScaleZero = null,
         // Format string for y-axis labels
@@ -126,7 +128,8 @@ var line = function() {
 
         yAxis = d3.axisLeft(yScale)
             .tickValues(yTickValues)
-            .tickFormat(d3.format(yFormat));
+            ;
+            //.tickFormat(d3.format(yFormat));
 
         var xAxisObject = svg.append('g')
             .attr('class', 'axis')
