@@ -1,4 +1,4 @@
-/*
+/**
   * file: violin.js
   * desc: d3js 4.0 implementation of violin plots.
   * vers: 0.2.0
@@ -110,18 +110,35 @@ var violin = function() {
         };
     };
 
-    var yAccess = function(d) { return d.y; };
+    /** 
+      * Returns the margin corrected height of the plot.
+      */
     var getHeight = function() { return height - margin.top - margin.bottom; };
+
+    /** 
+      * Returns the margin corrected width of the plot.
+      */
     var getWidth = function() { return width - margin.left - margin.right; };
 
+    /** 
+      * Returns the list of categories used in the plot.
+      */
     var getCategories = function() { 
         return data.map(function(d) { return d.category; });
     };
 
+    /** 
+      * Iterates over each violin object and returns all distribution values
+      * flattened into a single array.
+      */
     var getAllValues = function() {
         return [].concat.apply([], data.map(function(d) { return d.values; }));
     };
 
+    /** 
+      * Creates the x and y axis scales using the given domains and/or values.
+      * Returns the D3 scale objects in a two element array.
+      */
     var makeScales = function() {
 
         if (xDomain === undefined || !xDomain)
@@ -161,6 +178,10 @@ var violin = function() {
         return [xScale, yScale];
     };
 
+    /** 
+      * Creates the x and y axis objects and draws them. The axis objects are
+      * returned as a two element array.
+      */
     var makeAxes = function() {
 
         var xaxis = d3.axisBottom(xScale)
@@ -212,7 +233,9 @@ var violin = function() {
         return [xAxisObject, yAxisObject];
     };
 
-    //var drawQuartiles = function(svg, values) {
+    /** 
+      * Draws the interquartile range (IQR) for each violin..
+      */
     var drawQuartiles = function() {
 
         violinSvg.append('line')
@@ -237,25 +260,24 @@ var violin = function() {
             ;
     };
 
-    var getQ1 = function(values) {
+    /** 
+      * Returns the first quartile for the given set of values.
+      */
+    var getQ1 = function(values) { return d3.quantile(values, 0.25); });
 
-        //return d3.quantile(values, 0.25, yAccess);
-        return d3.quantile(values, 0.25);
-    };
+    /** 
+      * Returns the third quartile for the given set of values.
+      */
+    var getQ3 = function(values) { return d3.quantile(values, 0.75); })
 
-    var getQ3 = function(values) {
+    /** 
+      * Returns the median for the given set of values.
+      */
+    var getMedian = function(values) { return d3.median(values); });
 
-        //return d3.quantile(values, 0.75, yAccess);
-        return d3.quantile(values, 0.75);
-    };
-
-    var getMedian = function(values) {
-
-        //return d3.median(values, yAccess);
-        return d3.median(values);
-    };
-
-    //var drawMedian = function(svg, values) {
+    /** 
+      * Draws the median for each violin.
+      */
     var drawMedian = function() {
 
         violinSvg.append('circle')
@@ -275,11 +297,18 @@ var violin = function() {
             ;
     };
 
+    /** 
+      * Returns the interquartile range for the given set of values.
+      */
     var interQuartileRange = function(ds) {
 
         return getQ3(ds) - getQ1(ds);
     };
 
+    /** 
+      * Returns the position of the lower confidence interval for the given set
+      * of values.
+      */
     var lowerCI = function(ds) {
 
         var median = getMedian(ds);
@@ -290,6 +319,10 @@ var violin = function() {
         return lower;
     };
 
+    /** 
+      * Returns the position of the upper confidence interval for the given set
+      * of values.
+      */
     var upperCI = function(ds) {
 
         var median = getMedian(ds);
@@ -300,6 +333,10 @@ var violin = function() {
         return upper;
     };
 
+    /** 
+      * Draws the background of the plot. Currently this is just grey lines
+      * indicating ticks on the y axis.
+      */
     var drawBackground = function() {
 
         var ticks = yScale.ticks();
@@ -318,7 +355,9 @@ var violin = function() {
         }
     };
 
-    //var drawCI = function(svg, values) {
+    /** 
+      * Draws the confidence intervals for each violin.
+      */
     var drawCI = function() {
 
         violinSvg.append('line')
@@ -344,6 +383,18 @@ var violin = function() {
             ;
     };
 
+    /** 
+      * Estimates density using the Epanechnikov kernel for the given set of
+      * values.
+      *
+      * returns
+      *     an array of two element arrays where the first element is a value
+      *     from the given list of values, and the second element is its
+      *     density.
+      *
+      *     e.g. an input like [0,1,2,1,3,5,5,5,4] might return
+      *         [[0, 0.1], [1, 0.2], [2, 0.1], [3, 0.1], [4, 0.1], [5, 0.4]]
+      */
     var makeKDE = function(values) {
 
         var kdg = kernelDensityGenerator(
@@ -399,7 +450,9 @@ var violin = function() {
         return kde;
     };
 
-    //var drawDistribution = function(svg, values, category) {
+    /** 
+      * Draws each violin, or more precisely the area of its distribution.
+      */
     var drawDistribution = function() {
 
         var distributionData = data.map(function(d) {
@@ -682,6 +735,9 @@ var violin = function() {
 
     /** public **/
 
+    /** 
+      * Draw the entire violin plot.
+      */
     exports.draw = function() {
 
         /*
@@ -761,8 +817,8 @@ var violin = function() {
     };
 
     /**
-     * Setters and getters.
-     */
+      * Setters and getters.
+      */
 
     exports.data = function(_) {
         if (!arguments.length) return data;

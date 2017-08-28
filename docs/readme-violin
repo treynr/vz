@@ -1,0 +1,109 @@
+VIOLIN.JS README
+
+ABOUT
+
+    A D3.js 4.0 implementation of violin plots. violin.js exports a function,
+    violin(), that can be used to build the plot and specify options in the
+    same function chaining manner used by D3.
+
+REQUIREMENTS
+
+    D3.js 4.X
+
+DATA FORMAT
+
+    violin.js requires an array of objects for input. Each object represents a
+    separate violin that will be drawn in the plot. Some object fields are
+    required. The objects must be in the following format:
+
+        {
+            category
+                [string; required]
+                category and X-axis label for this violin
+
+            id
+                [string; required] 
+                unique ID for this violin
+
+            values
+                [array; reqired]
+                an array of numbers used for drawing the violin distribution
+
+            color
+                [string; optional]
+                hexadecimal code (#012345) used to color the violin
+
+            lowerBound
+                [float; optional]
+                lower bound value used to cut off the violin drawing
+
+            upperBound
+                [float; optional]
+                upper bound value used to cut off the violin drawing
+        }
+
+OPTIONS
+
+    The following options can be used to alter the behavior and appeance of the
+    violin plot.
+
+    data
+        [array; required]
+        The array of objects used as input for the plot. This is the only
+        exported option that is required.
+
+    height
+        [int; default = 800]
+        The height of the SVG in pixels.
+
+    width
+        [int; default = 900]
+        The width of the SVG in pixels.
+
+    font
+        [string; default = 'sans-serif']
+        The font family to use when drawing text.
+
+    fontSize
+        [string; default = '11px']
+        The font size to use when drawing text.
+
+    fontWeight
+        [string; default = 'normal']
+        The font weight to use when drawing text.
+
+    kernelBandwidth
+        [float; default = 50]
+        The kernel density estimation bandwidth parameter. Depending on the
+        distribution of the input data, this value will most likely have to be
+        increased or decreased.
+
+    xDomain
+        [array]
+        Specify a custom x-axis domain. The default set of x domain values is 
+        the list of categories specified by each violin object. This probably
+        shouldn't be used
+
+    yDomain
+        [array]
+        Specify a custom y-axis domain. The default y domain used is the min
+        and max of all values used when estimating the distribution.
+
+    xLabel
+        [string; default = '']
+        A string used to label the x-axis.
+
+    yLabel
+        [string; default = '']
+        A string used to label the y-axis.
+
+EXAMPLES
+
+    Create a simple violin plot.
+
+        var plot = violin()
+            .data(someData)
+            .height(350)
+            .width(600)
+            .draw();
+
