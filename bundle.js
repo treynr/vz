@@ -7,51 +7,91 @@
 
 // Don't fucking forget the id variables have to be strings or this thing shits
 // the bed.
-/*
- * The graph data structure necessary for this viz is an object containing two
- * lists, 'nodes' and 'edges'. Each node object can have the following fields:
- *  node {
- *      id:         [required] node ID 
- *      depth:      [required] int used to represent depth in the hierarchy
- *      colorValue: [optional] int value used to generate a range of colors
- *      label:      [optional] text label to append to the node
- *      radius:     [optional] size of the node
- *      color:      [optional] node color
- * }
- *
- * edge {
- *      source: [required] ID of the source node
- *      target: [required] ID of the source node
- *      width:  [optional] width of the edge in pixels
- * }
- *
- */
+
+/**
+  * The data structure necessary for this viz is an object containing two
+  * fields, 'nodes' and 'edges', both of which are lists of objects. 
+  * Since this is designed to visualize connections between various components
+  * of a hierarchy, some nodes should represent internal clusters and others
+  * are leaf-like ends. Edges are only visualized between leaves.
+  * The following fields are used for node and edge objects:
+  *
+  * [node]
+  *     id:     [required] string representing a unique ID
+  *     parent: [required] parent node ID of this node
+  *     name:   [optional] displayed name for this node
+  *
+  * [edge]
+  *     source: [required] source node ID
+  *     target: [required] target node ID
+  *
+  * So, an example input would look like this:
+  *
+  * var graph = {
+  *     nodes: [
+  *         {id: 'Cat-A', name: 'Category A', parent: ''},
+  *         {id: 'Cat-B', name: 'Category B', parent: ''},
+  *         {id: 'Mem-A1', name: 'A1', parent: 'Cat-A'},
+  *         {id: 'Mem-A2', name: 'A2', parent: 'Cat-A'},
+  *         {id: 'Mem-A3', name: 'A3', parent: 'Cat-A'},
+  *         {id: 'Mem-B1', name: 'B1', parent: 'Cat-B'},
+  *         {id: 'Mem-B2', name: 'B2', parent: 'Cat-B'}
+  *     ],
+  *     edges = [
+  *         {source: 'Mem-A1', target: 'Mem-A2'},
+  *         {source: 'Mem-A1', target: 'Mem-B1'},
+  *         {source: 'Mem-A2', target: 'Mem-B2'},
+  *         {source: 'Mem-A3', target: 'Mem-B1'}
+  *     ]
+  */
 var bundle = function() {
 
     var exports = {},
-        svg = null,
-        svgLabel = '',
+
+        /** public **/
+
+        // Graph data struct which should contain a key for nodes and edges
+        graph = null,
         // SVG diameter (width and height)
         diameter = 960,
-        // Radius used to generate the circular bundle graph (d / 2)
+        // Radius used to generate the circular bundle graph
         radius = diameter / 2,
         // Inner radius of the bundle graph
         innerRadius = radius - 120,
+        // Renders node name text for leaf nodes
+        useNodeText = false,
+        // Draws rectangles indicating upper level node groups
+        useCircumference = false,
+        // Draws rectangles indicating upper level node groups
+        useGroupBoxes = false,
+        // The width of the node group boxes
+        groupBoxWidth = 5,
+        // Fill color for the node group boxes
+        groupBoxFill = '#555555',
+        // Stroke color for the node group boxes
+        groupBoxStroke = '#000000',
+        // Stroke width for the node group boxes
+        groupBoxStrokeWidth = 1,
+        // Spacing between the start of the boxes and edges
+        groupBoxSpacing = 5,
         // Separation distance between nodes of the same group
-        separation = 0.5,
+        intraSeparation = 0.5,
+        // Separation distance between nodes of different groups
+        interSeparation = 2,
+
+        /** private **/
+
         // Root node of a d3 generated hierarchy
         rootNode = null,
+        // List of node objects
         d3Nodes = null,
+        // List of edge objects
         d3Edges = null,
-
-
-
-        // Graph data struct which should contain a key for nodes and edges
-        graph = null
-            ;
+        // SVG object
+        svg = null
+        ;
 
     /** private **/
-
 
     /**
      * Because the d3js stratify() function is fucked when it comes to
@@ -140,7 +180,7 @@ var bundle = function() {
             */
 
             .append('text')
-            //.attr('class', 'node')
+            .attr('class', 'node-text')
             .attr('fill', '#000000')
             .attr('dy', '.31em')
             .attr('transform', function(d) { 
@@ -158,7 +198,7 @@ var bundle = function() {
 
                 return d.data.textDecoration ? d.data.textDecoration : 'none';
             })
-            .text(function(d) { return d.data.label; })
+            .text(function(d) { return d.data.name; })
             ;
     };
 
@@ -178,7 +218,6 @@ var bundle = function() {
             .append('path')
             .attr('class', 'link')
             .attr('d', function(d) { 
-                console.log(d);
                 return line(d.source.path(d.target)); 
             })
 			.attr('stroke', function(d) {
@@ -197,7 +236,19 @@ var bundle = function() {
 			;
     };
 
-    var drawGroupLines = function() {
+    var drawGroupBoxes = function() {
+
+        var maxTextWidth = 0;
+
+        if (useNodeText) {
+            d3.selectAll('.node-text')
+                .each(function(d) {
+
+                    maxTextWidth = d3.max([
+                        maxTextWidth, this.getComputedTextLength()
+                    ]);
+                })
+        }
 
         var nodes = rootNode.descendants().filter(function(n) { 
             return !n.children; 
@@ -226,7 +277,6 @@ var bundle = function() {
 
         edges = edges.filter(function(a) { return a.length !== 0; });
 
-        console.log(edges);
         edges.forEach(function(d, i) {
 
             var min = d3.min(d, function(e) { return d3.min([e.start, e.end]); });
@@ -241,21 +291,16 @@ var bundle = function() {
         });
 
         var arc = d3.arc()
-            .innerRadius(radius - 5)
-            .outerRadius(radius)
-            .innerRadius(function(d) { return d.radius + 5; })
-            .outerRadius(function(d) { return d.radius + 10; })
+            //.innerRadius(radius - 5)
+            //.outerRadius(radius)
+            .innerRadius(function(d) { 
+                return d.radius + groupBoxSpacing + maxTextWidth; 
+            })
+            .outerRadius(function(d) { 
+                return d.radius + groupBoxSpacing + groupBoxWidth + maxTextWidth;
+            })
             .startAngle(function (d) { return d.start / 180 * Math.PI; })
-            //.endAngle(function (d) { return d.y ; })
             .endAngle(function (d) { return d.end / 180 * Math.PI; })
-            ;
-
-        var line = d3.radialLine()
-            .radius(function(d) { return d.y; })
-            .angle(function(d) { return d.x / 180 * Math.PI; })
-            //.curve(d3.curveBundle.beta(0.0))
-            //.curve(d3.curveBasis.alpha(0))
-            .curve(d3.curveCatmullRom.alpha(1))
             ;
 
         link = svg.append('g')
@@ -265,35 +310,45 @@ var bundle = function() {
             .append('path')
             .attr('class', 'link')
             .attr('id', function(d) { return d.tag; })
-            //.attr('d', function(d) { return line(d.source.path(d.target)); })
-            //.attr('d', function(d) { return line([d.source, d.target]); })
-            //.attr('d', function(d) { return arc([d.source.x, d.target.x]); })
             .attr('d', function(d) { return arc(d); })
-			.style('stroke', function(d) {
-				return d.color ? d.color : '#555';
-			})
-			.style('fill', function(d) {
-				return d.color ? d.color : '#555';
-			})
-			.attr('stroke-opacity', 1)
-			.attr('stroke-width', 
-				function(d) { return d.width ? d.width : 2;
-			})
+			.style('stroke', function(d) { return groupBoxStroke; })
+			.style('stroke-width', function(d) { return groupBoxStrokeWidth; })
+			.style('fill', function(d) { return groupBoxFill; })
+			.style('stroke-opacity', 1)
 			;
 
-            /*
         var texts = svg.selectAll('linkTexts')
             .data(edges)
             .enter()
             .append('text')
             .attr('dy', -5)
             .style('text-anchor', 'middle')
+
+            //.attr('dx', '1.61em')
+            //.attr('transform', function(d) { 
+
+            //    return 'rotate(' + (d.x - 90) + ')' + 
+            //        'translate(' + (d.y + 8) + ',0)' + 
+            //        (d.x < 180 ? '' : 'rotate(180)'); 
+            //})
+            //.style('text-anchor', function(d) { 
+            //    return d.x < 180 ? 'start' : 'end'; 
+            //})
+            .style('font-family', 'sans-serif')
+            .style('font-size', '12px')
+            //.style('text-decoration', function(d) {
+
+            //    return d.data.textDecoration ? d.data.textDecoration : 'none';
+            //})
+
             .append('textPath')
             .attr('xlink:href', function(d) { return '#' + d.tag; })
-            //.attr('startOffset', '20%')
+            //.attr('startOffset', '0%')
+            .style('text-anchor', function(d) { 
+                return 'start';
+            })
             .text('genes and shit')
             ;
-            */
     };
 
     var drawCircumference = function() {
@@ -327,6 +382,12 @@ var bundle = function() {
 			;
     };
 
+    var recalculateRadii = function() {
+
+        radius = diameter / 2;
+        innerRadius = radius - 120;
+    };
+
     /** public **/
 
     exports.draw = function() {
@@ -347,22 +408,26 @@ var bundle = function() {
         var cluster = d3.cluster()
             .size([360, innerRadius])
             .separation(function(a, b) {
-                return a.parent == b.parent ? separation: 2;
+                return a.parent == b.parent ? intraSeparation : interSeparation;
             });
 
         graph.nodes = buildHierarchy(graph.nodes);
         rootNode = d3.hierarchy(graph.nodes);
 
         cluster(rootNode);
-        drawNodes();
         drawEdges();
-        drawGroupLines();
-        drawCircumference();
+
+        if (useNodeText)
+            drawNodes();
+
+        if (useGroupBoxes)
+            drawGroupBoxes();
+
+        if (useCircumference)
+            drawCircumference();
     };
 
-    /**
-     * Setters and getters.
-     */
+    /** setters and getters **/
 
     exports.graph = function(_) {
         if (!arguments.length) return graph;
@@ -373,12 +438,6 @@ var bundle = function() {
     exports.innerRadius = function(_) {
         if (!arguments.length) return innerRadius;
         innerRadius = +_;
-        return exports;
-    };
-
-    exports.height = function(_) {
-        if (!arguments.length) return height;
-        height = +_;
         return exports;
     };
 
@@ -394,141 +453,51 @@ var bundle = function() {
         return exports;
     };
 
-    exports.charge = function(_) {
-        if (!arguments.length) return charge;
-        charge = +_;
+    exports.useNodeText = function(_) {
+        if (!arguments.length) return useNodeText;
+        useNodeText = _;
         return exports;
     };
 
-    exports.distance = function(_) {
-        if (!arguments.length) return distance;
-        distance = +_;
+    exports.useCircumference = function(_) {
+        if (!arguments.length) return useCircumference;
+        useCircumference = _;
         return exports;
     };
 
-    exports.fixed = function(_) {
-        if (!arguments.length) return fixed;
-        fixed = _;
+    exports.useGroupBoxes = function(_) {
+        if (!arguments.length) return useGroupBoxes;
+        useGroupBoxes = _;
         return exports;
     };
 
-    exports.layerSize = function(_) {
-        if (!arguments.length) return layerSize;
-        layerSize = +_;
+    exports.groupBoxWidth = function(_) {
+        if (!arguments.length) return groupBoxWidth;
+        groupBoxWidth = +_;
         return exports;
     };
 
-    exports.verticalSpacing = function(_) {
-        if (!arguments.length) return verticalSpacing;
-        verticalSpacing = +_;
+    exports.groupBoxFill = function(_) {
+        if (!arguments.length) return groupBoxFill;
+        groupBoxFill = _;
         return exports;
     };
 
-    exports.nodeColor = function(_) {
-        if (!arguments.length) return nodeColor;
-        nodeColor = _;
+    exports.groupBoxStroke = function(_) {
+        if (!arguments.length) return groupBoxStroke;
+        groupBoxStroke = +_;
         return exports;
     };
 
-    exports.nodeOpacity = function(_) {
-        if (!arguments.length) return nodeOpacity;
-        nodeOpacity = +_;
+    exports.groupBoxStrokeWidth = function(_) {
+        if (!arguments.length) return groupBoxStrokeWidth;
+        groupBoxStrokeWidth = +_;
         return exports;
     };
 
-    exports.scaleFxn = function(_) {
-        if (!arguments.length) return scaleFxn;
-        scaleFxn = _;
-        return exports;
-    };
-
-    exports.useColorRange = function(_) {
-        if (!arguments.length) return useColorRange;
-        useColorRange = _;
-        return exports;
-    };
-
-    exports.useSizeRange = function(_) {
-        if (!arguments.length) return useSizeRange;
-        useSizeRange = _;
-        return exports;
-    };
-
-    exports.gradient = function(_) {
-        if (!arguments.length) return gradient;
-        gradient = _;
-        return exports;
-    };
-
-    exports.useDarkStroke = function(_) {
-        if (!arguments.length) return useDarkStroke;
-        useDarkStroke = _;
-        return exports;
-    };
-
-    exports.useShadow = function(_) {
-        if (!arguments.length) return useShadow;
-        useShadow = _;
-        return exports;
-    };
-
-    exports.nodeStroke = function(_) {
-        if (!arguments.length) return nodeStroke;
-        nodeStroke = _;
-        return exports;
-    };
-
-    exports.nodeStrokeWidth = function(_) {
-        if (!arguments.length) return nodeStrokeWidth;
-        nodeStrokeWidth = +_;
-        return exports;
-    };
-
-    exports.prettifyNodes = function(_) {
-        if (!arguments.length) return prettifyNodes;
-        prettifyNodes = _;
-        return exports;
-    };
-
-    exports.edgeCurve = function(_) {
-        if (!arguments.length) return edgeCurve;
-        edgeCurve = _;
-        return exports;
-    };
-
-    exports.edgeColor = function(_) {
-        if (!arguments.length) return edgeColor;
-        edgeColor = _;
-        return exports;
-    };
-
-    exports.edgeOpacity = function(_) {
-        if (!arguments.length) return edgeOpacity;
-        edgeOpacity = +_;
-        return exports;
-    };
-
-    exports.edgeStroke = function(_) {
-        if (!arguments.length) return edgeStroke;
-        edgeStroke = _;
-        return exports;
-    };
-
-    exports.edgeWidth = function(_) {
-        if (!arguments.length) return edgeWidth;
-        edgeWidth = +_;
-        return exports;
-    };
-
-    exports.tx = function(_) {
-        if (!arguments.length) return tx;
-        tx = +_;
-        return exports;
-    };
-
-    exports.ty = function(_) {
-        if (!arguments.length) return ty;
-        ty = +_;
+    exports.groupBoxSpacing = function(_) {
+        if (!arguments.length) return groupBoxSpacing;
+        groupBoxSpacing = +_;
         return exports;
     };
 
@@ -550,21 +519,21 @@ var bundle = function() {
         return exports;
     };
 
+    exports.intraSeparation = function(_) {
+        if (!arguments.length) return intraSeparation;
+        intraSeparation = _;
+        return exports;
+    };
+
+    exports.interSeparation = function(_) {
+        if (!arguments.length) return interSeparation;
+        interSeparation = _;
+        return exports;
+    };
+
     exports.fontWeight = function(_) {
         if (!arguments.length) return fontWeight;
         fontWeight = _;
-        return exports;
-    };
-
-    exports.svgLabel = function(_) {
-        if (!arguments.length) return svgLabel;
-        svgLabel = _;
-        return exports;
-    };
-
-    exports.textures = function(_) {
-        if (!arguments.length) return textures;
-        textures = _;
         return exports;
     };
 
