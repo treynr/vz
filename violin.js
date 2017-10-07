@@ -263,17 +263,17 @@ var violin = function() {
     /** 
       * Returns the first quartile for the given set of values.
       */
-    var getQ1 = function(values) { return d3.quantile(values, 0.25); });
+    var getQ1 = function(values) { return d3.quantile(values, 0.25); };
 
     /** 
       * Returns the third quartile for the given set of values.
       */
-    var getQ3 = function(values) { return d3.quantile(values, 0.75); })
+    var getQ3 = function(values) { return d3.quantile(values, 0.75); };
 
     /** 
       * Returns the median for the given set of values.
       */
-    var getMedian = function(values) { return d3.median(values); });
+    var getMedian = function(values) { return d3.median(values); };
 
     /** 
       * Draws the median for each violin.

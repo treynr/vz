@@ -127,7 +127,9 @@ var line = function() {
             .tickSizeOuter(outerTicks ? 6 : 0);
 
         yAxis = d3.axisLeft(yScale)
-            .tickValues(yTickValues)
+            //.tickValues(yTickValues)
+            // Forces min/max ticks to be labeled
+            .tickValues(yScale.ticks().concat(yScale.domain()));
             ;
             //.tickFormat(d3.format(yFormat));
 
