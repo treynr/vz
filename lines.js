@@ -45,6 +45,14 @@ var line = function() {
         outerTicks = false,
         // Axis text size
         fontSize = '11px',
+        // Graph title
+        title = '',
+        // X position of the title
+        titleX = null,
+        // Y position of the title
+        titleY = null,
+        // Title font size in pixels
+        titleSize = '11px',
         // X-axis text
         xText = '',
         // Y-axis text
@@ -124,7 +132,9 @@ var line = function() {
     var makeAxes = function() {
 
         xAxis = d3.axisBottom(xScale)
-            .tickSizeOuter(outerTicks ? 6 : 0);
+            .tickValues(xScale.ticks().concat(xScale.domain()))
+            //.tickSizeOuter(outerTicks ? 6 : 0);
+        ;
 
         yAxis = d3.axisLeft(yScale)
             //.tickValues(yTickValues)
@@ -248,6 +258,26 @@ var line = function() {
         }
     };
 
+    var drawTitle = function() {
+
+            svg.append('text')
+                .attr('x', function() {
+                    if (titleX !== null)
+                        return titleX;
+
+                    return (width - margin.left) / 2;
+                })
+                .attr('y', function() {
+                    if (titleY !== null)
+                        return titleY;
+
+                    return margin.top;
+                })
+                .style('font-family', 'sans-serif')
+                .style('font-size', titleSize)
+                .text(title);
+    };
+
     /** public **/
 
     exports.draw = function() {
@@ -262,14 +292,6 @@ var line = function() {
 
         if (svgLabel) {
 
-            svg.append('text')
-                //.attr('transform', 'translate(-' + margin.left + ',-' + margin.top + ')')
-                .attr('x', 10)
-                .attr('y', 15)
-                .style('font-family', 'sans-serif')
-                .style('font-size', '15px')
-                .style('font-weight', 'bold')
-                .text(svgLabel);
         }
 
         makeScales();
@@ -281,6 +303,9 @@ var line = function() {
 
         if (useNodes)
             drawNodes();
+
+        if (title)
+            drawTitle();
     };
 
     /** setters/getters **/
@@ -336,6 +361,30 @@ var line = function() {
     exports.fontSize = function(_) {
         if (!arguments.length) return fontSize;
         fontSize = _;
+        return exports;
+    };
+
+    exports.titleSize = function(_) {
+        if (!arguments.length) return titleSize;
+        titleSize = _;
+        return exports;
+    };
+
+    exports.titleX = function(_) {
+        if (!arguments.length) return titleX;
+        titleX = +_;
+        return exports;
+    };
+
+    exports.titleY = function(_) {
+        if (!arguments.length) return titleY;
+        titleY = _;
+        return exports;
+    };
+
+    exports.title = function(_) {
+        if (!arguments.length) return title;
+        title = _;
         return exports;
     };
 

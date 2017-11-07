@@ -225,7 +225,7 @@ var bundle = function() {
                     //return '#feb24c';
                     return 'steelblue';
                 else
-                    return '#f03b20';
+                    return '#4682b4';
 				return d.color ? d.color : 'steelblue';
 			})
 			.attr('stroke-opacity', 0.6)
@@ -241,6 +241,10 @@ var bundle = function() {
         var maxTextWidth = 0;
 
         if (useNodeText) {
+
+            // Computes the max text width only if node names are rendered.
+            // This way the drawn group boxes don't overlap the text and look
+            // ugly.
             d3.selectAll('.node-text')
                 .each(function(d) {
 
@@ -262,10 +266,11 @@ var bundle = function() {
 
             if (a.parent == b.parent) { 
                 edges[edges.length - 1].push({
+                    id: a.data.id + '-group',
                     start: a.x, 
                     end: b.x, 
                     radius: a.y,
-                    tag: a.data.id + '-group'
+                    tag: a.parent.data.name
                 });
                     
                 //edges.push({start: a.x, end: b.x, radius: a.y});
@@ -283,6 +288,7 @@ var bundle = function() {
             var max = d3.max(d, function(e) { return d3.max([e.start, e.end]); });
 
             edges[i] =  {
+                id: d[0].id,
                 start: min, 
                 end: max, 
                 radius: d[0].radius,
@@ -321,16 +327,22 @@ var bundle = function() {
             .data(edges)
             .enter()
             .append('text')
+            .attr('class', 'group-text')
             .attr('dy', -5)
             .style('text-anchor', 'middle')
 
             //.attr('dx', '1.61em')
-            //.attr('transform', function(d) { 
+            .attr('transform', function(d) { 
 
-            //    return 'rotate(' + (d.x - 90) + ')' + 
-            //        'translate(' + (d.y + 8) + ',0)' + 
-            //        (d.x < 180 ? '' : 'rotate(180)'); 
-            //})
+                d.x = d.end / 180 * Math.PI;
+                d.y = d.start / 180 * Math.PI;
+                
+                //return 'rotate(' + d.x + ')';
+                //return 'rotate(' + 180 + ' ' + d.x + ' ' + d.y + ')';
+                //return 'rotate(' + (d.x - 90) + ')' + 
+                //    'translate(' + (d.y + 8) + ',0)' + 
+                //    (d.x < 180 ? '' : 'rotate(180)'); 
+            })
             //.style('text-anchor', function(d) { 
             //    return d.x < 180 ? 'start' : 'end'; 
             //})
@@ -347,7 +359,7 @@ var bundle = function() {
             .style('text-anchor', function(d) { 
                 return 'start';
             })
-            .text('genes and shit')
+            .text(function(d) { return d.tag; })
             ;
     };
 

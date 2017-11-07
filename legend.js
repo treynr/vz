@@ -310,6 +310,12 @@ var legend = function() {
         return exports;
     };
 
+    exports.keyPad = function(_) {
+        if (!arguments.length) return keyPad;
+        keyPad = +_;
+        return exports;
+    };
+
     exports.symbol = function(_) {
         if (!arguments.length) return symbol;
         symbol = _;
