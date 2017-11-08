@@ -1,6 +1,317 @@
+/**
+  * file: heat.js
+  * desc: d3js 4.0 implementation of heatmaps.
+  * vers: 0.2.0
+  * auth: TR
+  */
+
+/**
+  * The data structure necessary for this viz is an array of objects. Each
+  * object represents a separate box plot which may have >= 1 violins.
+  * The design is similar to the scatter plot visualization and allows the user
+  * to specify plot positions in a grid like arrangement; although this
+  * complicates the codebase, it is much better for producing consistently 
+  * aligned, publication-ready images.
+  *
+  * Each object has the following fields:
+  *
+  * plot {
+  *     values: [required] an array of data point objects
+  *     title:  [optional] text for the plot title
+  *     label:  [optional] label text for indicating separate figures
+  *     color:  [optional] hmmm idk yet
+  * }
+  *
+  * value {
+  *     x:      [required] x-axis (column) category
+  *     y:      [required] y-axis (row) category
+  *     value:  [required] the numeric value for this data point
+  * }
+  *
+  */
+
+var heatmap = function() {
+
+    var exports = {},
+
+        /** public **/
+
+        data = null,
+        // The x-axis domain range
+        xDomain = null,
+        // The y-axis domain range
+        yDomain = null,
+        // Font family
+        font = 'sans-serif',
+        // Font size
+        fontSize = '11px',
+        // Font weight
+        fontWeight = 'normal',
+        xLabel = '',
+        yLabel = '',
+
+        /** private **/
+
+        cScale = null,
+        // Margin object
+        margin = {top: 90, right: 90, bottom: 90, left: 90},
+        // SVG object
+        svg = null
+        ;
+
+    /** 
+      * Returns the margin corrected height of the plot.
+      */
+    var getHeight = function() { return height - margin.top - margin.bottom; };
+
+    /** 
+      * Returns the margin corrected width of the plot.
+      */
+    var getWidth = function() { return width - margin.left - margin.right; };
+
+    /**
+      * Returns the list of categories that make up the x-axis or the current
+      * set of columns.
+      */
+    var getColumnCategories = function() {
+
+        // Requries the Set object from the new ES6 standard which not all
+        // browsers support. Removes duplicates.
+        return Array
+            .from(new Set(data.values.map(function(d) { return d.x; })));
+    };
+
+    /**
+      * Returns the list of categories that make up the y-axis or the current
+      * set of rows.
+      */
+    var getRowCategories = function() {
+
+        // Requries the Set object from the new ES6 standard which not all
+        // browsers support. Removes duplicates.
+        return Array
+            .from(new Set(data.values.map(function(d) { return d.y; })));
+    };
+
+    /** 
+      * Creates the x and y axis scales using the given domains and/or values.
+      * Returns the D3 scale objects in a two element array.
+      */
+    var makeScales = function() {
+
+        if (!xDomain)
+            xDomain = getColumnCategories();
+
+        if (!yDomain)
+            yDomain = getRowCategories();
+
+        cDomain = d3.extent(data.values.map(function(d) { return d.value; }));
+
+        xScale = d3.scaleBand()
+            .domain(xDomain)
+            .range([0, getWidth()])
+            .paddingInner(0)
+            .paddingOuter(0.05)
+            .align(0)
+            ;
+
+        yScale = d3.scaleBand()
+            .domain(yDomain)
+            .range([0, getHeight()])
+            .paddingInner(0)
+            .paddingOuter(0.05)
+            .align(0)
+            ;
+
+        //cScale = d3.scaleLinear()
+        //    //.interpolate(d3.interpolateRgb)
+        //    .interpolate(d3.interpolateYlGnBu)
+        //    .domain(cDomain)
+        //    .range([d3.rgb('#EDF3FE'), d3.rgb('#0767F8')])
+        //    .range([d3.rgb(d3.schemeYlGnBu[0]), d3.rgb(d3.schemeYlGnBu[d3.schemeYlGnBu.length - 1])])
+        //    ;
+        cScale = d3.scaleSequential(d3.interpolateYlGnBu)
+            //.interpolate(d3.interpolateRgb)
+            .domain(cDomain)
+            //.range([d3.rgb('#EDF3FE'), d3.rgb('#0767F8')])
+            //.range([d3.rgb(d3.schemeYlGnBu[0]), d3.rgb(d3.schemeYlGnBu[d3.schemeYlGnBu.length - 1])])
+            ;
+
+        return [xScale, yScale];
+    };
+
+    /** 
+      * Creates the x and y axis objects and draws them. The axis objects are
+      * returned as a two element array.
+      */
+    var drawAxes = function() {
+
+        var xaxis = d3.axisBottom(xScale)
+            .tickSizeOuter(0)
+            //.ticks(5)
+            //.tickValues(xTickValues)
+            //.tickFormat(d3.format(xFormat))
+            ;//.tickSizeOuter(outerTicks ? 6 : 0);
+
+        var yaxis = d3.axisRight(yScale)
+            .tickSizeOuter(0)
+            //.ticks(5)
+            //.tickValues(yTicksValues)
+            //.tickFormat(d3.format(yFormat))
+            ;
+
+        var xAxisObject = svg.append('g')
+            .attr('transform', function() {
+                return 'translate(0,' + getHeight() + ')';
+            })
+            .style('fill', 'none')
+            .style('font-family', font)
+            .style('font-size', fontSize)
+            .style('font-weight', fontWeight)
+            .call(xaxis)
+            ;
+
+        xAxisObject
+            .select('.domain')
+            .remove()
+            ;
+
+        xAxisObject
+            .selectAll('text')
+            .attr('x', 5)
+            .attr('y', 5)
+            .attr('dy', '.35em')
+            .attr('dx', '.35em')
+            .attr('transform', 'rotate(-300)')
+            .style('text-anchor', 'start')
+            .append('text')
+            .attr('x', function() { return getWidth() / 2; })
+            .attr('y', 35)
+            .attr('fill', '#000')
+            .style('text-anchor', 'middle')
+            .text(function(d) { return xLabel; })
+            ;
+
+
+        var yAxisObject = svg.append('g')
+            .attr('transform', function() {
+                return 'translate(' + getWidth() + ',0)';
+            })
+            .style('fill', 'none')
+            .style('font-family', font)
+            .style('font-size', fontSize)
+            .style('font-weight', fontWeight)
+            .call(yaxis)
+            .select('.domain')
+            .remove()
+            //.append('text')
+            //// Weird x, y argumetnns cause of the -90 rotation
+            //.attr('x', function() { return -getHeight() / 2; })
+            //.attr('y', -40)
+            //.attr('fill', '#000')
+            ////.attr('transform', 'rotate(-90)')
+            //.style('text-anchor', 'middle')
+            //.text(function(d) { return 'shit'; })
+            ;
+
+        return [xAxisObject, yAxisObject];
+    };
+
+    var drawCells = function() {
+
+        var cellSvg = svg.selectAll('cells')
+            .data(data.values)
+            .enter()
+            .append('rect')
+            .attr('x', function(d) { return xScale(d.x); })
+            .attr('y', function(d) { return yScale(d.y); })
+            .attr('height', yScale.bandwidth())
+            .attr('width', xScale.bandwidth())
+            .style('fill', function(d) { return cScale(d.value); })
+            .style('stroke', '#000000')
+            .style('stroke-width', 1)
+            ;
+    };
+
+    var drawLegend = function() {
+
+        var gradient = svg.append('defs')
+            .append('linearGradient')
+            .attr("id", "gradient")
+            .attr("x1", "0%")
+            .attr("y1", "0%")
+            .attr("x2", "0%")
+            .attr("y2", "100%")
+            .attr("spreadMethod", "pad")
+            //.attr("spreadMethod", 'userSpaceOnUse')
+            .selectAll('stop')
+            .data([
+                {offset: '0%', color: cScale(0)},
+                {offset: '50%', color: cScale(0.5)},
+                {offset: '100%', color: cScale(1)},
+            ])
+            .enter()
+            .append('stop')
+            .attr('offset', function(d) { return d.offset; })
+            .attr('stop-color', function(d) { return d.color; })
+            ;
+
+        var legendSvg = svg.append('rect')
+            .attr('x', function(d) { return -20; })
+            .attr('y', function(d) { return 0; })
+            .attr('height', getHeight() - 3)
+            .attr('width', 10)
+            .style('fill', 'url(#gradient)')
+            .style('stroke', '#000000')
+            .style('stroke-width', 1)
+            ;
+    };
+
+    exports.draw = function() {
+
+        svg = d3.select('body')
+            .append('svg')
+            .attr('height', height)
+            .attr('width', width)
+            .append('g')
+            .attr('transform', 
+                  'translate(' + margin.left + ',' + margin.top + ')'
+            )
+            ;
+
+        makeScales();
+        drawAxes();
+        drawCells();
+        drawLegend();
+
+    };
+    /**
+      * Setters and getters.
+      */
+
+    exports.data = function(_) {
+        if (!arguments.length) return data;
+        data = _;
+        return exports;
+    };
+
+    exports.height = function(_) {
+        if (!arguments.length) return height;
+        height = +_;
+        return exports;
+    };
+
+    exports.width = function(_) {
+        if (!arguments.length) return width;
+        width = +_;
+        return exports;
+    };
+
+    return exports;
+};
 
 // opts.rg = reverse the gradient coloring
-var heatmap = function(data, rlabels, clabels, title, grps, opts) {
+var heats = function(data, rlabels, clabels, title, grps, opts) {
 
     var margin = { top: 300, right: 10, bottom: 50, left: 300 };
     var in_height = (opts.dimensions === undefined) ? 500 : opts.dimensions[0];
