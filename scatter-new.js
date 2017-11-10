@@ -462,7 +462,8 @@ var scatter = function() {
 
             // Plot title
             scatterBox.append('text')
-                .attr('x', subWidth / 2)
+                //.attr('x', subWidth / 2)
+                .attr('x', 0)
                 .attr('y', -5)
                 .style('font', '11px sans-serif')
                 .style('font-weight', 'normal')
