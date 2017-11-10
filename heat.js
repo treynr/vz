@@ -49,6 +49,9 @@ var heatmap = function() {
         fontWeight = 'normal',
         xLabel = '',
         yLabel = '',
+        normalizeRows = false,
+        normalizeColumns = false,
+        normalizeMatrix = false,
 
         /** private **/
 
@@ -93,6 +96,132 @@ var heatmap = function() {
             .from(new Set(data.values.map(function(d) { return d.y; })));
     };
 
+    var normalize = function(row) {
+
+        var cats = [];
+        var means = {}
+        var accessor = '';
+
+        if (row) {
+
+            cats = getRowCategories();
+            accessor = 'y';
+
+        } else {
+
+            cats = getColumnCategories();
+            accessor = 'x';
+        }
+
+        for (var i = 0; i < cats.length; i++)
+            means[cats[i]] = [];
+
+        for (var i = 0; i < cats.length; i++) {
+            for (var j = 0; j < data.values.length; j++) {
+
+                if (data.values[j][accessor] === cats[i])
+                    means[cats[i]].push(data.values[j].value);
+            }
+        }
+
+        for (var i = 0; i < cats.length; i++) {
+
+            var mean = d3.mean(means[cats[i]]);
+            var dev = d3.deviation(means[cats[i]]);
+
+            for (var j = 0; j < data.values.length; j++) {
+                if (data.values[j][accessor] === cats[i])
+                    data.values[j].value = (data.values[j].value - mean) / dev;
+            }
+        }
+    };
+
+    /**
+      * Normalize values over the entire matrix rather that just a column or
+      * row at a time. This should only be used when the elements in the rows
+      * and columns are the same.
+      */
+    var matrixNormalization = function() {
+
+        //var vals = data.values.map(function(d) { return d.value; });
+        var vals = data.values
+            .filter(function(d) { return d.x != d.y; })
+            .map(function(d) { return d.value; });
+        var mean = d3.mean(vals);
+        var dev = d3.deviation(vals);
+
+        for (var i = 0; i < data.values.length; i++) {
+            if (data.values[i].x == data.values[i].y)
+                data.values[i].value = 0;
+            else
+                data.values[i].value = (data.values[i].value - mean) / dev;
+        }
+    };
+
+    /**
+      * Normalize values over the entire matrix rather that just a column or
+      * row at a time. This should only be used when the elements in the rows
+      * and columns are the same.
+      */
+    var matrixNormalization2 = function() {
+
+        var vals = data.values
+            .filter(function(d) { return d.x != d.y; })
+            .map(function(d) { return d.value; });
+        
+        var extent = d3.extent(vals);
+        //var mean = d3.mean(vals);
+        //var dev = d3.deviation(vals);
+
+        for (var i = 0; i < data.values.length; i++) {
+            if (data.values[i].x == data.values[i].y)
+                data.values[i].value = 0;
+            else
+                data.values[i].value = (data.values[i].value - extent[0]) / extent[1];
+        }
+    };
+
+    var reflect = function(row) {
+
+        var accessor = '';
+        var mirror = '';
+        var matrix = {};
+
+        if (row) {
+
+            accessor = 'y';
+            mirror = 'x';
+
+        } else {
+
+            accessor = 'x';
+            mirror = 'y';
+        }
+        console.log(data.values);
+
+        for (var i = 0; i < data.values.length; i++) {
+
+            var value = data.values[i];
+            var va = value[accessor];
+            var vm = value[mirror];
+
+            if (!(va in matrix))
+                matrix[va] = {}
+
+            matrix[va][vm] = value.value;
+        }
+
+        for (var i = 0; i < data.values.length; i++) {
+
+            var va = data.values[i][accessor];
+            var vm = data.values[i][mirror];
+
+            //if (data.values[mirror] == data.values[accessor])
+            //if (vm === va)
+                data.values.value = matrix[va][vm];
+        }
+    };
+
     /** 
       * Creates the x and y axis scales using the given domains and/or values.
       * Returns the D3 scale objects in a two element array.
@@ -105,7 +234,13 @@ var heatmap = function() {
         if (!yDomain)
             yDomain = getRowCategories();
 
-        cDomain = d3.extent(data.values.map(function(d) { return d.value; }));
+        //cDomain = d3.extent(data.values.map(function(d) { return d.value; }));
+        cDomain = d3.extent(
+            data.values
+            //.filter(function(d) { return d.x != d.y; })
+            .map(function(d) { return d.value; })
+        );
+        console.log(cDomain);
 
         xScale = d3.scaleBand()
             .domain(xDomain)
@@ -130,7 +265,8 @@ var heatmap = function() {
         //    .range([d3.rgb('#EDF3FE'), d3.rgb('#0767F8')])
         //    .range([d3.rgb(d3.schemeYlGnBu[0]), d3.rgb(d3.schemeYlGnBu[d3.schemeYlGnBu.length - 1])])
         //    ;
-        cScale = d3.scaleSequential(d3.interpolateYlGnBu)
+        //cScale = d3.scaleSequential(d3.interpolateYlGnBu)
+        cScale = d3.scaleSequential(d3.interpolateBlues)
             //.interpolate(d3.interpolateRgb)
             .domain(cDomain)
             //.range([d3.rgb('#EDF3FE'), d3.rgb('#0767F8')])
@@ -179,10 +315,10 @@ var heatmap = function() {
         xAxisObject
             .selectAll('text')
             .attr('x', 5)
-            .attr('y', 5)
+            .attr('y', 8)
             .attr('dy', '.35em')
             .attr('dx', '.35em')
-            .attr('transform', 'rotate(-300)')
+            .attr('transform', 'rotate(-310)')
             .style('text-anchor', 'start')
             .append('text')
             .attr('x', function() { return getWidth() / 2; })
@@ -227,13 +363,22 @@ var heatmap = function() {
             .attr('y', function(d) { return yScale(d.y); })
             .attr('height', yScale.bandwidth())
             .attr('width', xScale.bandwidth())
-            .style('fill', function(d) { return cScale(d.value); })
+            .style('fill', function(d) { 
+                if (d.x == d.y)
+                    return cScale(cScale.domain()[1]);
+
+                return cScale(d.value); 
+            })
             .style('stroke', '#000000')
             .style('stroke-width', 1)
             ;
     };
 
     var drawLegend = function() {
+
+        var cmin = cScale.domain()[0];
+        var cmax = cScale.domain()[1];
+        var cmid = (cmin + cmax) / 2;
 
         var gradient = svg.append('defs')
             .append('linearGradient')
@@ -243,12 +388,14 @@ var heatmap = function() {
             .attr("x2", "0%")
             .attr("y2", "100%")
             .attr("spreadMethod", "pad")
-            //.attr("spreadMethod", 'userSpaceOnUse')
             .selectAll('stop')
             .data([
-                {offset: '0%', color: cScale(0)},
-                {offset: '50%', color: cScale(0.5)},
-                {offset: '100%', color: cScale(1)},
+                //{offset: '0%', color: cScale(0)},
+                //{offset: '50%', color: cScale(0.5)},
+                //{offset: '100%', color: cScale(1)},
+                {offset: '0%', color: cScale(cmin)},
+                {offset: '50%', color: cScale(cmid)},
+                {offset: '100%', color: cScale(cmax)},
             ])
             .enter()
             .append('stop')
@@ -279,6 +426,16 @@ var heatmap = function() {
             )
             ;
 
+        if (normalizeRows)
+            normalize(true);
+
+        else if (normalizeColumns)
+            normalize(false);
+
+        else if (normalizeMatrix)
+            matrixNormalization();
+        console.log(data.values);
+
         makeScales();
         drawAxes();
         drawCells();
@@ -304,6 +461,42 @@ var heatmap = function() {
     exports.width = function(_) {
         if (!arguments.length) return width;
         width = +_;
+        return exports;
+    };
+
+    exports.font = function(_) {
+        if (!arguments.length) return font;
+        font = _;
+        return exports;
+    };
+
+    exports.fontSize = function(_) {
+        if (!arguments.length) return fontSize;
+        fontSize = _;
+        return exports;
+    };
+
+    exports.normalizeRows = function(_) {
+        if (!arguments.length) return normalizeRows;
+        normalizeRows = _;
+        return exports;
+    };
+
+    exports.normalizeColumns = function(_) {
+        if (!arguments.length) return normalizeColumns;
+        normalizeColumns = _;
+        return exports;
+    };
+
+    exports.normalizeMatrix = function(_) {
+        if (!arguments.length) return normalizeMatrix;
+        normalizeMatrix = _;
+        return exports;
+    };
+
+    exports.margin = function(_) {
+        if (!arguments.length) return margin;
+        margin = _;
         return exports;
     };
 
