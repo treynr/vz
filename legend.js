@@ -181,12 +181,13 @@ var legend = function() {
 
                     makeSplitColor(
                         legend, 
-                        d.text + '-grad',
+                        d.idText + '-grad',
                         d.colors[0], 
                         d.colors[1]
                     );
 
-                    return 'url(#' + (d.text + '-grad') + ')';
+                    return 'url(#' + (d.idText + '-grad') + ')';
+                    //return 'url(#shit-a)';
                 }
 
                 if (d.color === undefined)

@@ -62,6 +62,8 @@ var heatmap = function() {
         /** private **/
 
         cScale = null,
+        xScale = null,
+        yScale = null,
         hierarchy = null,
         // SVG object
         svg = null
@@ -128,7 +130,10 @@ var heatmap = function() {
       */
     var convertSimilarities = function() {
 
-        return data.values.map(function(d) { 
+        // Deep copy of the values array otherwise the conversion uses the
+        // fucking reference and alters the values in the original array.
+        //return data.values.map(function(d) { 
+        return JSON.parse(JSON.stringify(data.values)).map(function(d) { 
             d.value = 1 - d.value; 
 
             return d;
@@ -220,6 +225,33 @@ var heatmap = function() {
         }
     };
 
+    /** Makes sure all row/column pairs have values. Missing values are filled
+      * in.
+      */
+    var ensureMatrixCompleteness = function(matrix) {
+
+        var rows = getRowCategories();
+        var cols = getColumnCategories();
+
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+
+            for (var j = 0; j < cols.length; j++) {
+                var col = cols[j];
+
+                if (matrix[row] === undefined)
+                    matrix[row] = {};
+
+                if (matrix[row][col] === undefined) {
+
+                    matrix[row][col] = 1;
+                }
+            }
+        }
+
+        return matrix;
+    };
+
     var makeDistanceMatrix = function(pts) {
 
         var matrix = {};
@@ -261,7 +293,6 @@ var heatmap = function() {
             //.filter(function(d) { return d.x != d.y; })
             .map(function(d) { return d.value; })
         );
-        console.log(cDomain);
 
         xScale = d3.scaleBand()
             .domain(xDomain)
@@ -311,7 +342,8 @@ var heatmap = function() {
             ;//.tickSizeOuter(outerTicks ? 6 : 0);
 
         var yaxis = d3.axisRight(yScale)
-            .tickSizeOuter(0)
+            //.tickValues(yScale.ticks().concat(yScale.domain()))
+            //.tickSizeOuter(0)
             //.ticks(5)
             //.tickValues(yTicksValues)
             //.tickFormat(d3.format(yFormat))
@@ -391,7 +423,11 @@ var heatmap = function() {
                 return cScale(d.value); 
             })
             .style('stroke', '#000000')
-            .style('stroke-width', 1)
+            .style('stroke-width', 0)
+            .append('title')
+            .text(function(d) {
+                return d.x + "\n" + d.y + "\n" + d.value;
+            })
             ;
     };
 
@@ -424,7 +460,9 @@ var heatmap = function() {
             .attr('stop-color', function(d) { return d.color; })
             ;
 
-        var legendSvg = svg.append('rect')
+        var legendSvg = svg.append('g');
+
+        legendSvg.append('rect')
             .attr('x', function(d) { return -20; })
             .attr('y', function(d) { return 0; })
             .attr('height', getHeight() - 3)
@@ -433,6 +471,66 @@ var heatmap = function() {
             .style('stroke', '#000000')
             .style('stroke-width', 1)
             ;
+
+        var lscale = d3.scaleLinear()
+            //.domain(cScale.domain())
+            .domain([0, 1])
+            .range([0, getHeight() - 3]);
+
+        var laxis = d3.axisLeft(lscale)
+            //.tickValues([0.0, 0.25, 0.5, 0.75, 1.0])
+            .tickValues([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+            //.tickValues([0.0, 0.5, 1.0])
+            //.tickValues(cScale.ticks().concat(cScale.domain()));
+            .tickSizeOuter(0)
+            ;
+
+        var legendAxis = legendSvg.append('g')
+            .attr('transform', function() {
+                return 'translate(' + (-30) + ',' + 0 + ')';
+            })
+            .style('fill', 'none')
+            .style('font-family', font)
+            .style('font-size', fontSize)
+            .style('font-weight', fontWeight)
+            .call(laxis)
+            ;
+
+        //legendAxis
+        //    .select('.domain')
+        //    .remove()
+        //    ;
+
+        //xAxisObject
+        //    .selectAll('text')
+        //    .attr('x', 5)
+        //    .attr('y', 8)
+        //    .attr('dy', '.35em')
+        //    .attr('dx', '.35em')
+        //    .attr('transform', 'rotate(-310)')
+        //    .style('text-anchor', 'start')
+        //    .append('text')
+        //    .attr('x', function() { return getWidth() / 2; })
+        //    .attr('y', 35)
+        //    .attr('fill', '#000')
+        //    .style('text-anchor', 'middle')
+        //    .text(function(d) { return xLabel; })
+        //    ;
+
+        //legendSvg.append('text')
+        //    .attr('x', function() { return -30; })
+        //    .attr('y', 0)
+        //    .attr('fill', '#000')
+        //    .style('text-anchor', 'middle')
+        //    .text(function(d) { return '' + cScale.domain()[0] + ' -'; })
+        //    ;
+        //legendSvg.append('text')
+        //    .attr('x', function() { return -30; })
+        //    .attr('y', getHeight())
+        //    .attr('fill', '#000')
+        //    .style('text-anchor', 'middle')
+        //    .text(function(d) { return '' + cScale.domain()[1] + ' -'; })
+        //    ;
     };
 
     var getLabelsInOrder = function(hierarchy) {
@@ -448,6 +546,9 @@ var heatmap = function() {
             var distMatrix = makeDistanceMatrix(data.values);
         else
             var distMatrix = makeDistanceMatrix(convertSimilarities());
+
+        distMatrix = ensureMatrixCompleteness(distMatrix);
+        console.log(distMatrix);
 
         var hierarchy = wards(distMatrix);
 
@@ -496,6 +597,12 @@ var heatmap = function() {
 			  return linkStep(d.source.x, d.source.y, d.target.x, d.target.y);
               //return line([d.source, d.target]);
             })
+            // Attempts to have it on the left side.
+            //.attr('transform', function() {
+            //    return 'translate(' + 0 + ',' + (getHeight() + margin.top ) + ') ' + 'rotate(270) ';
+            //})
+            //.attr('transform', 'translate(50, 50)')
+            
           ;
 
           /*
@@ -542,11 +649,10 @@ var heatmap = function() {
             normalize(false);
 
         else if (normalizeMatrix)
-            matrixNormalization();
+            matrixNormalization2();
 
         if (cluster) { 
             hierarchy = clusterElements();
-            console.log(hierarchy);
 
             var orderedLabels = getLabelsInOrder(hierarchy);
             var labelMap = orderedLabels.reduce(function(ac, a, i) {
@@ -568,6 +674,7 @@ var heatmap = function() {
         if (distances)
             data.values = convertSimilarities();
 
+        console.log(data.values);
         makeScales();
         drawAxes();
         drawCells();
@@ -661,6 +768,7 @@ var clusterValues = function(clust, ac) {
 
     for (var i = 0; i < clust.children.length; i++) {
 
+        //console.log(clust);
         var v = clusterValues(clust.children[i], ac);
 
         if (v.length === undefined)
@@ -674,7 +782,7 @@ var clusterValues = function(clust, ac) {
 
 var wards = function(matrix) {
 
-    var makeCluster = function(a, b) {
+    var merge = function(a, b) {
 
         var clust = {children: [a, b]};
         var cid = clusterValues(clust, 'id').join('');
@@ -682,6 +790,16 @@ var wards = function(matrix) {
         clust.id = cid;
 
         return clust;
+    };
+
+    var clusterSize = function(c) {
+
+        if (c.singleton)
+            return 1;
+
+        return c.children.reduce(function(ac, cl) { 
+            return ac + clusterSize(cl);
+        }, 0);
     };
 
     var updateDistances = function(pts, matrix) {
@@ -705,6 +823,23 @@ var wards = function(matrix) {
                 ((bSize + cSize) / all) * matrix[b.id][c.id] - 
                 (cSize / all) * matrix[a.id][b.id];
 
+            if (isNaN(matrix[merged.id][c.id])) {
+                console.log('--nan--');
+                console.log(a);
+                console.log(b);
+                console.log(c);
+                console.log(aSize);
+                console.log(bSize);
+                console.log(cSize);
+                console.log(all);
+                console.log(matrix);
+                console.log(((aSize + cSize) / all) * matrix[a.id][c.id]);
+                console.log(matrix[a.id][c.id]);
+                console.log(((bSize + cSize) / all) * matrix[b.id][c.id]);
+                console.log((cSize / all) * matrix[a.id][b.id]);
+
+            }
+
             matrix[c.id][merged.id] = matrix[merged.id][c.id];
         }
     };
@@ -726,6 +861,9 @@ var wards = function(matrix) {
                 var b = pts[j];
                 var dist = matrix[a.id][b.id];
 
+                //console.log(a);
+                //console.log(b);
+                //console.log(matrix[a.id]);
                 if (dist < minDistance) {
 
                     minDistance = dist;
@@ -740,7 +878,7 @@ var wards = function(matrix) {
             return d != amerge && d != bmerge; 
         })
 
-        pts.push(makeCluster(amerge, bmerge));
+        pts.push(merge(amerge, bmerge));
 
         // Update the distance matrix to account for the newly merged cluster
         // using Ward's linkage criterion

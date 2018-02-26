@@ -40,6 +40,8 @@ var bar = function() {
         barColor = '#98ABC5',
         // Bar chart edge color
         barStroke = '#222222',
+        // Bar stroke width
+        strokeWidth = 1,
         // Boolean to draw or hide the outer x-axis ticks
         outerTicks = false,
         // Width of each bar in the chart
@@ -66,8 +68,12 @@ var bar = function() {
         fontSize = '11px',
         // X-axis text
         xText = '',
+        // X-axis text padding
+        xTextPad = 35,
         // Y-axis text
         yText = ''
+        // Y-axis text padding
+        yTextPad = 35,
         // Y-axis padding
         yAxisPad = 35,
         // Padding between bars
@@ -78,6 +84,7 @@ var bar = function() {
         xGroupScale = null,
         // Histogram scale for the x-axis
         xHistoScale = null,
+        xTickFormat = d3.format(''),
         // Scale for the y-axis
         yScale = null,
         // Format string for y-axis labels
@@ -86,6 +93,8 @@ var bar = function() {
         yTickValues = null,
         // Y-axis tick values
         yDomain = null,
+        // Display values at the peak of each bar
+        barValues = false,
         // Bar chart object
         chart = null,
         textures = [],
@@ -102,7 +111,6 @@ var bar = function() {
 
         var xdomain = data.map(function(d) { return d.x; });
         var ydomain = yDomain ? yDomain : [0, d3.max(data, function(d) { return d.y; })];
-
 
         if (grouped) {
 
@@ -183,6 +191,16 @@ var bar = function() {
                 })])
                 .range([getHeight(), 0]);
 
+            // User specified y-domain
+            if (yDomain) { 
+
+                yScale = d3.scaleLinear()
+                    .domain(yDomain)
+                    .range([getHeight(), 0]);
+            }
+
+            console.log(ydomain);
+            console.log(xdomain);
             return;
         }
 
@@ -193,10 +211,17 @@ var bar = function() {
 
     var makeAxes = function() {
 
-        if (grouped)
-            xAxis = d3.axisBottom(xGroupScale).tickSizeOuter(outerTicks ? 6 : 0);
-        else
-            xAxis = d3.axisBottom(xScale).tickSizeOuter(outerTicks ? 6 : 0);
+        if (grouped) {
+            xAxis = d3.axisBottom(xGroupScale)
+                .tickSizeOuter(outerTicks ? 6 : 0)
+                .tickFormat(xTickFormat)
+                ;
+        } else {
+            xAxis = d3.axisBottom(xScale)
+                .tickSizeOuter(outerTicks ? 6 : 0)
+                .tickFormat(xTickFormat)
+                ;
+        }
 
         yAxis = d3.axisLeft(yScale)
             .tickFormat(d3.format(yFormat))
@@ -221,7 +246,9 @@ var bar = function() {
             .style('font-weight', 'normal')
             .style('fill', 'none')
             .call(xAxis)
-            .append('text')
+            ;
+
+        xAxisObject.append('text')
             .attr('x', function() { return (margin.left + getWidth()) / 2; })
             .attr('y', 45)
             .attr('fill', '#000')
@@ -239,16 +266,20 @@ var bar = function() {
             .style('font-weight', 'normal')
             .style('fill', 'none')
             .call(yAxis)
-            .append('text')
+            ;
+
+        yAxisObject.append('text')
             // Weird x, y argumetnns cause of the -90 rotation
             .attr('x', function() { return -getHeight() / 2; })
-            .attr('y', -50)
+            .attr('y', yTextPad)
             .attr('fill', '#000')
             .attr('transform', 'rotate(-90)')
             .style('text-anchor', 'middle')
             .text(yText)
             ;
 
+            yAxisObject.select('.domain').remove();
+            //xAxisObject.select('.domain').remove();
 /*
              svg.append("g")
       .attr("class", "axis axis--y")
@@ -362,9 +393,9 @@ var bar = function() {
                         return getHeight() - yScale(d.y); 
                     }
                 })
-                .style('shape-rendering', 'auto')
-                .style('stroke', '#343434')
-                .style('stroke-width', 1)
+                .style('shape-rendering', 'crispEdges')
+                .style('stroke', barStroke)
+                .style('stroke-width', strokeWidth)
                 .style('fill', function(d) {
                     if (textures.length > 0 && d.texture)
                         return d.texture.url();
@@ -375,6 +406,35 @@ var bar = function() {
                     return barColor;
                 })
                 ;
+
+                if (barValues) {
+
+                    bar.append('text')
+                        .attr('x', function(d) { 
+                            if (asHistogram)
+                                return xScale(d.x1); 
+                            else
+                                return xScale(d.x); 
+                        })
+                        // +1 so the bar converges with the x-axis
+                        .attr('y', function(d) { 
+                            if (asHistogram) {
+                                if (binPercent)
+                                    return yScale(d.length / binPercent) + 1;
+                                else
+                                    return yScale(d.length) + 1;
+                            } else { 
+                                return yScale(d.y) + 1; 
+                            }
+                        })
+                        .attr('dy', -2)
+                        .style('font-family', 'sans-serif')
+                        .style('font-size', '13px')
+                        //.style('font-weight', 'bold')
+                        .text(function(d) {
+                            return Math.round(d.y * 1000) / 1000;
+                        });
+                }
 
         } else {
             if (groupColors) {
@@ -403,11 +463,9 @@ var bar = function() {
                 .attr('height', function(d) { 
                     return getHeight() - yScale(d.y); 
                 })
-                .style('shape-rendering', 'auto')
-                //.style('stroke', barStroke)
-                //.style('stroke-width', '1px')
-                .style('stroke', '#343434')
-                .style('stroke-width', 1)
+                .style('shape-rendering', 'crispEdges')
+                .style('stroke', barStroke)
+                .style('stroke-width', strokeWidth)
                 .style('fill', function(d) { 
                     console.log(d);
                     if (textures.length > 0 && d.texture)
@@ -416,6 +474,32 @@ var bar = function() {
                     return colorScale(d.group); 
                 })
                 ;
+                if (barValues) {
+                    bar.append('text')
+                        .attr('x', function(d) { 
+                            if (asHistogram)
+                                return xScale(d.x1); 
+                            else
+                                return xScale(d.x); 
+                        })
+                        // +1 so the bar converges with the x-axis
+                        .attr('y', function(d) { 
+                            if (asHistogram) {
+                                if (binPercent)
+                                    return yScale(d.length / binPercent) + 1;
+                                else
+                                    return yScale(d.length) + 1;
+                            } else { 
+                                return yScale(d.y) + 1; 
+                            }
+                        })
+                        .style('font-family', 'sans-serif')
+                        .style('font-size', '15px')
+                        //.style('font-weight', 'bold')
+                        .text(function(d) {
+                            return Math.round(d.y * 1000) / 1000;
+                        });
+                }
         }
 
     };
@@ -674,7 +758,13 @@ var bar = function() {
 
     exports.barStroke = function(_) {
         if (!arguments.length) return barStroke;
-        barStroke = +_;
+        barStroke = _;
+        return exports;
+    };
+
+    exports.strokeWidth = function(_) {
+        if (!arguments.length) return strokeWidth;
+        strokeWidth = +_;
         return exports;
     };
 
@@ -693,6 +783,12 @@ var bar = function() {
     exports.outerTicks = function(_) {
         if (!arguments.length) return outerTicks;
         outerTicks = _;
+        return exports;
+    };
+
+    exports.xTickFormat = function(_) {
+        if (!arguments.length) return xTickFormat;
+        xTickFormat = _;
         return exports;
     };
 
@@ -735,6 +831,18 @@ var bar = function() {
     exports.yAxisPad = function(_) {
         if (!arguments.length) return yAxisPad;
         yAxisPad = +_;
+        return exports;
+    };
+
+    exports.yTextPad = function(_) {
+        if (!arguments.length) return yTextPad;
+        yTextPad = +_;
+        return exports;
+    };
+
+    exports.xTextPad = function(_) {
+        if (!arguments.length) return xTextPad;
+        xTextPad = +_;
         return exports;
     };
 
@@ -807,6 +915,12 @@ var bar = function() {
     exports.yDomain = function(_) {
         if (!arguments.length) return yDomain;
         yDomain = _;
+        return exports;
+    };
+
+    exports.barValues = function(_) {
+        if (!arguments.length) return barValues;
+        barValues = _;
         return exports;
     };
 

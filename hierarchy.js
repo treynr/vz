@@ -40,6 +40,8 @@ var hierarchy = function() {
         sizeScale = null,
         // Node objects constructed with d3js
         d3Nodes = null,
+        // 
+        d3Halos = null,
         // Edge objects constructed with d3js
         d3Edges = null,
         // Fixed layout structure containing layout and position parameters
@@ -216,9 +218,81 @@ var hierarchy = function() {
 
     };
 
+    var makeHalos = function() {
+
+        var nodeGroups = svg.selectAll('halo')
+            .data(graph.nodes)
+            .enter()
+            .append('g');
+		// if halo is defined, remove this
+        nodeGroups
+			.filter(function(d) {
+				return d.halo !== undefined;
+			})
+			.append('circle')
+            .attr('r', function(d) {
+                if (d.hradius !== undefined) {
+                    return d.hradius;
+                }
+                if (d.value !== undefined && useSizeRange)
+                    return sizeScale(d.value * 1.2);
+                    
+                if (d.radius === undefined)
+                    return radius * 1.2;
+
+                return d.radius * 1.3;
+            })
+            .style('fill', function(d) {
+                return d.halo;
+            })
+            .style('stroke', 'none')
+			.style('opacity', 1.0)
+            ;
+        nodeGroups
+			.filter(function(d) {
+				return d.bihalo !== undefined;
+			})
+			.append('circle')
+            .attr('r', function(d) {
+
+                if (d.hradius !== undefined) {
+                    return d.hradius;
+                }
+                if (d.value !== undefined && useSizeRange)
+                    return sizeScale(d.value * 1.2);
+                    
+                if (d.radius === undefined)
+                    return radius * 1.2;
+
+                return d.radius * 1.2;
+            })
+            .style('fill', function(d) {
+                var grad = svg.append("defs")
+                    .append("linearGradient")
+                    .attr("id", "grad")
+                    .attr("x1", "0%")
+                    .attr("x2", "0%")
+                    .attr("y1", "100%")
+                    .attr("y2", "0%")
+                    //.attr('gradientTransform', 'rotate(40)');
+                    ;
+                //grad.append("stop").attr("offset", "90%").style("stop-color", d.bihalo[0]);
+                grad.append("stop").attr("offset", "50%").style("stop-color", d.bihalo[0]);
+                grad.append("stop").attr("offset", "50%").style("stop-color", d.bihalo[1]);
+
+                return 'url(#grad)';
+            })
+            .style('stroke', 'none')
+			.style('opacity', 1)
+            ;
+        //
+
+        return nodeGroups;
+    }
+
     var makeRegularNodes = function() {
 
-        var nodeGroups = svg.selectAll('circle')
+        var nodeGroups = svg.selectAll('node')
             .data(graph.nodes)
             .enter()
             .append('g');
@@ -241,7 +315,7 @@ var hierarchy = function() {
         // Actual colored node. This selects nodes that don't have a symbol key
         // in their object.
         nodeGroups
-            .filter(function(d) { return d.symbol === undefined; })
+            .filter(function(d) { return d.symbol === undefined && d.rect == undefined; })
             .append('circle')
             .attr('r', function(d) {
                 if (d.value !== undefined && useSizeRange)
@@ -252,6 +326,36 @@ var hierarchy = function() {
 
                 return d.radius;
             })
+            ;
+
+        // delete
+        // Actual colored node. This selects nodes that don't have a symbol key
+        // in their object.
+        nodeGroups
+            .filter(function(d) { return d.rect !== undefined; })
+            .append('rect')
+            .attr('width', function(d) {
+                if (d.value !== undefined && useSizeRange)
+                    return sizeScale(d.value);
+                    
+                if (d.radius === undefined)
+                    return radius;
+
+                return d.radius;
+            })
+            .attr('height', function(d) {
+                if (d.value !== undefined && useSizeRange)
+                    return sizeScale(d.value);
+                    
+                if (d.radius === undefined)
+                    return radius;
+
+                return d.radius;
+            })
+            .attr('rx', 4)
+            .attr('ry', 4)
+            .attr('x', function(d) { return -(d.radius / 2); })
+            .attr('y', function(d) { return -(d.radius / 2); })
             ;
 
         // In case symbols are used
@@ -298,6 +402,12 @@ var hierarchy = function() {
                     return nodeStrokeWidth;
 
                 return d.width;
+            })
+            .attr('opacity', function(d) {
+                if (d.opacity)
+                    return d.opacity;
+
+                return 1.0;
             })
             .attr('fill', function(d) {
                 if (textures.length >= 1 && d.texture)
@@ -349,6 +459,9 @@ var hierarchy = function() {
                     d.fy = null;
                 }));
 
+        nodeGroups.append('svg:title')
+            .text(function(d) { return d.data; });
+
         return nodeGroups;
     };
 
@@ -365,7 +478,7 @@ var hierarchy = function() {
             .attr('shape-rendering', 'auto')
             .attr('r', function(d) {
                 if (d.radius === undefined)
-                    return radius + 2;
+                    return radius + 4;
 
                 return d.radius + 2;
             })
@@ -380,7 +493,7 @@ var hierarchy = function() {
             .append('circle')
             .attr('r', function(d) {
                 if (d.radius === undefined)
-                    return radius + 3;
+                    return radius + 5;
 
                 return d.radius + 3;
             })
@@ -483,6 +596,12 @@ var hierarchy = function() {
                     return edgeColor;
 
                 return d.stroke;
+            })
+            .attr('opacity', function(d) {
+                if (d.opacity === undefined)
+                    return 1.0;
+
+                return d.opacity;
             })
             .attr('stroke-width', function(d) {
                 if (d.width === undefined)
@@ -643,6 +762,25 @@ var hierarchy = function() {
             return 'translate(' + d.x + ',' + d.y + ')';
         });
 
+        /*
+        d3Halos.attr('transform', function(d) {
+
+            var layerChunk = layerSize / (fixedStruct.nodeCounts[d.depth]);
+
+            // Forces even spacing between nodes in a layer otherwise the
+            // nodes are positioned (and move) according to the force layout
+            if (fixed)
+                d.x = layerChunk * fixedStruct.countMap[d.id];
+
+            d.y = d.depth * verticalSpacing + 15; // + 100;
+
+            if (d.ax && d.ay)
+                return 'translate(' + d.x + d.ax + ',' + d.y + d.ay + ')';
+
+            return 'translate(' + d.x + ',' + d.y + ')';
+        });
+        */
+
         // Here for posterity. If I ever need to take the nodes out of their
         // groups they must be positioned using cx/cy.
         //d3Nodes
@@ -713,6 +851,8 @@ var hierarchy = function() {
         if (useShadow)
             makeDropShadow();
 
+        console.log(graph);
+        //d3Halos = makeHalos();
         d3Edges = makeEdges();
 
         if (prettifyNodes)
