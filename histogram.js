@@ -234,7 +234,7 @@ var histogram = function() {
         bar.append('rect')
             //.attr('x', 1)
             .attr('x', d => xScale(d.x0) + 1)
-            .attr('y', d => yScale(d.length))
+            .attr('y', d => yScale(d.length) + 1)
             //.attr('width', xScale(bins[0].x1) - xScale(bins[0].x0) - 1)
             .attr('width', d => xScale(d.x1) - xScale(d.x0) - 1)
             //.attr('height', d => getHeight() - yScale(d.length))
@@ -484,11 +484,13 @@ var histogram = function() {
                 //.attr('transform', 'translate(-' + margin.left  + ',-' + margin.top + ')')
                 .attr('transform', 'translate(' + 0  + ',-' + margin.top + ')')
                 //.attr('x', getWidth() / 2)
-                .attr('x', getWidth() / 2)
+                //.attr('x', getWidth() / 2)
                 .attr('y', margin.top / 2)
+                .attr('x', function() { return (margin.left + getWidth()) / 2; })
+                //.attr('y', 45)
                 .attr('text-anchor', 'middle')
                 .style('font-family', 'sans-serif')
-                .style('font-size', '17px')
+                .style('font-size', '13px')
                 .style('font-weight', 'normal')
                 .text(title);
         }
@@ -520,7 +522,7 @@ var histogram = function() {
         makeAxes();
         drawBars();
         //drawDistribution();
-        //drawText();
+        drawText();
 
         //if (distribution)
         //    drawdist();
