@@ -31,6 +31,8 @@ var beeswarm = function() {
 
         // Data objects
         data = null,
+        // HTML element the viz is attached to
+        element = 'body',
         // X and y axis font
         font = 'sans-serif',
         // X and y axis font size
@@ -128,6 +130,7 @@ var beeswarm = function() {
 
         xScale = d3.scaleLinear()
             .domain(xdomain)
+            .nice()
             .range([0, getWidth()]);
 
         //colorScale = d3.scaleSequential(d3.interpolateReds)
@@ -318,7 +321,7 @@ var beeswarm = function() {
 
     exports.draw = function() {
 
-        svg = d3.select('body')
+        svg = d3.select(element)
             .append('svg')
             .attr('height', height)
             .attr('width', width)
@@ -373,6 +376,12 @@ var beeswarm = function() {
     exports.data = function(_) {
         if (!arguments.length) return data;
         data = _;
+        return exports;
+    };
+
+    exports.element = function(_) {
+        if (!arguments.length) return element;
+        element = _;
         return exports;
     };
 

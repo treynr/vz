@@ -40,7 +40,7 @@ var scatter = function() {
         // Radius for each data point
         radius = 4,
         // Margin object
-        margin = {top: 30, right: 90, bottom: 100, left: 70},
+        margin = {top: 90, right: 90, bottom: 90, left: 90},
         // Generate an N x M grid of plots
         grid = [1, 1],
         // Draw lines for a background grid
@@ -72,9 +72,9 @@ var scatter = function() {
         // Suggested number of y-axis ticks to draw
         yTicksValues = null,
         // Format string for X-axis labels
-        xFormat = '',
+        xFormat = null
         // Format string for Y-axis labels
-        yFormat = '',
+        yFormat = null
         // Plot title
         title = '',
         // X-axis text
@@ -83,6 +83,8 @@ var scatter = function() {
         yText = '',
         // Y-axis padding
         yAxisPad = 35,
+        // P-value text
+        pText = '',
         // X/Y-axis scales and domains
         xScale = null,
         yScale = null,
@@ -109,24 +111,24 @@ var scatter = function() {
 
         xScale = d3.scaleLinear()
             .domain(xdomain)
+            .nice()
             .range([0, sw]);
 
         yScale = d3.scaleLinear()
             .domain(ydomain)
+            .nice()
             .range([sh, 0]);
     };
 
     var makeAxes = function(ssvg, sw, sh, tx, ty) {
 
         xAxis = d3.axisBottom(xScale)
-            .ticks(5)
             .tickValues(xTickValues)
-            .tickFormat(d3.format(xFormat))
+            .tickFormat(xFormat)
             ;//.tickSizeOuter(outerTicks ? 6 : 0);
         yAxis = d3.axisLeft(yScale)
-            .ticks(5)
             .tickValues(yTicksValues)
-            .tickFormat(d3.format(yFormat))
+            .tickFormat(yFormat)
             ;
 
         var xAxisObject = ssvg.append('g')
@@ -263,121 +265,20 @@ var scatter = function() {
 
     };
 
-    var calculateRegressionLine = function(data) {
-
-        var sumx = 0;
-        var sumy = 0;
-        var sumx2 = 0;
-        var sumy2 = 0;
-        var sumxy = 0;
-        var n = data.length;
-
-
-        for (var i = 0; i < data.length; i++) {
-
-            sumx += data[i].x;
-            sumy += data[i].y;
-            sumx2 += (data[i].x * data[i].x);
-            sumy2 += (data[i].y * data[i].y);
-            sumxy += (data[i].x * data[i].y);
-        }
-
-        var a = ((n * sumxy) - (sumx * sumy)) / ((n * sumx2) - (sumx * sumx));
-        var b = ((sumy * sumx2) - (sumx * sumxy)) / ((n * sumx2) - (sumx * sumx));
-
-        var x1 = d3.min(data, function(d) { return d.x; });
-        var y1 = a + b;
-        var x2 = d3.max(data, function(d) { return d.x; });;
-        var y2 = a * data.length + b;
-
-        // slope, intercept
-        return [a, b];
-        //return [x1, y1, x2, y2];
-    };
-
-    var leastSquares2 = function(data) {
-
-        var xBar = 0;
-        var yBar = 0;
-        var xStd = 0;
-        var yStd = 0;
-
-        for (var i = 0; i < data.length; i++) {
-
-            xBar += data[i].x;
-            yBar += data[i].y;
-        }
-
-        xBar /= data.length;
-        yBar /= data.length;
-
-        for (var i = 0; i < data.length; i++) {
-
-            xStd += Math.pow((data[i].x - xBar), 2);
-            yStd += Math.pow((data[i].y - yBar), 2);
-        }
-
-        xStd = Math.sqrt(xStd / (data.length - 1));
-        yStd = Math.sqrt(yStd / (data.length - 1));
-
-        var b = 0;
-        var a = 0;
-
-        for (var i = 0; i < data.length; i++) {
-
-            b += (data[i].x - xBar) * (data[i].y - yBar);
-            a += Math.pow((data[i].x - xBar), 2);
-        }
-
-        b = b / a;
-        a = yBar - b * xBar;
-
-        return [a, b];
-    };
-
-    function leastSquares(xSeries, ySeries) {
-        var reduceSumFunc = function(prev, cur) { return prev + cur; };
-        
-        var xBar = xSeries.reduce(reduceSumFunc) * 1.0 / xSeries.length;
-        var yBar = ySeries.reduce(reduceSumFunc) * 1.0 / ySeries.length;
-
-        var ssXX = xSeries.map(function(d) { return Math.pow(d - xBar, 2); })
-            .reduce(reduceSumFunc);
-        
-        var ssYY = ySeries.map(function(d) { return Math.pow(d - yBar, 2); })
-            .reduce(reduceSumFunc);
-            
-        var ssXY = xSeries.map(function(d, i) { return (d - xBar) * (ySeries[i] - yBar); })
-            .reduce(reduceSumFunc);
-            
-        var slope = ssXY / ssXX;
-        var intercept = yBar - (xBar * slope);
-        var rSquare = Math.pow(ssXY, 2) / (ssXX * ssYY);
-
-        return [slope, intercept, rSquare];
-    }
-
     var leastSquares = function(data) {
-        var xBar = data
-            .reduce(function(a, b) { return a + b.x; }, 0) / data.length;
-        var yBar = data
-            .reduce(function(a, b) { return a + b.y; }, 0) / data.length;
 
-        var xVar = data
-            .reduce(function(a, b) { return a + Math.pow(b.x - xBar, 2); }, 0);
-        var yVar = data
-            .reduce(function(a, b) { return a + Math.pow(b.y - yBar, 2); }, 0);
+        let xm = d3.mean(data, d => d.x);
+        let ym = d3.mean(data, d => d.y);
 
-        var slopeNumerator = data.reduce(
-            function(a, b) { return a + (b.x - xBar) * (b.y - yBar); },
-            0
-        );
+        var ssxx = data.reduce((ac, d) => ac + ((d.x - xm) * (d.x - ym)), 0);
+        var ssyy = data.reduce((ac, d) => ac + ((d.y - ym) * (d.y - ym)), 0);
+        var ssxy = data.reduce((ac, d) => ac + ((d.x - xm) * (d.y - ym)), 0);
 
-        var slope = slopeNumerator / xVar;
-        var intercept = yBar - slope * xBar;
-        var rsquared = Math.pow(slopeNumerator, 2) / (xVar * yVar);
-
-        return {slope: slope, intercept: intercept, rsquared: rsquared};
+        return {
+            slope: ssxy / ssxx,
+            intercept: ym - (ssxy / ssxx) * xm,
+            rsquared: (ssxy * ssxy) / (ssxx * ssyy)
+        }
     };
 
 
@@ -413,14 +314,13 @@ var scatter = function() {
             if (i >= (grid[0] * grid[1]))
                 break;
 
-            var padX = 65;
+            var padX = 55;
             var padY = 55;
-            var subWidth = (getWidth() - padX) / grid[0];
+            //var subWidth = (getWidth() - padX) / grid[0];
+            var subWidth = (getWidth() ) / grid[0];
             var subHeight = getHeight() / grid[1];
             var sx = (subWidth * (gridX - 1)) + (padX * (gridX - 1));
             var sy = (subHeight * (gridY - 1)) + (padY * (gridY - 1));
-            console.log('--');
-            console.log(subWidth);
 
             var scatterBox = svg.append('g')
                 .attr('transform', 'translate(' + sx + ',' + sy + ')');
@@ -478,7 +378,7 @@ var scatter = function() {
 
             if (gridBackground) {
 
-                var ticks = xScale.ticks(5);
+                var ticks = xScale.ticks();
 
                 for (var j = 0; j < ticks.length; j++) {
 
@@ -492,7 +392,7 @@ var scatter = function() {
                         .style('stroke-width', backgroundStrokeWidth);
                 }
 
-                var ticks = yScale.ticks(5);
+                var ticks = yScale.ticks();
 
                 for (var j = 0; j < ticks.length; j++) {
 
@@ -554,6 +454,7 @@ var scatter = function() {
                     .data([[x1, y1, x2, y2]])
                     .enter()
                     .append('line')
+                    .attr('clip-path', 'url(#clip-area-' + i + ')')
                     .attr('x1', function(d) { return xScale(d[0]); })
                     .attr('y1', function(d) { return yScale(d[1]); })
                     .attr('x2', function(d) { return xScale(d[2]); })
@@ -564,9 +465,10 @@ var scatter = function() {
 
                 var rtext = scatterBox.append('text')
                     .attr('x', function() { return subWidth - 22; })
-                    .attr('y', -2)
+                    .attr('y', -4)
                     .attr('fill', '#000')
                     .style('text-anchor', 'middle')
+                    .style('font', '13px sans-serif')
                     //.text('r2 = ' + (Math.round(reg.rsquared * 1000) / 1000))
                     ;
                 rtext.append('tspan')
@@ -576,6 +478,19 @@ var scatter = function() {
                     .text('2');
                 rtext.append('tspan')
                     .text(' = ' + (Math.round(reg.rsquared * 1000) / 1000));
+
+                if (pText) {
+
+                    var ptext = scatterBox.append('text')
+                        .attr('x', function() { return subWidth - 95; })
+                        .attr('y', -4)
+                        .attr('fill', '#000')
+                        .style('text-anchor', 'middle')
+                        .style('font', '13px sans-serif')
+                        ;
+                    ptext.append('tspan')
+                        .text('p = ' + pText);
+                }
 
                 // Draws an additional border so the red line doesn't bleed
                 // outside the plot.
@@ -791,6 +706,12 @@ var scatter = function() {
     exports.yFormat = function(_) {
         if (!arguments.length) return yFormat;
         yFormat = _;
+        return exports;
+    };
+
+    exports.pText = function(_) {
+        if (!arguments.length) return pText;
+        pText = _;
         return exports;
     };
 

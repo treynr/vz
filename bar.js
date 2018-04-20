@@ -84,15 +84,15 @@ var bar = function() {
         xGroupScale = null,
         // Histogram scale for the x-axis
         xHistoScale = null,
-        xTickFormat = d3.format(''),
+        xTickFormat = null,
+        yTickFormat = null,
         // Scale for the y-axis
         yScale = null,
-        // Format string for y-axis labels
-        yFormat = '',
         // Y-axis tick values
         yTickValues = null,
         // Y-axis tick values
         yDomain = null,
+        yScaleFunction = d3.scaleLinear,
         // Display values at the peak of each bar
         barValues = false,
         // Bar chart object
@@ -110,7 +110,7 @@ var bar = function() {
     var makeScales = function() {
 
         var xdomain = data.map(function(d) { return d.x; });
-        var ydomain = yDomain ? yDomain : [0, d3.max(data, function(d) { return d.y; })];
+        var ydomain = yDomain ? yDomain : d3.extent(data, d => d.y);
 
         if (grouped) {
 
@@ -199,14 +199,15 @@ var bar = function() {
                     .range([getHeight(), 0]);
             }
 
-            console.log(ydomain);
-            console.log(xdomain);
             return;
         }
 
-        yScale = d3.scaleLinear()
+        console.log(ydomain);
+        yScale = yScaleFunction()
             .domain(ydomain)
+            .nice()
             .range([getHeight(), 0]);
+        console.log(yScale.domain());
     };
 
     var makeAxes = function() {
@@ -214,7 +215,7 @@ var bar = function() {
         if (grouped) {
             xAxis = d3.axisBottom(xGroupScale)
                 .tickSizeOuter(outerTicks ? 6 : 0)
-                .tickFormat(xTickFormat)
+                .tickFormat(null)
                 ;
         } else {
             xAxis = d3.axisBottom(xScale)
@@ -224,7 +225,7 @@ var bar = function() {
         }
 
         yAxis = d3.axisLeft(yScale)
-            .tickFormat(d3.format(yFormat))
+            .tickFormat(yTickFormat)
             .tickValues(yTickValues)
             //.tickValues( yScale.ticks(7).concat(parseFloat(yScale.domain()[1]).toFixed(2)) )
             ;
@@ -248,9 +249,18 @@ var bar = function() {
             .call(xAxis)
             ;
 
+        xAxisObject.selectAll('text')
+            .attr('transform', 'rotate(-310)')
+            .attr('x', 5)
+            .attr('y', 8)
+            .attr('dy', '.35em')
+            .attr('dx', '.35em')
+            .style('text-anchor', 'start')
+            ;
+
         xAxisObject.append('text')
             .attr('x', function() { return (margin.left + getWidth()) / 2; })
-            .attr('y', 45)
+            .attr('y', xTextPad)
             .attr('fill', '#000')
             .style('text-anchor', 'middle')
             .text(xText)
@@ -467,9 +477,10 @@ var bar = function() {
                 .style('stroke', barStroke)
                 .style('stroke-width', strokeWidth)
                 .style('fill', function(d) { 
-                    console.log(d);
                     if (textures.length > 0 && d.texture)
                         return d.texture.url();
+                    if (d.color)
+                        return d.color;
 
                     return colorScale(d.group); 
                 })
@@ -504,10 +515,110 @@ var bar = function() {
 
     };
 
-    var drawText = function() {
+    var drawSE = function() {
+
+        var traitMeans = {}
+
+        for (let d of data) {
+
+            if (!(d.x in traitMeans))
+                traitMeans[d.x] = []
+
+            traitMeans[d.x].push(d.y);
+        }
+
+        data.map(d => {
+
+            d.error = d3.deviation(traitMeans[d.x]) / Math.sqrt(traitMeans[d.x].length);
+
+            return d;
+        });
+
+        var line2 = d3.line()
+            .curve(d3.curveCatmullRom.alpha(0.5))
+            //.x(function(d) { return xScale(d.group); })
+            //.y(function(d) { return yScale(d.y); })
+            .x(function(d) { return xScale(d[0]); })
+            .y(function(d) { return yScale(d[1]); })
+            ;
+
+        for (let d of data) {
+
+            var points = [
+                [d.group, d.y],
+                [d.group, d.y + d.error]
+            ];
+            //points.x = d.x;
+
+            svg.append('line')
+                .attr('x1', function() { 
+                    return xScale(d.group) + (xScale.bandwidth() / 2); 
+                })
+                .attr('y1', function() { 
+                    return yScale(parseFloat(d.y) + parseFloat(d.error));
+                })
+                .attr('x2', function() { 
+                    return xScale(d.group) + (xScale.bandwidth() / 2);
+                })
+                .attr('y2', function() {
+                    return yScale(d.y);
+                })
+                //.style('stroke-linecap', 'round')
+                .style('shape-rendering', 'auto')
+                .style('stroke', '#000')
+                .style('stroke-width', 2)
+                .attr('transform', function() { 
+                    if (grouped)
+                        return 'translate(' + xGroupScale(d.x) + ',0)'; 
+                    else
+                        return 'translate(0,0)'; 
+                })
+                ;
+            svg.append('line')
+                .attr('x1', function() { 
+                    return xScale(d.group) + (xScale.bandwidth() / 2); 
+                })
+                .attr('y1', function() { 
+                    return yScale(parseFloat(d.y) - parseFloat(d.error));
+                })
+                .attr('x2', function() { 
+                    return xScale(d.group) + (xScale.bandwidth() / 2);
+                })
+                .attr('y2', function() {
+                    return yScale(d.y);
+                })
+                //.style('stroke-linecap', 'round')
+                .style('shape-rendering', 'auto')
+                .style('stroke', '#000')
+                .style('stroke-width', 2)
+                .attr('transform', function() { 
+                    if (grouped)
+                        return 'translate(' + xGroupScale(d.x) + ',0)'; 
+                    else
+                        return 'translate(0,0)'; 
+                })
+                ;
+                /*
+            var lines = svg.selectAll('se')
+                .data([points])
+                .enter()
+                .append('line')
+                .attr('d', function(d) { return line2(d); })
+                .attr('class', 'se')
+                .attr('transform', function() { 
+                    if (grouped)
+                        return 'translate(' + xGroupScale(d.x) + ',0)'; 
+                    else
+                        return 'translate(0,0)'; 
+                })
+                .attr('stroke', '#000')
+                .attr('stroke-width', 1)
+                .attr('fill', '#000')
+                ;
+                */
+        }
 
     };
-
 
     var mean = function(data) {
 
@@ -608,11 +719,6 @@ var bar = function() {
             .style('stroke-dasharray', '5,5')
             .style('fill', 'none');
 
-        console.log(allVals);
-        console.log(binned);
-
-        console.log(u);
-        console.log(v);
     };
 
     var drawDistribution = function() {
@@ -734,9 +840,13 @@ var bar = function() {
 
         if (distribution)
             drawdist();
+
+        return exports;
     };
 
     /** setters/getters **/
+
+    exports.svg = function(_) { return svg; };
 
     exports.data = function(_) {
         if (!arguments.length) return data;
@@ -753,6 +863,36 @@ var bar = function() {
     exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
+        return exports;
+    };
+
+    exports.margin = function(_) {
+        if (!arguments.length) return margin;
+        margin = _;
+        return exports;
+    };
+
+    exports.marginBottom = function(_) {
+        if (!arguments.length) return margin.bottom;
+        margin.bottom = +_;
+        return exports;
+    };
+
+    exports.marginTop = function(_) {
+        if (!arguments.length) return margin.top;
+        margin.top = +_;
+        return exports;
+    };
+
+    exports.marginLeft = function(_) {
+        if (!arguments.length) return margin.left;
+        margin.left = +_;
+        return exports;
+    };
+
+    exports.marginRight = function(_) {
+        if (!arguments.length) return margin.right;
+        margin.right = +_;
         return exports;
     };
 
@@ -783,6 +923,12 @@ var bar = function() {
     exports.outerTicks = function(_) {
         if (!arguments.length) return outerTicks;
         outerTicks = _;
+        return exports;
+    };
+
+    exports.yTickFormat = function(_) {
+        if (!arguments.length) return yTickFormat;
+        yTickFormat = _;
         return exports;
     };
 
@@ -864,12 +1010,6 @@ var bar = function() {
         return exports;
     };
 
-    exports.yFormat = function(_) {
-        if (!arguments.length) return yFormat;
-        yFormat = _;
-        return exports;
-    };
-
     exports.yText = function(_) {
         if (!arguments.length) return yText;
         yText = _;
@@ -909,6 +1049,12 @@ var bar = function() {
     exports.yTickValues = function(_) {
         if (!arguments.length) return yTickValues;
         yTickValues = _;
+        return exports;
+    };
+
+    exports.yScaleFunction = function(_) {
+        if (!arguments.length) return yScaleFunction;
+        yScaleFunction = _;
         return exports;
     };
 

@@ -102,7 +102,7 @@ var legend = function() {
 
     exports.draw = function() {
 
-        var legend = d3.select('body')
+        legend = d3.select('body')
             .append('svg')
             .attr('width', width)
             .attr('height', height)
@@ -219,7 +219,11 @@ var legend = function() {
             .attr('font-size', fontSize)
             .attr('font-weight', fontWeight)
             .text(function(d) { return d.text; });
+
+        return exports;
     };
+
+    exports.svg = function(_) { return legend; };
 
     exports.data = function(_) {
         if (!arguments.length) return data;
