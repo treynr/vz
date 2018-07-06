@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <script src="../dist/d3.min.js" type="text/javascript"></script>
+        <script src="../dist/bar.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+		d3.json('data/bar-example-0.json', function(error, json) {
+
+            console.log(json.notes);
+
+            // Transform gene lists to counts
+            json.data.forEach(d => { d.y = d.y.length; });
+
+			var chart = bar()
+                .data(json.data)
+                .width(350)
+                .height(300)
+                .yDomain([0, 45])
+				.xLabel('Mouse Brain Regions (Abbreviated)')
+				.yLabel('# of Up-regulated Genes')
+				.draw();
+
+		});
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>

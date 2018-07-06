@@ -1,20 +1,15 @@
-## vizlib to-be-ignored files
+## Ignore the following shit:
 #
 
-# Ignore all files...
-#*
-# except js files
-#!*.js
+## the node_modules directory
+node_modules/**
+node_modules
 
-# And except what's in the katex folder, we need all that
-#!katex/**
-
-## Had to change the file because of the stupid katex folder
-## Ignore any raw data files
+## any raw data files
 *.json
 *.tsv
 *.csv
 *.txt
 
-## FUCK VIM SWAP FILES
+## vim swap files
 *.sw*
