@@ -1,0 +1,25 @@
+{
+  "name": "idk",
+  "version": "0.3.0",
+  "description": "A javascript library, built on d3, for visualizing biological data.",
+  "main": "index.js",
+  "repository": "git@s1k.pw:vizlib",
+  "author": "TR <tim@fin0c.net>",
+  "license": "AGPLv3",
+  "private": true,
+  "dependencies": {
+    "d3": "4.13.0",
+    "d3-scale-chromatic": "^1.3.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.6.1",
+    "tape": "^4.9.1",
+    "webpack": "^4.15.0",
+    "webpack-cli": "^3.0.8",
+    "webpack-merge": "^4.1.4"
+  },
+  "scripts": {
+    "build": "webpack --config webpack.prod.js",
+    "test": "webpack --config webpack.dev.js && tape test/*.js"
+  }
+}
