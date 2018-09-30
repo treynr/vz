@@ -1,10 +1,10 @@
 /**
- * file: bar.js
- * desc: d3js 4.0 implementation of bar charts.
- * auth: TR
- */
+  * file: bar.js
+  * desc: d3js 4.0 implementation of bar charts.
+  * auth: TR
+  */
 
-import {deviation, extent, histogram, max, min} from 'd3-array';
+import {deviation, extent, max, min} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleBand, scaleLinear, scaleOrdinal} from 'd3-scale';
 import {select} from 'd3-selection';
@@ -30,66 +30,72 @@ import {line, curveCatmullRom} from 'd3-shape';
 export default function() {
 
     var exports = {},
-        data = null,
+
+        /** private **/
+
+        // Scale used to color individual bars when the group option is used
+        colorScale = scaleOrdinal().range([
+            '#98abc5', '#8a89a6', '#7b6888', '#6b486b', '#a05d56', '#d0743c', '#ff8c00'
+        ]),
+        // List of data groups
+        groups = null,
+        // d3 SVG object
         svg = null,
-        // Top level bar chart title
-        title = '',
-        // SVG width
-        width = 800,
-        // SVG height
-        height = 500,
-        // Margin object
-        margin = {top: 40, right: 30, bottom: 60, left: 50},
+        // x-axis object
+        xAxis = null,
+        // Grouped chart scale for the x-axis
+        xGroupScale = null,
+        // Scale for the x-axis
+        xScale = null,
+        // y-axis object
+        yAxis = null,
+        // Scale for the y-axis
+        yScale = null,
+
+        /** public **/
+
         // Bar chart color
         barColor = '#98ABC5',
         // Bar chart edge color
         barStroke = '#222222',
-        // Bar stroke width
-        strokeWidth = 1,
-        // Boolean to draw or hide the outer x-axis ticks
-        outerTicks = false,
         // Width of each bar in the chart
         barWidth = null,
+        // Plot data
+        data = null,
+        // Font size for each axis and title
+        fontSize = 13,
         // Use a grouped bar chart style
         grouped = null,
-        // List of data groups
-        groups = null,
         // List of group bar colors
         groupColors = null,
-        // Overlay chart with normalized distribution
-        distribution = false,
-        // Axis text size
-        //fontSize = '13px',
-        fontSize = 13,
+        // SVG height
+        height = 500,
+        // Margin object
+        margin = {top: 40, right: 30, bottom: 60, left: 50},
+        // Boolean to draw or hide the outer x-axis ticks
+        outerTicks = false,
+        rotateXLabel = false,
+        // Bar stroke width
+        strokeWidth = 1,
+        // Top level bar chart title
+        title = '',
+        // SVG width
+        width = 800,
         // X-axis text
         xLabel = '',
         // X-axis text padding to position it away from the x-axis
         xLabelPad = 50,
+        // Y-axis padding. Positive values shift the y-axis further to the
+        // left.
+        yAxisPad = 40,
         // Y-axis text
         yLabel = '',
         // Y-axis text padding. Positive values shift the y-axis label further
         // to the left.
         yLabelPad = -35,
-        // Y-axis padding. Positive values shift the y-axis further to the
-        // left.
-        yAxisPad = 40,
-        rotateXLabel = false,
-        // Padding between bars
-        innerPadding = 0.1,
-        // Scale used to color individual bars when the group option is used
-        colorScale = scaleOrdinal().range([
-            '#98abc5', '#8a89a6', '#7b6888', '#6b486b', '#a05d56', '#d0743c', '#ff8c00'
-        ]),
-        // Scale for the x-axis
-        xScale = null,
-        // Grouped chart scale for the x-axis
-        xGroupScale = null,
-        // Scale for the y-axis
-        yScale = null,
-        xAxis = null,
-        yAxis = null,
+        // d3 format string for x-axis tick values
         xTickFormat = null,
-        // Y-axis tick values
+        // d3 format string for y-axis tick values
         yTickFormat = null,
         yTickValues = null,
         // Y-axis tick values
@@ -97,10 +103,6 @@ export default function() {
         noXLine = false,
         noYLine = false,
         yScaleFunction = scaleLinear,
-        // Display values at the peak of each bar
-        barValues = false,
-        // Bar chart object
-        chart = null,
         textures = []
         ;
 
@@ -516,12 +518,6 @@ export default function() {
         return exports;
     };
 
-    exports.asHistogram = function(_) {
-        if (!arguments.length) return asHistogram;
-        asHistogram = _;
-        return exports;
-    };
-
     exports.yAxisPad = function(_) {
         if (!arguments.length) return yAxisPad;
         yAxisPad = +_;
@@ -549,12 +545,6 @@ export default function() {
     exports.noYLine = function(_) {
         if (!arguments.length) return noYLine;
         noYLine = _;
-        return exports;
-    };
-
-    exports.innerPadding = function(_) {
-        if (!arguments.length) return innerPadding;
-        innerPadding = +_;
         return exports;
     };
 
@@ -606,12 +596,6 @@ export default function() {
         return exports;
     };
 
-    exports.distribution = function(_) {
-        if (!arguments.length) return distribution;
-        distribution = _;
-        return exports;
-    };
-
     exports.yTickValues = function(_) {
         if (!arguments.length) return yTickValues;
         yTickValues = _;
@@ -627,12 +611,6 @@ export default function() {
     exports.yDomain = function(_) {
         if (!arguments.length) return yDomain;
         yDomain = _;
-        return exports;
-    };
-
-    exports.barValues = function(_) {
-        if (!arguments.length) return barValues;
-        barValues = _;
         return exports;
     };
 

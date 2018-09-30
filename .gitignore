@@ -6,7 +6,6 @@ node_modules/**
 node_modules
 
 ## any raw data files
-*.json
 *.tsv
 *.csv
 *.txt
