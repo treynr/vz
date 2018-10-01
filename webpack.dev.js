@@ -2,9 +2,9 @@
 const merge = require('webpack-merge');
 const config = require('./webpack.config.js');
 
-module.exports = merge(config, {
-
+const devConfig = {
     mode: 'development',
     devtool: 'inline-source-map'
-});
+};
 
+module.exports = config.map(c => merge(devConfig, c));

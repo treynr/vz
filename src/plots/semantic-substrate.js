@@ -1,9 +1,9 @@
 /**
   * file: semantic-substrate.js
-  * desc: d3js implementation of 2D graph plots.
+  * desc: d3js implementation of semantic substrate (2D graph scatter) plots.
   * auth: TR
   *
-  * TODO: Consider a reimplementation using d3-force.
+  * TODO: Consider a reimplementation of node and edge positioning using d3-force.
   */
 
 'use strict';
@@ -48,18 +48,18 @@ export default function() {
         // Font to use when displaying text
         font = 'sans-serif',
         // Font size in pixels
-        fontSize = 13,
+        fontSize = 12,
         // SVG height
         height = 600,
         margin = {top: 50, right: 50, bottom: 50, left: 50},
         // Color used to fill in nodes
         nodeFill = '#d62333',
         // Radius of rendered nodes in the graph
-        nodeRadius = 7,
+        nodeRadius = 4,
         // Color used when drawing strokes around the nodes
         nodeStroke = '#ffffff',
         // Width of the stroke around nodes
-        nodeStrokeWidth = 1,
+        nodeStrokeWidth = 2,
         // SVG object for the plot
         svg = null,
         // SVG width
@@ -67,8 +67,9 @@ export default function() {
         xDomain = null,
         // Text label for the x-axis
         xLabel = '',
-        // Padding in pixels for the x-axis label
-        xLabelPad = 50,
+        // Padding in pixels for the x-axis label, if set to null then
+        // semi-sensible default values are used instead
+        xLabelPad = null,
         // d3 scale type to use for the x-axis
         xScaleFunction = scaleLinear,
         // Format string for x-axis ticks
@@ -78,8 +79,9 @@ export default function() {
         yDomain = null,
         // Text label for the y-axis
         yLabel = '',
-        // Padding in pixels for the x-axis label
-        yLabelPad = 50,
+        // Padding in pihels for the y-axis label, if set to null then
+        // semi-sensible default values are used instead
+        yLabelPad = null,
         // d3 scale type to use for the y-axis
         yScaleFunction = scaleLinear,
         // Format string for y-axis ticks
@@ -108,7 +110,7 @@ export default function() {
         xScale = xScaleFunction()
             .domain(xDomain)
             .nice()
-            .range([0, getWidth()]);
+            .range([margin.left, getWidth()]);
 
         yScale = yScaleFunction()
             .domain(yDomain)
@@ -133,10 +135,15 @@ export default function() {
         let xAxisObject = svg.append('g')
             .attr('class', 'x-axis')
             .attr('transform', `translate(0, ${getHeight()})`)
+            //.attr('font', font)
+            //.attr('font-size', `${fontSize}px`)
+            //.attr('font-weight', 'normal')
+            .call(xAxis);
+
+        xAxisObject.selectAll('text')
             .attr('font', font)
             .attr('font-size', `${fontSize}px`)
-            .attr('font-weight', 'normal')
-            .call(xAxis);
+            .attr('font-weight', 'normal');
 
         // Attach the x-axis label
         xAxisObject.append('text')
@@ -151,17 +158,22 @@ export default function() {
                 if (xLabelPad !== null)
                     return xLabelPad;
 
-                return altAxisLabels ? -5 : 45;
+                return altAxisLabels ? -5 : 50;
             })
             .text(xLabel);
 
         let yAxisObject = svg.append('g')
             .attr('class', 'y-axis')
             .attr('transform', `translate(${margin.left}, 0)`)
+            //.attr('font', font)
+            //.attr('font-size', `${fontSize}px`)
+            //.attr('font-weight', 'normal')
+            .call(yAxis);
+
+        yAxisObject.selectAll('text')
             .attr('font', font)
             .attr('font-size', `${fontSize}px`)
-            .attr('font-weight', 'normal')
-            .call(yAxis);
+            .attr('font-weight', 'normal');
 
         // Attach the y-axis label
         yAxisObject.append('text')
@@ -174,7 +186,7 @@ export default function() {
                 if (yLabelPad !== null)
                     return yLabelPad;
 
-                return altAxisLabels ? 0 : -50;
+                return altAxisLabels ? 0 : -40;
             })
             .text(yLabel);
     };
@@ -234,9 +246,10 @@ export default function() {
         let nodePositions = {};
 
         //selectAll('.node > circle').each(function(d) {
-        selectAll('.node').each(function(d) {
+        //selectAll('.node').each(function(d) {
+        data.nodes.forEach(d => {
 
-            let node = select(this);
+            //let node = select(this);
 
             //nodePositions[d.id] = {x: node.attr('cx'), y: node.attr('cy')};
             nodePositions[d.id] = {x: d.x, y: d.y};
@@ -285,7 +298,14 @@ export default function() {
             .append('svg')
             .attr('height', height)
             .attr('width', width)
+            .append('g')
             .attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+        makeScales();
+        makeAxes();
+        renderAxes();
+        renderEdges();
+        renderNodes();
     };
 
     /** setters/getters **/
