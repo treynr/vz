@@ -2,8 +2,6 @@
 const merge = require('webpack-merge');
 const config = require('./webpack.config.js');
 
-module.exports = merge(config, {
+const prodConfig = { mode: 'production' };
 
-    mode: 'production'
-}};
-
+module.exports = config.map(c => merge(prodConfig, c));
