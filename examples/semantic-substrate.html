@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <script src="../dist/d3.min.js" type="text/javascript"></script>
+        <script src="../dist/semantic-substrate.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+        const data = {
+            nodes: [
+                {x: 1, y: 1, value: 0, id: 'a'},
+                {x: 2, y: 3, value: 0, id: 'b'},
+                {x: 4, y: 2, value: 0, id: 'c'},
+                {x: 4, y: 5, value: 0, id: 'd'},
+                {x: 5, y: 5, value: 0, id: 'e'}
+            ],
+            edges: [
+                {source: 'a', target: 'b'},
+                {source: 'a', target: 'c'},
+                {source: 'b', target: 'c'},
+                {source: 'b', target: 'd'},
+                {source: 'c', target: 'd'},
+                {source: 'd', target: 'e'}
+            ]
+        }
+
+		//d3.json('data/bar-example-0.json', function(error, json) {
+
+            //console.log(json.notes);
+
+            // Transform gene lists to counts
+            //json.data.forEach(d => { d.y = d.y.length; });
+
+			var chart = substrate()
+                .data(data)
+                .width(400)
+                .height(400)
+                .xDomain([0, 5])
+                .yDomain([0, 5])
+                .xLabel('Some X Values')
+                .yLabel('Some Y Values')
+                .altAxisLabels(true)
+                .yLabelPad(8)
+                //.yDomain([0, 45])
+				//.xLabel('Mouse Brain Regions (Abbreviated)')
+				//.yLabel('# of Up-regulated Genes')
+				.draw();
+
+		//});
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>
+
