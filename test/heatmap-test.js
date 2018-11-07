@@ -151,6 +151,34 @@ tape('makeScales() sets the default y-scale', t => {
     t.end();
 });
 
+tape('renderAxes() renders default axes', t => {
+
+    global.document = (new jsdom.JSDOM(`...`)).window.document;
+    let svg = d3.select('body').append('svg');
+    let h = heatmap().data(mirroredData).svg(svg);
+
+    h.makeScales();
+    h.renderAxes();
+    t.notOk(d3.select('.x-axis').empty());
+    t.notOk(d3.select('.y-axis').empty());
+    t.ok(d3.select('.x-axis-label').text() == '');
+    t.ok(d3.select('.y-axis-label').text() == '');
+    t.end();
+});
+
+tape('renderAxes() renders custom labels', t => {
+
+    global.document = (new jsdom.JSDOM(`...`)).window.document;
+    let svg = d3.select('body').append('svg');
+    let h = heatmap().data(mirroredData).svg(svg).xLabel('lul').yLabel('lul');
+
+    h.makeScales();
+    h.renderAxes();
+    t.ok(d3.select('.x-axis-label').text() == 'lul');
+    t.ok(d3.select('.y-axis-label').text() == 'lul');
+    t.end();
+});
+
 /*
 tape('makeScales() sets the default y-scale', t => {
 

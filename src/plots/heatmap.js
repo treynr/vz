@@ -283,13 +283,69 @@ export default function() {
             [Align.LEFT]: axisLeft
         }[yAxisAlign];
 
-        xaxis = axis.scale(xScale);
-        yaxis = axis.scale(yScale);
+        //console.log(xaxis);
+        //xaxis = xaxis.scale(xScale);
+        //yaxis = yaxis.scale(yScale);
+        xaxis = xaxis(xScale);
+        yaxis = yaxis(yScale);
 
         let xAxisObject = svg.append('g')
             .attr('class', 'x-axis')
-            .attr('transform', `translate(0, ${getHeight()})`)
+            .attr('transform', _ => {
+                return xAxisAlign == Align.TOP ? `translate(0, 0)` :
+                                                 `translate(0, ${getHeight()})`;
+            })
             .call(xaxis);
+
+        // Update the text properties and positioning for the axis ticks
+        xAxisObject.selectAll('text')
+            .attr('x', 5)
+            .attr('y', xAxisAlign == Align.TOP ? -8 : 10)
+            .attr('dx', '.35em')
+            .attr('dy', '.35em')
+            .attr('font', font)
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', fontWeight)
+            .attr('transform', xAxisAlign == Align.TOP ? 'rotate(-45)' : 'rotate(-320)')
+            .attr('text-anchor', 'start')
+            ;
+
+        // Add the x-axis label
+        xAxisObject.append('text')
+            .attr('class', 'x-axis-label')
+            .attr('x', getWidth() / 2)
+            .attr('y', xLabelPad)
+            .attr('fill', '#000000')
+            .attr('text-anchor', 'middle')
+            .text(xLabel)
+            ;
+
+        let yAxisObject = svg.append('g')
+            .attr('class', 'y-axis')
+            .attr('transform', _ => {
+                return yAxisAlign == Align.LEFT ? `translate(0, 0)` :
+                                                  `translate(${getWidth()}, 0)`;
+            })
+            .call(yaxis);
+
+        yAxisObject.selectAll('text')
+            .attr('font', font)
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', fontWeight)
+            .attr('text-anchor', 'start')
+            ;
+
+        yAxisObject.append('text')
+            .attr('class', 'y-axis-label')
+            .attr('x', 60)
+            .attr('y', yLabelPad)
+            .attr('fill', '#000000')
+            .attr('text-anchor', 'middle')
+            .text(yLabel);
+
+        // Remove domain lines
+        xAxisObject.select('.domain').remove();
+        yAxisObject.select('.domain').remove();
     };
 
     /** public **/
@@ -305,6 +361,8 @@ export default function() {
 
         stringifyCategories();
         completeMatrix(mirror=mirrorAxes);
+
+        renderAxes();
     };
 
     /** setters/getters **/
@@ -479,9 +537,16 @@ export default function() {
         exports.completeMatrix = completeMatrix;
         exports.stringifyCategories = stringifyCategories;
         exports.makeScales = makeScales;
+        exports.renderAxes = renderAxes;
 
         exports.xScale = () => xScale;
         exports.yScale = () => yScale;
+
+        exports.svg = function(_) {
+            if (!arguments.length) return svg;
+            svg = _;
+            return exports;
+        };
     }
 
     return exports;
