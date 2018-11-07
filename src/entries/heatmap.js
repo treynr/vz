@@ -1,2 +1,2 @@
-export {default} from '../plots/heatmap.js';
+export {default} from '../plots/heatmap';
 

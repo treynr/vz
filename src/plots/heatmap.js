@@ -106,7 +106,7 @@ export default function() {
         // Padding in pixels for the x-axis label
         yLabelPad = 50,
         width = 600,
-        mirrorAxes = true,
+        mirrorAxes = false,
         // Cluster the results and draw a dendogram in the heat map margins
         cluster = false,
         // The values provided are distances and should be converted
@@ -212,7 +212,7 @@ export default function() {
             for (let c in matrix[r]) {
 
                 // (r, c) is in the original set of comparisons so we don't do anything
-                if (r in origMatrix && origMatrix[r][c])
+                if (r in origMatrix && origMatrix[r][c] !== undefined)
                     continue;
 
                 // otherwise we add the missing comparison to our values array
@@ -348,6 +348,50 @@ export default function() {
         yAxisObject.select('.domain').remove();
     };
 
+    let renderCells = function() {
+
+        // Maps row and column categories to their indexed position on the plot
+        let indexMap = {};
+
+        getRowCategories().forEach(d => { indexMap[d] = xScale(d); });
+        getColumnCategories().forEach(d => { indexMap[d] = yScale(d); });
+
+        let cells = svg.append('g')
+            .attr('class', 'cells')
+            .selectAll('cells')
+            .data(data.values)
+            .enter()
+            .filter(d => {
+
+                // If rows == columns, we only a diagonal cross section of the heatmap
+                if (mirrorAxes)
+                    return indexMap[d.y] <= indexMap[d.x];
+                else
+                    return true;
+            })
+            .append('g')
+            .attr('class', 'cell');
+
+        cells.append('rect')
+            .attr('x', d => xScale(d.x))
+            .attr('y', d => yScale(d.y))
+            .attr('height', yScale.bandwidth())
+            .attr('width', xScale.bandwidth())
+            .attr('fill', d => {
+
+                if (d.fill)
+                    return d.fill;
+
+                if (!d.value)
+                    return '#ffffff';
+
+                return colorScale(d.value);
+            })
+            .attr('shape-rendering', 'auto')
+            .attr('stroke', cellStroke)
+            .attr('stroke-width', cellStrokeWidth)
+    };
+
     /** public **/
 
     exports.draw = function() {
@@ -360,9 +404,14 @@ export default function() {
             .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
         stringifyCategories();
-        completeMatrix(mirror=mirrorAxes);
+        completeMatrix(mirrorAxes);
 
+        makeScales();
         renderAxes();
+        renderCells();
+        console.log(data.values);
+
+        return exports;
     };
 
     /** setters/getters **/
@@ -538,6 +587,7 @@ export default function() {
         exports.stringifyCategories = stringifyCategories;
         exports.makeScales = makeScales;
         exports.renderAxes = renderAxes;
+        exports.renderCells = renderCells;
 
         exports.xScale = () => xScale;
         exports.yScale = () => yScale;

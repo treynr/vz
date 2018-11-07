@@ -179,83 +179,25 @@ tape('renderAxes() renders custom labels', t => {
     t.end();
 });
 
+tape('renderCells() renders default cells', t => {
+
+
+    global.document = (new jsdom.JSDOM(`...`)).window.document;
+    let svg = d3.select('body').append('svg');
+    let h = heatmap().data(data).svg(svg);
+
+    h.makeScales();
+    h.renderAxes();
+    h.renderCells();
+
+    t.notOk(d3.select('.cells').empty());
+    t.notOk(d3.select('.cell').empty());
+    t.ok(d3.selectAll('.cell').size() == 9);
+    console.log(d3.selectAll('.cell').size());
+    t.end();
+});
+
 /*
-tape('makeScales() sets the default y-scale', t => {
-
-    //let data = [{y:30}, {y:20}, {y:10}];
-    let s = substrate().data(data);
-
-    s.makeScales();
-    t.equal(s.yScale().domain()[0], 1);
-    t.equal(s.yScale().domain()[1], 5);
-    t.end();
-});
-
-tape('makeScales() returns correct values for user defined domains', t => {
-
-    let s = substrate().xDomain([10, 100]).yDomain([5, 50]);
-
-    s.makeScales();
-    t.equal(s.xScale().domain()[0], 10);
-    t.equal(s.xScale().domain()[1], 100);
-    t.equal(s.yScale().domain()[0], 5);
-    t.equal(s.yScale().domain()[1], 50);
-    t.end();
-});
-
-tape('makeAxes() returns correct ticks for default data sets', t => {
-
-    //let s = substrate().data([{x:1, y:1}, {x:5, y:5}]);
-    let s = substrate().data(data);
-
-    s.makeScales();
-    s.makeAxes();
-    t.deepEqual(s.xAxis().scale().ticks(s.xTicks()), [1, 2, 3, 4, 5]);
-    t.deepEqual(s.yAxis().scale().ticks(s.yTicks()), [1, 2, 3, 4, 5]);
-    t.end();
-});
-
-tape('makeAxes() returns correct ticks for user defined domains', t => {
-
-    let s = substrate().xDomain([1, 10]).yDomain([1, 10]);
-
-    s.makeScales();
-    s.makeAxes();
-    t.deepEqual(s.xAxis().scale().ticks(s.xTicks()), [2, 4, 6, 8, 10]);
-    t.deepEqual(s.yAxis().scale().ticks(s.yTicks()), [2, 4, 6, 8, 10]);
-    t.end();
-});
-
-tape('renderAxes() renders default axes', t => {
-
-    global.document = (new jsdom.JSDOM(`...`)).window.document;
-    let svg = d3.select('body').append('svg');
-    let s = substrate().svg(svg).xDomain([1, 10]).yDomain([1, 10]);
-
-    s.makeScales();
-    s.makeAxes();
-    s.renderAxes();
-    t.notOk(d3.select('.x-axis').empty());
-    t.notOk(d3.select('.y-axis').empty());
-    t.ok(d3.select('.x-axis-label').text() == '');
-    t.ok(d3.select('.y-axis-label').text() == '');
-    t.end();
-});
-
-tape('renderAxes() renders custom labels', t => {
-
-    global.document = (new jsdom.JSDOM(`...`)).window.document;
-    let svg = d3.select('body').append('svg');
-    let s = substrate().svg(svg).xDomain([1, 10]).yDomain([1, 10]).xLabel('lul').yLabel('lul');
-
-    s.makeScales();
-    s.makeAxes();
-    s.renderAxes();
-    t.ok(d3.select('.x-axis-label').text() == 'lul');
-    t.ok(d3.select('.y-axis-label').text() == 'lul');
-    t.end();
-});
-
 tape('renderNodes() renders default nodes', t => {
 
     global.document = (new jsdom.JSDOM(`...`)).window.document;
