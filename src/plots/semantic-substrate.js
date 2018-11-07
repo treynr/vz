@@ -12,6 +12,7 @@ import {extent} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleLinear} from 'd3-scale';
 import {select, selectAll} from 'd3-selection';
+import {forceCollide, forceSimulation, forceX, forceY} from 'd3-force';
 
 export default function() {
 
@@ -76,6 +77,7 @@ export default function() {
         xTickFormat = null,
         // Suggestion for the number of ticks on the x-axis
         xTicks = 5,
+        xTickValues = null,
         yDomain = null,
         // Text label for the y-axis
         yLabel = '',
@@ -125,6 +127,9 @@ export default function() {
 
         xAxis = axisBottom(xScale).ticks(xTicks, xTickFormat);
         yAxis = axisLeft(yScale).ticks(yTicks, yTickFormat);
+
+        if (xTickValues)
+            xAxis.tickValues(xTickValues);
     };
 
     /**
@@ -202,11 +207,14 @@ export default function() {
             .data(data.nodes)
             .enter()
             .append('g')
-            .attr('class', 'node');
+            .attr('class', 'node')
+            .attr('id', d => `node-${d.id}`)
+            ;
 
         nodes.append('circle')
-            .attr('cx', d => xScale(d.x))
-            .attr('cy', d => yScale(d.y))
+            .attr('cx', d => d.cx !== undefined ? d.cx : xScale(d.x))
+            .attr('cy', d => d.cy !== undefined ? d.cy : yScale(d.y))
+            //.attr('cy', d => yScale(d.y))
             .attr('r', d => {
 
                 if (d.radius)
@@ -236,6 +244,15 @@ export default function() {
 
                 return nodeStrokeWidth;
             });
+
+        nodes.append('title')
+            .text(d => {
+
+                if (d.label)
+                    return d.label;
+
+                return '';
+            });
     };
 
     let renderEdges = function() {
@@ -252,7 +269,12 @@ export default function() {
             //let node = select(this);
 
             //nodePositions[d.id] = {x: node.attr('cx'), y: node.attr('cy')};
-            nodePositions[d.id] = {x: d.x, y: d.y};
+            if (d.cx !== undefined && d.cy !== undefined) {
+                console.log('shit');
+                nodePositions[d.id] = {x: d.cx, y: d.cy};
+            } else {
+                nodePositions[d.id] = {x: xScale(d.x), y: yScale(d.y)};
+            }
         });
 
         let edges = svg.append('g')
@@ -264,10 +286,10 @@ export default function() {
             .attr('class', 'edge');
 
         edges.append('line')
-            .attr('x1', d => xScale(nodePositions[d.source].x))
-            .attr('y1', d => yScale(nodePositions[d.source].y))
-            .attr('x2', d => xScale(nodePositions[d.target].x))
-            .attr('y2', d => yScale(nodePositions[d.target].y))
+            .attr('x1', d => nodePositions[d.source].x)
+            .attr('y1', d => nodePositions[d.source].y)
+            .attr('x2', d => nodePositions[d.target].x)
+            .attr('y2', d => nodePositions[d.target].y)
             .attr('fill', 'none')
             .attr('opacity', d => {
 
@@ -292,6 +314,80 @@ export default function() {
             });
     };
 
+    let positionWithForce = function() {
+
+        for (let node of data.nodes) {
+
+            //node.fy = yScale(node.y);
+        }
+
+        let simulation = forceSimulation(data.nodes)
+            .force('x', forceX(d => xScale(d.x)).strength(1))
+            .force('y', forceY(d => yScale(d.y)).strength(1))
+            //.force('fy', d => yScale(d.y))
+            .force('collide', forceCollide(5))
+            .stop();
+
+        for (let i = 0; i < 120; i++)
+            simulation.tick();
+
+        for (let node of data.nodes) {
+
+            node.cx = node.x;
+            node.cy = node.y;
+        }
+        console.log(simulation);
+        console.log(simulation.nodes());
+        console.log(data.nodes);
+    };
+
+    let renderGrid = function() {
+
+        let ticks = yScale.ticks();
+
+        for (let i = 0; i < ticks.length; i++) {
+
+            let yt = yScale(ticks[i]);
+            let yt1 = 0;
+            let x1 = xScale.range()[0];
+            let x2 = xScale.range()[1];
+            let y1 = 0;
+            let y2 = 0;
+
+            if (i == 0) {
+
+                yt1 = yScale(ticks[i + 1]);
+                y1 = yt + ((yt1 - yt) / 2);
+                y2 = yt;
+
+            } else if (i == ticks.length - 1) {
+                
+                yt1 = yScale(ticks[i - 1]);
+                y1 = yt - ((yt - yt1) / 2);
+                y2 = yt;
+
+            } else {
+
+                yt1 = yScale(ticks[i - 1]);
+                y1 = yt + ((yt - yt1) / 2);
+                y2 = yt - ((yt - yt1) / 2);
+            }
+
+            svg.append('path')
+                .attr('class', `background-${i}`)
+                .attr('d', _ => {
+
+                    return `M ${x1}, ${y1} ` +
+                           `L ${x2}, ${y1} ` +
+                           `L ${x2}, ${y2} ` +
+                           `L ${x1}, ${y2} ` +
+                           `L ${x1}, ${y1} `;
+                })
+                .attr('stroke', 'none')
+                .attr('fill', i % 2 ? '#fff': '#cecece');
+        }
+    };
+
     exports.draw = function() {
 
         svg = select(element)
@@ -303,9 +399,18 @@ export default function() {
 
         makeScales();
         makeAxes();
+
+        renderGrid();
+
         renderAxes();
+
+        positionWithForce();
+
         renderEdges();
         renderNodes();
+
+
+        return exports;
     };
 
     /** setters/getters **/
@@ -366,9 +471,27 @@ export default function() {
         return exports;
     };
 
-    exports.width = function(_) { 
-        if (!arguments.length) return width;
-        width = +_;
+    exports.marginBottom = function(_) { 
+        if (!arguments.length) return margin.bottom;
+        margin.bottom = +_;
+        return exports;
+    };
+
+    exports.marginLeft = function(_) { 
+        if (!arguments.length) return margin.left;
+        margin.left = +_;
+        return exports;
+    };
+
+    exports.marginRight = function(_) { 
+        if (!arguments.length) return margin.right;
+        margin.right = +_;
+        return exports;
+    };
+
+    exports.marginTop = function(_) { 
+        if (!arguments.length) return margin.top;
+        margin.top = +_;
         return exports;
     };
 
@@ -393,6 +516,12 @@ export default function() {
     exports.nodeStrokeWidth = function(_) { 
         if (!arguments.length) return nodeStrokeWidth;
         nodeStrokeWidth = +_;
+        return exports;
+    };
+
+    exports.width = function(_) { 
+        if (!arguments.length) return width;
+        width = +_;
         return exports;
     };
 
@@ -429,6 +558,12 @@ export default function() {
     exports.xTicks = function(_) { 
         if (!arguments.length) return xTicks;
         xTicks = +_;
+        return exports;
+    };
+
+    exports.xTickValues = function(_) { 
+        if (!arguments.length) return xTickValues;
+        xTickValues = _;
         return exports;
     };
 

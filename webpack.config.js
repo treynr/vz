@@ -26,13 +26,14 @@ const path = require('path');
 //};
 
 module.exports = [
+    /*
     {
         entry: {
             'semantic-substrate': './src/entries/semantic-substrate.js'
         },
         output: {
             path: path.resolve(__dirname, 'dist'),
-            filename: '[name].js',
+            //filename: '[name].js',
             // bug fix for umd target
             globalObject: 'this',
             library: 'substrate',
@@ -41,16 +42,18 @@ module.exports = [
             //libraryTarget: 'var'
         }
     },
+    */
     {
         entry: {
-            bioviz: './src/index.js',
-            bar: './src/entries/bar.js',
-            histogram: './src/entries/histogram.js',
-            line: './src/entries/line.js',
+            heatmap: './src/entries/heatmap.js'
+            //bioviz: './src/index.js',
+            //bar: './src/entries/bar.js',
+            //histogram: './src/entries/histogram.js',
+            //line: './src/entries/line.js',
         },
         output: {
             path: path.resolve(__dirname, 'dist'),
-            filename: '[name].js',
+            //filename: '[name].js',
             // bug fix for umd target
             globalObject: 'this',
             library: '[name]',

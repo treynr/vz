@@ -1,8 +1,10 @@
 /**
   * file: bar.js
-  * desc: d3js 4.0 implementation of bar charts.
+  * desc: Reusale d3js implementation of bar charts.
   * auth: TR
   */
+
+'use strict'
 
 import {deviation, extent, max, min} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
@@ -58,6 +60,8 @@ export default function() {
         barColor = '#98ABC5',
         // Bar chart edge color
         barStroke = '#222222',
+        // Bar stroke width
+        barStrokeWidth = 1,
         // Width of each bar in the chart
         barWidth = null,
         // Plot data
@@ -75,8 +79,6 @@ export default function() {
         // Boolean to draw or hide the outer x-axis ticks
         outerTicks = false,
         rotateXLabel = false,
-        // Bar stroke width
-        strokeWidth = 1,
         // Top level bar chart title
         title = '',
         // SVG width
@@ -97,8 +99,8 @@ export default function() {
         xTickFormat = null,
         // d3 format string for y-axis tick values
         yTickFormat = null,
-        yTickValues = null,
         // Y-axis tick values
+        yTickValues = null,
         yDomain = null,
         noXLine = false,
         noYLine = false,
@@ -169,10 +171,10 @@ export default function() {
             .attr('transform', function() {
                 return 'translate(0' + ',' + (getHeight() + 1) + ')';
             })
-            .style('font-family', 'sans-serif')
-            .style('font-size', `${fontSize}px`)
-            .style('font-weight', 'normal')
-            .style('fill', 'none')
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', 'normal')
+            .attr('fill', 'none')
             .call(xAxis)
             ;
 
@@ -182,14 +184,14 @@ export default function() {
             .attr('y', d => rotateXLabel ? 8 : fontSize)
             .attr('dy', '.35em')
             .attr('dx', d => rotateXLabel ? '.30em' : '')
-            .style('text-anchor', d => rotateXLabel ? 'start': 'middle')
+            .attr('text-anchor', d => rotateXLabel ? 'start': 'middle')
             ;
 
         xAxisObject.append('text')
             .attr('x', function() { return (margin.left + getWidth()) / 2; })
             .attr('y', xLabelPad)
             .attr('fill', '#000')
-            .style('text-anchor', 'middle')
+            .attr('text-anchor', 'middle')
             .text(xLabel)
             ;
 
@@ -198,10 +200,10 @@ export default function() {
             .attr('transform', function() {
                 return 'translate(' + yAxisPad + ',0)';
             })
-            .style('font-family', 'sans-serif')
-            .style('font-size', `${fontSize}px`)
-            .style('font-weight', 'normal')
-            .style('fill', 'none')
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', 'normal')
+            .attr('fill', 'none')
             .call(yAxis)
             ;
 
@@ -211,7 +213,7 @@ export default function() {
             .attr('y', yLabelPad)
             .attr('fill', '#000')
             .attr('transform', 'rotate(-90)')
-            .style('text-anchor', 'middle')
+            .attr('text-anchor', 'middle')
             .text(yLabel)
             ;
 
@@ -260,10 +262,10 @@ export default function() {
             })
             .attr('width', xScale.bandwidth()) 
             .attr('height', d => getHeight() - yScale(d.y))
-            .style('shape-rendering', 'crispEdges')
-            .style('stroke', barStroke)
-            .style('stroke-width', strokeWidth)
-            .style('fill', d => {
+            .attr('shape-rendering', 'crispEdges')
+            .attr('stroke', barStroke)
+            .attr('stroke-width', barStrokeWidth)
+            .attr('fill', d => {
 
                 if (textures.length > 0 && d.texture)
                     return d.texture.url();
@@ -327,9 +329,9 @@ export default function() {
                     return yScale(d.y);
                 })
                 //.style('stroke-linecap', 'round')
-                .style('shape-rendering', 'auto')
-                .style('stroke', '#000')
-                .style('stroke-width', 2)
+                .attr('shape-rendering', 'auto')
+                .attr('stroke', '#000')
+                .attr('stroke-width', 2)
                 .attr('transform', function() { 
                     if (grouped)
                         return 'translate(' + xGroupScale(d.x) + ',0)'; 
@@ -351,9 +353,9 @@ export default function() {
                     return yScale(d.y);
                 })
                 //.style('stroke-linecap', 'round')
-                .style('shape-rendering', 'auto')
-                .style('stroke', '#000')
-                .style('stroke-width', 2)
+                .attr('shape-rendering', 'auto')
+                .attr('stroke', '#000')
+                .attr('stroke-width', 2)
                 .attr('transform', function() { 
                     if (grouped)
                         return 'translate(' + xGroupScale(d.x) + ',0)'; 
@@ -376,9 +378,9 @@ export default function() {
                 .attr('x', getWidth() / 2)
                 .attr('y', margin.top / 2)
                 .attr('text-anchor', 'middle')
-                .style('font-family', 'sans-serif')
-                .style('font-size', '17px')
-                .style('font-weight', 'normal')
+                .attr('font-family', 'sans-serif')
+                .attr('font-size', '17px')
+                .attr('font-weight', 'normal')
                 .text(title);
         }
 
@@ -476,9 +478,9 @@ export default function() {
         return exports;
     };
 
-    exports.strokeWidth = function(_) {
-        if (!arguments.length) return strokeWidth;
-        strokeWidth = +_;
+    exports.barStrokeWidth = function(_) {
+        if (!arguments.length) return barStrokeWidth;
+        barStrokeWidth = +_;
         return exports;
     };
 
