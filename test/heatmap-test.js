@@ -192,8 +192,41 @@ tape('renderCells() renders default cells', t => {
 
     t.notOk(d3.select('.cells').empty());
     t.notOk(d3.select('.cell').empty());
+    t.ok(d3.selectAll('.cell').size() == 6);
+    t.end();
+});
+
+tape('renderCells() renders default cells', t => {
+
+
+    global.document = (new jsdom.JSDOM(`...`)).window.document;
+    let svg = d3.select('body').append('svg');
+    let h = heatmap().data(mirroredData).svg(svg);
+
+    h.makeScales();
+    h.renderAxes();
+    h.renderCells();
+
+    t.notOk(d3.select('.cells').empty());
+    t.notOk(d3.select('.cell').empty());
     t.ok(d3.selectAll('.cell').size() == 9);
-    console.log(d3.selectAll('.cell').size());
+    t.end();
+});
+
+tape('renderCells() renders default cells for mirrored data', t => {
+
+
+    global.document = (new jsdom.JSDOM(`...`)).window.document;
+    let svg = d3.select('body').append('svg');
+    let h = heatmap().data(mirroredData).mirrorAxes(true).svg(svg);
+
+    h.makeScales();
+    h.renderAxes();
+    h.renderCells();
+
+    t.notOk(d3.select('.cells').empty());
+    t.notOk(d3.select('.cell').empty());
+    t.ok(d3.selectAll('.cell').size() == 6);
     t.end();
 });
 

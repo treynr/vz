@@ -38,17 +38,26 @@
 
 'use strict'
 
-import {extent} from 'd3-array';
+import {extent, ticks} from 'd3-array';
 import {axisBottom, axisLeft, axisRight, axisTop} from 'd3-axis';
 import {scaleBand, scaleLinear, scaleQuantize} from 'd3-scale';
 import {schemeBlues} from 'd3-scale-chromatic';
 import {select, selectAll} from 'd3-selection';
 
 const Align = {
+
     TOP: 0,
     RIGHT: 1,
     BOTTOM: 2,
     LEFT: 3
+};
+
+const Threshold = {
+
+    GT: (x, t) => x > t,
+    LT: (x, t) => x < t,
+    GTE: (x, t) => x >= t,
+    LTE: (x, t) => x <= t
 };
 
 export default function() {
@@ -65,6 +74,7 @@ export default function() {
 
         // Data object containing objects/data to visualize
         data = null,
+        altValueThreshold = 0.05,
         // Positioning for the first cell of the heatmap, default is to begin
         // on the plot's left hand side
         cellAlignHorizontal = Align.LEFT,
@@ -113,42 +123,43 @@ export default function() {
         distances = false,
         colorDomain = null,
         cellStroke = '#000000',
-        cellStrokeWidth = 1
+        cellStrokeWidth = 1,
+        altCellStroke = '#000000',
+        altCellStrokeWidth = 1,
+        altThresholdComparator = Threshold.GT,
+        altValueDomain = null,
+        altValueRange = null,
+        invertAltValueScale = false,
+        useAltValues = false,
+        altValueScale = null
         ;
+
 
     /** private **/
 
     let getHeight = function() { return height - margin.bottom - margin.top; };
     let getWidth = function() { return width - margin.left - margin.right; };
 
+    let unique = function(a) { return Array.from(new Set(a)); };
+
     /**
       * Returns the list of column labels, i.e. the list of categories that make up the
       * x-axis.
       */
-    let getColumnCategories = function() {
-
-        return Array.from(new Set(data.values.map(d => d.x)));
-    };
+    let getColumnCategories = function() { return unique(data.values.map(d => d.x)); };
 
     /**
       * Returns the list of row labels, i.e. the list of categories that make up the
       * y-axis.
       */
-    let getRowCategories = function() {
-
-        return Array.from(new Set(data.values.map(d => d.y)));
-    };
+    let getRowCategories = function() { return unique(data.values.map(d => d.y)); };
 
     /**
       * Forces x- and y-axis labels (row and column categories) to be strings.
       */
     let stringifyCategories = function() {
 
-        data.values.forEach(v => {
-
-            v.x = `${v.x}`;
-            v.y = `${v.y}`;
-        });
+        data.values.forEach(v => { v.x = `${v.x}`; v.y = `${v.y}`; });
     };
 
     /**
@@ -179,7 +190,7 @@ export default function() {
         // another, i.e. rows == columns
         if (mirror) {
 
-            columns = Array.from(new Set(columns.concat(rows)));
+            columns = unique(columns.concat(rows));
             rows = columns;
         }
 
@@ -256,6 +267,46 @@ export default function() {
         colorScale = scaleQuantize()
             .domain(colorDomain)
             .range(schemeBlues[5]);
+        
+        if (useAltValues) {
+
+            // Choose the smaller of the bandwidths to be the upper bound for the alt value
+            // scale
+            let altMax = xScale.bandwidth() < yScale.bandwidth() ? 
+                         xScale.bandwidth() : yScale.bandwidth();
+
+            // The upper bound is set to be 95% of half bandwidth so it doesn't overlap the
+            // cell edges
+            altMax = Math.floor((altMax / 2) * 0.95);
+
+            // Or just ignore everything we just did if the user specifies a range
+            altValueRange = altValueRange ? altValueRange : [1, altMax];
+            altValueDomain = altValueDomain ? 
+                             altValueDomain : d3.extent(data.values, d => d.altValue);
+
+            console.log(altValueDomain);
+            altValueScale = scaleLinear()
+                .domain(altValueDomain)
+                .range(altValueRange)
+                ;
+                //.nice();
+            //altValueScale = scaleQuantize()
+            //    .domain(altValueDomain)
+            //    .range(ticks(altValueRange[0], altValueRange[1], 5));
+
+            console.log(altValueScale.domain());
+            console.log(altValueScale.range());
+
+            if (invertAltValueScale)
+                altValueScale.domain([altValueDomain[1], altValueDomain[0]]);
+                //altValueScale.range(ticks(altValueRange[1], altValueRange[0], 5));
+
+            console.log(altValueScale(0.001));
+            console.log(altValueScale(0.005));
+            console.log(altValueScale(0.01));
+            console.log(altValueScale(0.03));
+            console.log(altValueScale(0.05));
+        }
 
         // Cells begin at the right axis so change the scale to reflect that
         if (cellAlignHorizontal === Align.RIGHT)
@@ -387,9 +438,62 @@ export default function() {
 
                 return colorScale(d.value);
             })
-            .attr('shape-rendering', 'auto')
+            .attr('shape-rendering', 'crispEdges')
             .attr('stroke', cellStroke)
             .attr('stroke-width', cellStrokeWidth)
+    };
+
+    let renderAltCells = function() {
+
+        // Maps row and column categories to their indexed position on the plot
+        let indexMap = {};
+
+        getRowCategories().forEach(d => { indexMap[d] = xScale(d); });
+        getColumnCategories().forEach(d => { indexMap[d] = yScale(d); });
+
+        let cells = svg.append('g')
+            .attr('class', 'alt-cells')
+            .selectAll('cells')
+            .data(data.values)
+            .enter()
+            .filter(d => {
+
+                // If rows == columns, we only a diagonal cross section of the heatmap
+                if (mirrorAxes)
+                    return indexMap[d.y] <= indexMap[d.x];
+                else
+                    return true;
+            })
+            .append('g')
+            .attr('class', 'alt-cell');
+
+        // Remove the fill from rendered cells which we will redraw
+        selectAll('.cell > rect')
+            .filter(d => altThresholdComparator(d.altValue, altValueThreshold))
+            .attr('fill', 'none');
+
+        cells
+            .filter(d => altThresholdComparator(d.altValue, altValueThreshold))
+            .append('circle')
+            .attr('cx', d => xScale(d.x) + (xScale.bandwidth() / 2))
+            .attr('cy', d => yScale(d.y) + (yScale.bandwidth() / 2))
+            .attr('r', d => altValueScale(d.altValue))
+            .attr('fill', d => {
+
+                console.log(`altValue: ${d.altValue}`);
+                console.log(`size: ${altValueScale(d.altValue)}`);
+                if (d.fill)
+                    return d.fill;
+
+                if (!d.value)
+                    return '#ffffff';
+
+                return colorScale(d.value);
+            })
+            .attr('shape-rendering', 'auto')
+            .attr('stroke', altCellStroke)
+            .attr('stroke-width', altCellStrokeWidth)
+            ;
     };
 
     /** public **/
@@ -409,18 +513,41 @@ export default function() {
         makeScales();
         renderAxes();
         renderCells();
+        renderAltCells();
         console.log(data.values);
 
         return exports;
     };
 
-    /** setters/getters **/
 
-    exports.svg = function(_) { return svg; };
+    /** properties **/
+
+    exports.svg = svg;
+    exports.Threshold = Threshold;
+
+    /** setters/getters **/
 
     exports.data = function(_) {
         if (!arguments.length) return data;
         data = _;
+        return exports;
+    };
+
+    exports.altThresholdComparator = function(_) {
+        if (!arguments.length) return altThresholdComparator;
+        altThresholdComparator = _;
+        return exports;
+    };
+
+    exports.altCellStroke = function(_) {
+        if (!arguments.length) return altCellStroke;
+        altCellStroke = _;
+        return exports;
+    };
+
+    exports.altCellStrokeWidth = function(_) {
+        if (!arguments.length) return altCellStrokeWidth;
+        altCellStrokeWidth = +_;
         return exports;
     };
 
@@ -444,7 +571,7 @@ export default function() {
 
     exports.cellStrokeWidth = function(_) {
         if (!arguments.length) return cellStrokeWidth;
-        cellStrokeWidth = _;
+        cellStrokeWidth = +_;
         return exports;
     };
 
@@ -457,6 +584,12 @@ export default function() {
     exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
+        return exports;
+    };
+
+    exports.invertAltValueScale = function(_) {
+        if (!arguments.length) return invertAltValueScale;
+        invertAltValueScale = _;
         return exports;
     };
 
@@ -541,6 +674,12 @@ export default function() {
     exports.colorDomain = function(_) {
         if (!arguments.length) return colorDomain;
         colorDomain = _;
+        return exports;
+    };
+
+    exports.useAltValues = function(_) {
+        if (!arguments.length) return useAltValues;
+        useAltValues = _;
         return exports;
     };
     
