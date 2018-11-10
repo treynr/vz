@@ -97,6 +97,7 @@ export default function() {
         normalizeRows = false,
         normalizeColumns = false,
         normalizeMatrix = false,
+        rotateXLabels = true,
         // SVG object for the plot
         svg = null,
         // Y-axis position, default is aligned to the right of the heatmap
@@ -350,15 +351,21 @@ export default function() {
 
         // Update the text properties and positioning for the axis ticks
         xAxisObject.selectAll('text')
-            .attr('x', 5)
-            .attr('y', xAxisAlign == Align.TOP ? -8 : 10)
-            .attr('dx', '.35em')
+            .attr('x', rotateXLabels ? 5 : 0)
+            .attr('y', xAxisAlign == Align.TOP ? -8 : 12)
+            .attr('dx', rotateXLabels ? '.35em' : '')
             .attr('dy', '.35em')
             .attr('font', font)
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', fontWeight)
-            .attr('transform', xAxisAlign == Align.TOP ? 'rotate(-45)' : 'rotate(-320)')
-            .attr('text-anchor', 'start')
+            .attr('transform', _ => {
+                
+                if (rotateXLabels)
+                    return xAxisAlign == Align.TOP ? 'rotate(-45)' : 'rotate(-320)';
+
+                return '';
+            })
+            .attr('text-anchor', rotateXLabels ? 'start' : 'middle')
             ;
 
         // Add the x-axis label
@@ -575,6 +582,18 @@ export default function() {
         return exports;
     };
 
+    exports.colorScale = function(_) {
+        if (!arguments.length) return colorScale;
+        colorScale = _;
+        return exports;
+    };
+
+    exports.colorDomain = function(_) {
+        if (!arguments.length) return colorDomain;
+        colorDomain = _;
+        return exports;
+    };
+
     exports.legendAlign = function(_) {
         if (!arguments.length) return legendAlign;
         legendAlign = _;
@@ -590,12 +609,6 @@ export default function() {
     exports.invertAltValueScale = function(_) {
         if (!arguments.length) return invertAltValueScale;
         invertAltValueScale = _;
-        return exports;
-    };
-
-    exports.width = function(_) {
-        if (!arguments.length) return width;
-        width = +_;
         return exports;
     };
 
@@ -665,21 +678,21 @@ export default function() {
         return exports;
     };
 
-    exports.colorScale = function(_) {
-        if (!arguments.length) return colorScale;
-        colorScale = _;
-        return exports;
-    };
-
-    exports.colorDomain = function(_) {
-        if (!arguments.length) return colorDomain;
-        colorDomain = _;
+    exports.rotateXLabels = function(_) {
+        if (!arguments.length) return rotateXLabels;
+        rotateXLabels = _;
         return exports;
     };
 
     exports.useAltValues = function(_) {
         if (!arguments.length) return useAltValues;
         useAltValues = _;
+        return exports;
+    };
+
+    exports.width = function(_) {
+        if (!arguments.length) return width;
+        width = +_;
         return exports;
     };
     
