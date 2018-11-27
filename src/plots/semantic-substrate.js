@@ -63,9 +63,13 @@ export default function() {
         nodeStrokeWidth = 2,
         // SVG object for the plot
         svg = null,
+        // Position nodes in the graph using collision forces to avoid node overlap
+        useForce = false,
         // SVG width
         width = 600,
         xDomain = null,
+        // Strength of the x forces used if force positioning is enabled
+        xForceStrength = 1.0,
         // Text label for the x-axis
         xLabel = '',
         // Padding in pixels for the x-axis label, if set to null then
@@ -79,6 +83,8 @@ export default function() {
         xTicks = 5,
         xTickValues = null,
         yDomain = null,
+        // Strength of the y forces used if force positioning is enabled
+        yForceStrength = 1.0,
         // Text label for the y-axis
         yLabel = '',
         // Padding in pihels for the y-axis label, if set to null then
@@ -319,12 +325,12 @@ export default function() {
         for (let node of data.nodes) {
 
             //node.fy = yScale(node.y);
+            //node.fx = xScale(node.x);
         }
 
         let simulation = forceSimulation(data.nodes)
-            .force('x', forceX(d => xScale(d.x)).strength(1))
-            .force('y', forceY(d => yScale(d.y)).strength(1))
-            //.force('fy', d => yScale(d.y))
+            .force('x', forceX(d => xScale(d.x)).strength(xForceStrength))
+            .force('y', forceY(d => yScale(d.y)).strength(yForceStrength))
             .force('collide', forceCollide(5))
             .stop();
 
@@ -336,9 +342,6 @@ export default function() {
             node.cx = node.x;
             node.cy = node.y;
         }
-        console.log(simulation);
-        console.log(simulation.nodes());
-        console.log(data.nodes);
     };
 
     let renderGrid = function() {
@@ -404,7 +407,8 @@ export default function() {
 
         renderAxes();
 
-        positionWithForce();
+        if (useForce)
+            positionWithForce();
 
         renderEdges();
         renderNodes();
@@ -519,6 +523,12 @@ export default function() {
         return exports;
     };
 
+    exports.useForce = function(_) { 
+        if (!arguments.length) return useForce;
+        useForce = _;
+        return exports;
+    };
+
     exports.width = function(_) { 
         if (!arguments.length) return width;
         width = +_;
@@ -528,6 +538,12 @@ export default function() {
     exports.xDomain = function(_) { 
         if (!arguments.length) return xDomain;
         xDomain = _;
+        return exports;
+    };
+
+    exports.xForceStrength = function(_) { 
+        if (!arguments.length) return xForceStrength;
+        xForceStrength = +_;
         return exports;
     };
 
@@ -570,6 +586,12 @@ export default function() {
     exports.yDomain = function(_) { 
         if (!arguments.length) return yDomain;
         yDomain = _;
+        return exports;
+    };
+
+    exports.yForceStrength = function(_) { 
+        if (!arguments.length) return yForceStrength;
+        yForceStrength = +_;
         return exports;
     };
 

@@ -26,7 +26,6 @@ const path = require('path');
 //};
 
 module.exports = [
-    /*
     {
         entry: {
             'semantic-substrate': './src/entries/semantic-substrate.js'
@@ -42,12 +41,13 @@ module.exports = [
             //libraryTarget: 'var'
         }
     },
+    /*
     */
     {
         entry: {
-            heatmap: './src/entries/heatmap.js'
+            heatmap: './src/entries/heatmap.js',
             //bioviz: './src/index.js',
-            //bar: './src/entries/bar.js',
+            bar: './src/entries/bar.js',
             //histogram: './src/entries/histogram.js',
             //line: './src/entries/line.js',
         },

@@ -36,7 +36,7 @@
   * TabNine::hide_promotional_message
   */
 
-'use strict'
+'use strict';
 
 import {extent, ticks} from 'd3-array';
 import {axisBottom, axisLeft, axisRight, axisTop} from 'd3-axis';
@@ -74,7 +74,7 @@ export default function() {
 
         // Data object containing objects/data to visualize
         data = null,
-        altValueThreshold = 0.05,
+        altValueThreshold = 1.0,
         // Positioning for the first cell of the heatmap, default is to begin
         // on the plot's left hand side
         cellAlignHorizontal = Align.LEFT,
@@ -120,8 +120,6 @@ export default function() {
         mirrorAxes = false,
         // Cluster the results and draw a dendogram in the heat map margins
         cluster = false,
-        // The values provided are distances and should be converted
-        distances = false,
         colorDomain = null,
         cellStroke = '#000000',
         cellStrokeWidth = 1,
@@ -271,42 +269,26 @@ export default function() {
         
         if (useAltValues) {
 
-            // Choose the smaller of the bandwidths to be the upper bound for the alt value
-            // scale
+            // Choose the smaller of the bandwidths to be the upper bound for the alt 
+            // value scale
             let altMax = xScale.bandwidth() < yScale.bandwidth() ? 
                          xScale.bandwidth() : yScale.bandwidth();
 
-            // The upper bound is set to be 95% of half bandwidth so it doesn't overlap the
-            // cell edges
+            // The upper bound is set to be 95% of half bandwidth so it doesn't overlap
+            // the cell edges
             altMax = Math.floor((altMax / 2) * 0.95);
 
             // Or just ignore everything we just did if the user specifies a range
             altValueRange = altValueRange ? altValueRange : [1, altMax];
             altValueDomain = altValueDomain ? 
-                             altValueDomain : d3.extent(data.values, d => d.altValue);
+                             altValueDomain : extent(data.values, d => d.altValue);
 
-            console.log(altValueDomain);
             altValueScale = scaleLinear()
                 .domain(altValueDomain)
-                .range(altValueRange)
-                ;
-                //.nice();
-            //altValueScale = scaleQuantize()
-            //    .domain(altValueDomain)
-            //    .range(ticks(altValueRange[0], altValueRange[1], 5));
-
-            console.log(altValueScale.domain());
-            console.log(altValueScale.range());
+                .range(altValueRange);
 
             if (invertAltValueScale)
                 altValueScale.domain([altValueDomain[1], altValueDomain[0]]);
-                //altValueScale.range(ticks(altValueRange[1], altValueRange[0], 5));
-
-            console.log(altValueScale(0.001));
-            console.log(altValueScale(0.005));
-            console.log(altValueScale(0.01));
-            console.log(altValueScale(0.03));
-            console.log(altValueScale(0.05));
         }
 
         // Cells begin at the right axis so change the scale to reflect that
@@ -335,16 +317,13 @@ export default function() {
             [Align.LEFT]: axisLeft
         }[yAxisAlign];
 
-        //console.log(xaxis);
-        //xaxis = xaxis.scale(xScale);
-        //yaxis = yaxis.scale(yScale);
         xaxis = xaxis(xScale);
         yaxis = yaxis(yScale);
 
         let xAxisObject = svg.append('g')
             .attr('class', 'x-axis')
-            .attr('transform', _ => {
-                return xAxisAlign == Align.TOP ? `translate(0, 0)` :
+            .attr('transform', () => {
+                return xAxisAlign == Align.TOP ? 'translate(0, 0)' :
                                                  `translate(0, ${getHeight()})`;
             })
             .call(xaxis);
@@ -358,15 +337,14 @@ export default function() {
             .attr('font', font)
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', fontWeight)
-            .attr('transform', _ => {
+            .attr('transform', () => {
                 
                 if (rotateXLabels)
                     return xAxisAlign == Align.TOP ? 'rotate(-45)' : 'rotate(-320)';
 
                 return '';
             })
-            .attr('text-anchor', rotateXLabels ? 'start' : 'middle')
-            ;
+            .attr('text-anchor', rotateXLabels ? 'start' : 'middle');
 
         // Add the x-axis label
         xAxisObject.append('text')
@@ -375,13 +353,12 @@ export default function() {
             .attr('y', xLabelPad)
             .attr('fill', '#000000')
             .attr('text-anchor', 'middle')
-            .text(xLabel)
-            ;
+            .text(xLabel);
 
         let yAxisObject = svg.append('g')
             .attr('class', 'y-axis')
-            .attr('transform', _ => {
-                return yAxisAlign == Align.LEFT ? `translate(0, 0)` :
+            .attr('transform', () => {
+                return yAxisAlign == Align.LEFT ? 'translate(0, 0)' :
                                                   `translate(${getWidth()}, 0)`;
             })
             .call(yaxis);
@@ -390,8 +367,7 @@ export default function() {
             .attr('font', font)
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', fontWeight)
-            .attr('text-anchor', 'start')
-            ;
+            .attr('text-anchor', 'start');
 
         yAxisObject.append('text')
             .attr('class', 'y-axis-label')
@@ -447,7 +423,7 @@ export default function() {
             })
             .attr('shape-rendering', 'crispEdges')
             .attr('stroke', cellStroke)
-            .attr('stroke-width', cellStrokeWidth)
+            .attr('stroke-width', cellStrokeWidth);
     };
 
     let renderAltCells = function() {
@@ -458,11 +434,13 @@ export default function() {
         getRowCategories().forEach(d => { indexMap[d] = xScale(d); });
         getColumnCategories().forEach(d => { indexMap[d] = yScale(d); });
 
-        let cells = svg.append('g')
+        let cells = svg
+            .append('g')
             .attr('class', 'alt-cells')
             .selectAll('cells')
             .data(data.values)
             .enter()
+            .filter(d => altThresholdComparator(d.altValue, altValueThreshold))
             .filter(d => {
 
                 // If rows == columns, we only a diagonal cross section of the heatmap
@@ -480,15 +458,12 @@ export default function() {
             .attr('fill', 'none');
 
         cells
-            .filter(d => altThresholdComparator(d.altValue, altValueThreshold))
             .append('circle')
             .attr('cx', d => xScale(d.x) + (xScale.bandwidth() / 2))
             .attr('cy', d => yScale(d.y) + (yScale.bandwidth() / 2))
             .attr('r', d => altValueScale(d.altValue))
             .attr('fill', d => {
 
-                console.log(`altValue: ${d.altValue}`);
-                console.log(`size: ${altValueScale(d.altValue)}`);
                 if (d.fill)
                     return d.fill;
 
@@ -499,8 +474,7 @@ export default function() {
             })
             .attr('shape-rendering', 'auto')
             .attr('stroke', altCellStroke)
-            .attr('stroke-width', altCellStrokeWidth)
-            ;
+            .attr('stroke-width', altCellStrokeWidth);
     };
 
     /** public **/
@@ -520,8 +494,9 @@ export default function() {
         makeScales();
         renderAxes();
         renderCells();
-        renderAltCells();
-        console.log(data.values);
+
+        if (useAltValues)
+            renderAltCells();
 
         return exports;
     };
@@ -531,6 +506,7 @@ export default function() {
 
     exports.svg = svg;
     exports.Threshold = Threshold;
+    exports.Alignment = Align;
 
     /** setters/getters **/
 
@@ -543,6 +519,12 @@ export default function() {
     exports.altThresholdComparator = function(_) {
         if (!arguments.length) return altThresholdComparator;
         altThresholdComparator = _;
+        return exports;
+    };
+
+    exports.altValueThreshold = function(_) {
+        if (!arguments.length) return altValueThreshold;
+        altValueThreshold = +_;
         return exports;
     };
 
@@ -740,6 +722,7 @@ export default function() {
         exports.makeScales = makeScales;
         exports.renderAxes = renderAxes;
         exports.renderCells = renderCells;
+        exports.renderAltCells = renderAltCells;
 
         exports.xScale = () => xScale;
         exports.yScale = () => yScale;
