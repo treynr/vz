@@ -2,6 +2,7 @@
 
 <html>
     <head>
+        <meta charset="UTF-8">
         <script src="d3.min.js" type="text/javascript"></script>
         <script src="../dist/bar.js" type="text/javascript"></script>
     </head>
@@ -9,25 +10,33 @@
     <body>
         <script type="text/javascript">
 
-		d3.json('data/bar-example-0.json', function(error, json) {
+		//d3.json('data/bar-example-0.json', function(error, json) {
 
-            console.log(error);
-            console.log(json);
-            console.log(json.notes);
+            //console.log(error);
+            //console.log(json);
+            //console.log(json.notes);
 
-            // Transform gene lists to counts
-            json.data.forEach(d => { d.y = d.y.length; });
+            //// Transform gene lists to counts
+            //json.data.forEach(d => { d.y = d.y.length; });
+            let data = [
+                {x: 'A', y: 10},
+                {x: 'B', y: 20},
+                {x: 'C', y: 30},
+                {x: 'D', y: 40},
+            ];
 
 			var chart = bar()
-                .data(json.data)
+                .data(data)
                 .width(350)
                 .height(300)
                 .yDomain([0, 45])
-				.xLabel('Mouse Brain Regions (Abbreviated)')
-				.yLabel('# of Up-regulated Genes')
+				.xLabel('Stuff')
+				.yLabel('Values')
+                .fontSize(13)
+                .noXLine(true)
 				.draw();
 
-		});
+		//});
 
         </script>
     <div class="simple_example"></div>

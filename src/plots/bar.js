@@ -171,9 +171,6 @@ export default function() {
             .attr('transform', function() {
                 return 'translate(0' + ',' + (getHeight() + 1) + ')';
             })
-            .attr('font-family', 'sans-serif')
-            .attr('font-size', `${fontSize}px`)
-            .attr('font-weight', 'normal')
             .attr('fill', 'none')
             .call(xAxis)
             ;
@@ -181,7 +178,7 @@ export default function() {
         xAxisObject.selectAll('text')
             .attr('transform', d => rotateXLabel ? 'rotate(-320)' : '')
             .attr('x', d => rotateXLabel ? 5 : 0)
-            .attr('y', d => rotateXLabel ? 8 : fontSize)
+            .attr('y', d => rotateXLabel ? 8 : fontSize + 2)
             .attr('dy', '.35em')
             .attr('dx', d => rotateXLabel ? '.30em' : '')
             .attr('text-anchor', d => rotateXLabel ? 'start': 'middle')
@@ -195,14 +192,16 @@ export default function() {
             .text(xLabel)
             ;
 
+        xAxisObject.selectAll('text')
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', 'normal');
+
         var yAxisObject = svg.append('g')
             .attr('class', 'axis')
             .attr('transform', function() {
                 return 'translate(' + yAxisPad + ',0)';
             })
-            .attr('font-family', 'sans-serif')
-            .attr('font-size', `${fontSize}px`)
-            .attr('font-weight', 'normal')
             .attr('fill', 'none')
             .call(yAxis)
             ;
@@ -216,6 +215,11 @@ export default function() {
             .attr('text-anchor', 'middle')
             .text(yLabel)
             ;
+
+        yAxisObject.selectAll('text')
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', 'normal');
 
         if (noXLine)
             xAxisObject.select('.domain').remove();
@@ -414,8 +418,8 @@ export default function() {
         drawBars();
         drawText();
 
-        if (distribution)
-            drawdist();
+        //if (distribution)
+        //    drawdist();
 
         return exports;
     };
