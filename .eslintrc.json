@@ -11,7 +11,10 @@
     "rules": {
         "indent": [
             "error",
-            4
+            4,
+            {
+                "ignoredNodes": ["ConditionalExpression"]
+            }
         ],
         "linebreak-style": [
             "error",

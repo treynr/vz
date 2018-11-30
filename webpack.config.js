@@ -50,6 +50,7 @@ module.exports = [
             bar: './src/entries/bar.js',
             //histogram: './src/entries/histogram.js',
             //line: './src/entries/line.js',
+            legend: './src/entries/legend.js',
         },
         output: {
             path: path.resolve(__dirname, 'dist'),

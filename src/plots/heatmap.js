@@ -33,12 +33,11 @@
   * Add proper handling for groups.
   * Clean up code.
   * Normalize normalization functions.
-  * TabNine::hide_promotional_message
   */
 
 'use strict';
 
-import {extent, ticks} from 'd3-array';
+import {extent} from 'd3-array';
 import {axisBottom, axisLeft, axisRight, axisTop} from 'd3-axis';
 import {scaleBand, scaleLinear, scaleQuantize} from 'd3-scale';
 import {schemeBlues} from 'd3-scale-chromatic';
@@ -118,8 +117,6 @@ export default function() {
         yLabelPad = 50,
         width = 600,
         mirrorAxes = false,
-        // Cluster the results and draw a dendogram in the heat map margins
-        cluster = false,
         colorDomain = null,
         cellStroke = '#000000',
         cellStrokeWidth = 1,
@@ -358,8 +355,9 @@ export default function() {
         let yAxisObject = svg.append('g')
             .attr('class', 'y-axis')
             .attr('transform', () => {
-                return yAxisAlign == Align.LEFT ? 'translate(0, 0)' :
-                                                  `translate(${getWidth()}, 0)`;
+                return yAxisAlign == Align.LEFT ? 
+                       'translate(0, 0)' :
+                       `translate(${getWidth()}, 0)`;
             })
             .call(yaxis);
 
