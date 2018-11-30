@@ -86,7 +86,7 @@ export default function() {
         // Font family
         font = 'sans-serif',
         // Font size
-        fontSize = '11px',
+        fontSize = 11,
         // Font weight
         fontWeight = 'normal',
         height = 600,

@@ -167,7 +167,7 @@ export default function() {
             ;
 
         var xAxisObject = svg.append('g')
-            .attr('class', 'axis')
+            .attr('class', 'x-axis')
             .attr('transform', function() {
                 return 'translate(0' + ',' + (getHeight() + 1) + ')';
             })
@@ -185,6 +185,7 @@ export default function() {
             ;
 
         xAxisObject.append('text')
+            .attr('class', 'x-axis-label')
             .attr('x', function() { return (margin.left + getWidth()) / 2; })
             .attr('y', xLabelPad)
             .attr('fill', '#000')
@@ -198,23 +199,23 @@ export default function() {
             .attr('font-weight', 'normal');
 
         var yAxisObject = svg.append('g')
+            .attr('class', 'y-axis')
             .attr('class', 'axis')
             .attr('transform', function() {
                 return 'translate(' + yAxisPad + ',0)';
             })
             .attr('fill', 'none')
-            .call(yAxis)
-            ;
+            .call(yAxis);
 
         yAxisObject.append('text')
+            .attr('class', 'y-axis-label')
             // Weird x, y argumetnns cause of the -90 rotation
             .attr('x', function() { return -getHeight() / 2; })
             .attr('y', yLabelPad)
             .attr('fill', '#000')
             .attr('transform', 'rotate(-90)')
             .attr('text-anchor', 'middle')
-            .text(yLabel)
-            ;
+            .text(yLabel);
 
         yAxisObject.selectAll('text')
             .attr('font-family', 'sans-serif')
