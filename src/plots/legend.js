@@ -39,6 +39,7 @@ export default function() {
         legendAxis = null,
         legendScale = null,
         quantScale = null,
+        circleScale = null,
         /** public **/
 
         // HTML element or ID the SVG should be appended to
@@ -70,10 +71,14 @@ export default function() {
         textures = null,
         // Domain values, only required when rendering scales
         scaleDomain = [0, 1],
+        // Range values, only required when rendering scales
+        scaleRange = [15, 5],
         // Number of ticks to render on the scale
         scaleTicks = 4,
         // Array of colors to use for the scale
         scaleColors = null,
+        scaleFormat = null,
+        scaleTitle = '',
         // Render a quantized scale
         quantize = false
         ;
@@ -134,6 +139,72 @@ export default function() {
             .attr('stop-opacity', 1);
     }
 
+    let makeCircleScales = function() {
+
+        circleScale = scaleLinear()
+            .domain(scaleDomain)
+            .range([5, 20]);
+
+        legendScale = scaleLinear()
+            .domain(circleScale.domain())
+            .rangeRound([0, getWidth()]);
+
+        legendAxis = axisBottom(legendScale)
+            .ticks(legendScale.ticks(scaleTicks).length, scaleFormat)
+            //.tickValues(
+            .tickSize(15);
+
+    };
+
+    let renderCircleScale = function() {
+
+        let legScale = svg.append('g')
+            .attr('class', 'legend-scale');
+
+        legScale.selectAll('legend')
+            //.data(quantScale.range().map(d => quantScale.invertExtent(d)))
+            .data(circleScale.ticks(scaleTicks))
+            .enter()
+            .append('circle')
+            .attr('cx', d => legendScale(d))
+            .attr('r', d => circleScale(d))
+            //.attr('width', d => legendScale(d[1]) - legendScale(d[0]))
+            .attr('fill', d => d3.schemeBlues[9][3])
+            .attr('stroke', 'none')
+            .attr('stroke-width', 0)
+            .attr('shape-rendering', 'auto');
+
+        let legAxis = legScale.append('g')
+            .attr('class', 'ticks')
+            // Shift axis so it doesn't overlap the circles
+            .attr('transform', `translate(0,${circleScale.range()[1]})`)
+            .call(legendAxis);
+
+        legAxis.selectAll('text')
+            .attr('font-family', font)
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', fontWeight);
+
+        //legAxis.selectAll('.tick')
+            
+
+        // Remove the domain line
+        svg.select('.ticks > .domain').remove();
+
+        // Add legend text
+        svg.append('text')
+            .attr('class', 'legend-title')
+            .attr('fill', '#000000')
+            .attr('font-family', font)
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', fontWeight)
+            .attr('text-anchor', 'end')
+            .attr('x', getWidth())
+            // Prevent the text from overlapping with any circles
+            .attr('y', -circleScale.range()[1] - 5)
+            .text(scaleTitle);
+    };
+
     let makeQuantizeScales = function() {
 
         // Select the default color scheme if no colors have been specified
@@ -147,7 +218,6 @@ export default function() {
         legendScale = scaleLinear()
             .domain(quantScale.domain())
             .rangeRound([0, getWidth()])
-            //.nice();
             ;
 
         // Specifying a value for the ticks function is just a suggestion, it may return
@@ -172,9 +242,6 @@ export default function() {
         legendAxis = axisBottom(legendScale)
             .tickValues(legendScale.ticks(scaleTicks))
             .tickSize(15);
-        //let legendColors = quantScale.range().map(d => quantScale.invertExtent(d));
-
-        //console.log(legendColors);
     };
 
     let renderQuantizeScale = function() {
@@ -197,7 +264,7 @@ export default function() {
         let legAxis = legScale.call(legendAxis);
 
         legAxis.selectAll('text')
-            .attr('font', font)
+            .attr('font-family', font)
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', fontWeight);
 
@@ -205,6 +272,18 @@ export default function() {
         svg.select('.legend-scale > .tick:first-of-type').remove();
         svg.select('.legend-scale > .tick:last-of-type').remove();
         svg.select('.legend-scale > .domain').remove();
+
+        // Add legend text
+        svg.append('text')
+            .attr('class', 'legend-title')
+            .attr('fill', '#000000')
+            .attr('font-family', font)
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', fontWeight)
+            .attr('text-anchor', 'end')
+            .attr('x', getWidth())
+            .attr('y', -5)
+            .text(scaleTitle);
     };
 
     exports.draw = function() {
@@ -225,8 +304,10 @@ export default function() {
             //    return 'translate(40,' + (i + 1) * keyPad + ')'; 
             //});
 
-        makeQuantizeScales();
-        renderQuantizeScale();
+        //makeQuantizeScales();
+        //renderQuantizeScale();
+        makeCircleScales();
+        renderCircleScale();
         /*
         if (textures)
             for (var i = 0; i < textures.length; i++)
@@ -454,15 +535,63 @@ export default function() {
         return exports;
     };
 
+    exports.margin = function(_) {
+        if (!arguments.length) return margin;
+        margin = _;
+        return exports;
+    };
+
+    exports.marginBottom = function(_) {
+        if (!arguments.length) return margin.bottom;
+        margin.bottom = +_;
+        return exports;
+    };
+
+    exports.marginTop = function(_) {
+        if (!arguments.length) return margin.top;
+        margin.top = +_;
+        return exports;
+    };
+
+    exports.marginLeft = function(_) {
+        if (!arguments.length) return margin.left;
+        margin.left = +_;
+        return exports;
+    };
+
+    exports.marginRight = function(_) {
+        if (!arguments.length) return margin.right;
+        margin.right = +_;
+        return exports;
+    };
+
     exports.scaleDomain = function(_) {
         if (!arguments.length) return scaleDomain;
         scaleDomain = _;
         return exports;
     };
 
+    exports.scaleFormat = function(_) {
+        if (!arguments.length) return scaleFormat;
+        scaleFormat = _;
+        return exports;
+    };
+
+    exports.scaleRange = function(_) {
+        if (!arguments.length) return scaleRange;
+        scaleRange = _;
+        return exports;
+    };
+
     exports.scaleTicks = function(_) {
         if (!arguments.length) return scaleTicks;
         scaleTicks = +_;
+        return exports;
+    };
+
+    exports.scaleTitle = function(_) {
+        if (!arguments.length) return scaleTitle;
+        scaleTitle = _;
         return exports;
     };
 
