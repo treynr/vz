@@ -22,7 +22,7 @@
 
 'use strict';
 
-import {ticks} from 'd3-array';
+import {ticks, max} from 'd3-array';
 import {axisBottom} from 'd3-axis';
 import {select} from 'd3-selection';
 import {scaleLinear, scaleQuantize} from 'd3-scale';
@@ -75,10 +75,15 @@ export default function() {
         scaleRange = [15, 5],
         // Number of ticks to render on the scale
         scaleTicks = 4,
+        // Color to use for unicolor scales
+        scaleColor = schemeBlues[3][2],
         // Array of colors to use for the scale
         scaleColors = null,
         scaleFormat = null,
+        scaleTickSize = 15,
         scaleTitle = '',
+        useCircleScale = false,
+        useQuantizeScale = false,
         // Render a quantized scale
         quantize = false
         ;
@@ -143,7 +148,7 @@ export default function() {
 
         circleScale = scaleLinear()
             .domain(scaleDomain)
-            .range([5, 20]);
+            .range(scaleRange);
 
         legendScale = scaleLinear()
             .domain(circleScale.domain())
@@ -151,9 +156,7 @@ export default function() {
 
         legendAxis = axisBottom(legendScale)
             .ticks(legendScale.ticks(scaleTicks).length, scaleFormat)
-            //.tickValues(
-            .tickSize(15);
-
+            .tickSize(scaleTickSize);
     };
 
     let renderCircleScale = function() {
@@ -168,8 +171,7 @@ export default function() {
             .append('circle')
             .attr('cx', d => legendScale(d))
             .attr('r', d => circleScale(d))
-            //.attr('width', d => legendScale(d[1]) - legendScale(d[0]))
-            .attr('fill', d => d3.schemeBlues[9][3])
+            .attr('fill', d => scaleColor)
             .attr('stroke', 'none')
             .attr('stroke-width', 0)
             .attr('shape-rendering', 'auto');
@@ -177,16 +179,13 @@ export default function() {
         let legAxis = legScale.append('g')
             .attr('class', 'ticks')
             // Shift axis so it doesn't overlap the circles
-            .attr('transform', `translate(0,${circleScale.range()[1]})`)
+            .attr('transform', `translate(0,${max(circleScale.range())})`)
             .call(legendAxis);
 
         legAxis.selectAll('text')
             .attr('font-family', font)
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', fontWeight);
-
-        //legAxis.selectAll('.tick')
-            
 
         // Remove the domain line
         svg.select('.ticks > .domain').remove();
@@ -201,7 +200,7 @@ export default function() {
             .attr('text-anchor', 'end')
             .attr('x', getWidth())
             // Prevent the text from overlapping with any circles
-            .attr('y', -circleScale.range()[1] - 5)
+            .attr('y', -max(circleScale.range()) - 5)
             .text(scaleTitle);
     };
 
@@ -241,7 +240,7 @@ export default function() {
 
         legendAxis = axisBottom(legendScale)
             .tickValues(legendScale.ticks(scaleTicks))
-            .tickSize(15);
+            .tickSize(scaleTickSize);
     };
 
     let renderQuantizeScale = function() {
@@ -304,10 +303,16 @@ export default function() {
             //    return 'translate(40,' + (i + 1) * keyPad + ')'; 
             //});
 
-        //makeQuantizeScales();
-        //renderQuantizeScale();
-        makeCircleScales();
-        renderCircleScale();
+        if (useCircleScale) {
+
+            makeCircleScales();
+            renderCircleScale();
+
+        } else if (useQuantizeScale) {
+
+            makeQuantizeScales();
+            renderQuantizeScale();
+        }
         /*
         if (textures)
             for (var i = 0; i < textures.length; i++)
@@ -565,6 +570,18 @@ export default function() {
         return exports;
     };
 
+    exports.scaleColors = function(_) {
+        if (!arguments.length) return scaleColors;
+        scaleColors = _;
+        return exports;
+    };
+
+    exports.scaleColor = function(_) {
+        if (!arguments.length) return scaleColor;
+        scaleColor = _;
+        return exports;
+    };
+
     exports.scaleDomain = function(_) {
         if (!arguments.length) return scaleDomain;
         scaleDomain = _;
@@ -589,9 +606,27 @@ export default function() {
         return exports;
     };
 
+    exports.scaleTickSize = function(_) {
+        if (!arguments.length) return scaleTickSize;
+        scaleTickSize = +_;
+        return exports;
+    };
+
     exports.scaleTitle = function(_) {
         if (!arguments.length) return scaleTitle;
         scaleTitle = _;
+        return exports;
+    };
+
+    exports.useCircleScale = function(_) {
+        if (!arguments.length) return useCircleScale;
+        useCircleScale = _;
+        return exports;
+    };
+
+    exports.useQuantizeScale = function(_) {
+        if (!arguments.length) return useQuantizeScale;
+        useQuantizeScale = _;
         return exports;
     };
 

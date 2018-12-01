@@ -71,6 +71,8 @@ export default function() {
 
         /** public **/
 
+        colors = null,
+        numColors = 5,
         // Data object containing objects/data to visualize
         data = null,
         altValueThreshold = 1.0,
@@ -117,6 +119,7 @@ export default function() {
         yLabelPad = 50,
         width = 600,
         mirrorAxes = false,
+        renderIdentities = false,
         colorDomain = null,
         cellStroke = '#000000',
         cellStrokeWidth = 1,
@@ -245,6 +248,7 @@ export default function() {
         }
 
         colorDomain = colorDomain ? colorDomain : extent(data.values.map(d => d.value));
+        colors = colors ? colors : schemeBlues[numColors];
 
         xScale = scaleBand()
             .domain(xDomain)
@@ -262,7 +266,7 @@ export default function() {
 
         colorScale = scaleQuantize()
             .domain(colorDomain)
-            .range(schemeBlues[5]);
+            .range(colors);
         
         if (useAltValues) {
 
@@ -378,6 +382,14 @@ export default function() {
         // Remove domain lines
         xAxisObject.select('.domain').remove();
         yAxisObject.select('.domain').remove();
+
+        // If we don't render the identity matrix (i.e. row[i] == col[j]) then we remove
+        // these ticks otherwise they are just labeling empty space
+        if (!renderIdentities) {
+
+            xAxisObject.select('.tick:last-of-type').remove();
+            yAxisObject.select('.tick:first-of-type').remove();
+        }
     };
 
     let renderCells = function() {
@@ -396,8 +408,10 @@ export default function() {
             .filter(d => {
 
                 // If rows == columns, we only a diagonal cross section of the heatmap
-                if (mirrorAxes)
+                if (mirrorAxes && renderIdentities)
                     return indexMap[d.y] <= indexMap[d.x];
+                else if (mirrorAxes)
+                    return indexMap[d.y] < indexMap[d.x];
                 else
                     return true;
             })
@@ -442,8 +456,10 @@ export default function() {
             .filter(d => {
 
                 // If rows == columns, we only a diagonal cross section of the heatmap
-                if (mirrorAxes)
+                if (mirrorAxes && renderIdentities)
                     return indexMap[d.y] <= indexMap[d.x];
+                else if (mirrorAxes)
+                    return indexMap[d.y] < indexMap[d.x];
                 else
                     return true;
             })
@@ -502,12 +518,13 @@ export default function() {
 
     /** properties **/
 
-    exports.svg = svg;
+    //exports.svg = svg;
     exports.Threshold = Threshold;
     exports.Alignment = Align;
 
     /** setters/getters **/
 
+    exports.svg = function(_) { return svg; };
     exports.data = function(_) {
         if (!arguments.length) return data;
         data = _;
@@ -520,12 +537,6 @@ export default function() {
         return exports;
     };
 
-    exports.altValueThreshold = function(_) {
-        if (!arguments.length) return altValueThreshold;
-        altValueThreshold = +_;
-        return exports;
-    };
-
     exports.altCellStroke = function(_) {
         if (!arguments.length) return altCellStroke;
         altCellStroke = _;
@@ -535,6 +546,18 @@ export default function() {
     exports.altCellStrokeWidth = function(_) {
         if (!arguments.length) return altCellStrokeWidth;
         altCellStrokeWidth = +_;
+        return exports;
+    };
+
+    exports.altValueDomain = function(_) {
+        if (!arguments.length) return altValueDomain;
+        altValueDomain = _;
+        return exports;
+    };
+
+    exports.altValueThreshold = function(_) {
+        if (!arguments.length) return altValueThreshold;
+        altValueThreshold = +_;
         return exports;
     };
 
@@ -655,6 +678,18 @@ export default function() {
     exports.mirrorAxes = function(_) {
         if (!arguments.length) return mirrorAxes;
         mirrorAxes = _;
+        return exports;
+    };
+
+    exports.numColors = function(_) {
+        if (!arguments.length) return numColors;
+        numColors = +_;
+        return exports;
+    };
+
+    exports.renderIdentities = function(_) {
+        if (!arguments.length) return renderIdentities;
+        renderIdentities = _;
         return exports;
     };
 

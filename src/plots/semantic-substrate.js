@@ -36,6 +36,8 @@ export default function() {
         // If true, positions x- and y-axis labels along the ends of each axis rather than
         // centering them outside the axis
         altAxisLabels = false,
+        // Shaded background color to use when rendering the grid background
+        backgroundColor = '#cecece',
         // Data object containing objects/data to visualize
         data = null,
         // Transparency for rendered edges
@@ -387,7 +389,7 @@ export default function() {
                            `L ${x1}, ${y1} `;
                 })
                 .attr('stroke', 'none')
-                .attr('fill', i % 2 ? '#fff': '#cecece');
+                .attr('fill', i % 2 ? '#fff': backgroundColor);
         }
     };
 
@@ -424,6 +426,12 @@ export default function() {
     exports.altAxisLabels = function(_) { 
         if (!arguments.length) return altAxisLabels;
         altAxisLabels = _;
+        return exports;
+    };
+
+    exports.backgroundColor = function(_) { 
+        if (!arguments.length) return backgroundColor;
+        backgroundColor = _;
         return exports;
     };
 
