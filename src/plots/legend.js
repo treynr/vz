@@ -239,7 +239,8 @@ export default function() {
         }
 
         legendAxis = axisBottom(legendScale)
-            .tickValues(legendScale.ticks(scaleTicks))
+            //.tickValues(legendScale.ticks(scaleTicks))
+            .ticks(legendScale.ticks(scaleTicks).length, scaleFormat)
             .tickSize(scaleTickSize);
     };
 
