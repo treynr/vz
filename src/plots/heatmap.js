@@ -43,6 +43,7 @@ import {scaleBand, scaleLinear, scaleQuantize} from 'd3-scale';
 import {schemeBlues} from 'd3-scale-chromatic';
 import {select, selectAll} from 'd3-selection';
 
+// Alignment positions used for x- and y-axes
 const Align = {
 
     TOP: 0,
@@ -51,6 +52,7 @@ const Align = {
     LEFT: 3
 };
 
+// Threshold comparators
 const Threshold = {
 
     GT: (x, t) => x > t,
@@ -65,16 +67,45 @@ export default function() {
 
         /** private **/
 
+        // d3 scale used for alt. secondary values
+        altValueScale = null,
+        // d3 scale used to convert heatmap values to colors
         colorScale = null,
+        // x-axis scale
         xScale = null,
+        // y-axis scale
         yScale = null,
+
+        /** protected **/
+
+        // SVG object for the plot
+        svg = null,
 
         /** public **/
 
+        // Color used for the stroke around alt. heatmap cells
+        altCellStroke = '#000000',
+        // Width of the stroke around alt. heatmap cells
+        altCellStrokeWidth = 1,
+        // Comparison operator to use when checking the threshold for alternative values
+        altThresholdComparator = Threshold.GT,
+        // Domain for the alternative
+        altValueDomain = null,
+        // Range of sizes for the alternative value set
+        altValueRange = null,
+        // Color used for the stroke around heatmap cells
+        cellStroke = '#000000',
+        // Width of the stroke around heatmap cells
+        cellStrokeWidth = 1,
+        // Domain for values used to color the heatmap
+        colorDomain = null,
+        // List of user-defined colors to use for the quantized color scale
         colors = null,
+        // Number of colors to use for the quantized color scale
         numColors = 5,
         // Data object containing objects/data to visualize
         data = null,
+        // Cutoff threshold to use when showing displaying sizes
         altValueThreshold = 1.0,
         // Positioning for the first cell of the heatmap, default is to begin
         // on the plot's left hand side
@@ -90,17 +121,24 @@ export default function() {
         fontSize = 11,
         // Font weight
         fontWeight = 'normal',
+        // SVG height
         height = 600,
+        // If true, inverts the alternative values scale
+        invertAltValueScale = false,
         // Color legend positioning, default is aligned to the left of the heatmap
         legendAlign = Align.LEFT,
         // Margin object
         margin = {top: 90, right: 90, bottom: 90, left: 90},
+        // If true, rows == columns so the plot removes a diagonal portion of the heatmap
+        mirrorAxes = false,
         normalizeRows = false,
         normalizeColumns = false,
         normalizeMatrix = false,
+        // If true, renders heatmap cells where row[i] == column[j]
+        renderIdentities = false,
+        // Rotate x-axis labels so they aren't a straight vertical line and easy to read
         rotateXLabels = true,
-        // SVG object for the plot
-        svg = null,
+        useAltValues = false,
         // Y-axis position, default is aligned to the right of the heatmap
         yAxisAlign = Align.RIGHT,
         // X-axis position, default is aligned to the bottom of the heatmap
@@ -117,20 +155,8 @@ export default function() {
         yLabel = '',
         // Padding in pixels for the x-axis label
         yLabelPad = 50,
-        width = 600,
-        mirrorAxes = false,
-        renderIdentities = false,
-        colorDomain = null,
-        cellStroke = '#000000',
-        cellStrokeWidth = 1,
-        altCellStroke = '#000000',
-        altCellStrokeWidth = 1,
-        altThresholdComparator = Threshold.GT,
-        altValueDomain = null,
-        altValueRange = null,
-        invertAltValueScale = false,
-        useAltValues = false,
-        altValueScale = null
+        // SVG width
+        width = 600
         ;
 
 
@@ -301,6 +327,9 @@ export default function() {
             yScale.range([getHeight(), 0]);
     };
 
+    /**
+      * Draws the x- and y-axes.
+      */
     let renderAxes = function() {
 
         // Determine the position of each axis--top, right, bottom, or left of the plot
@@ -392,6 +421,9 @@ export default function() {
         }
     };
 
+    /**
+      * Draws each cell of the heatmap.
+      */
     let renderCells = function() {
 
         // Maps row and column categories to their indexed position on the plot
@@ -438,6 +470,9 @@ export default function() {
             .attr('stroke-width', cellStrokeWidth);
     };
 
+    /**
+      * Renders cells with alt. values.
+      */
     let renderAltCells = function() {
 
         // Maps row and column categories to their indexed position on the plot
@@ -518,13 +553,12 @@ export default function() {
 
     /** properties **/
 
-    //exports.svg = svg;
     exports.Threshold = Threshold;
     exports.Alignment = Align;
 
     /** setters/getters **/
 
-    exports.svg = function(_) { return svg; };
+    exports.svg = function() { return svg; };
     exports.data = function(_) {
         if (!arguments.length) return data;
         data = _;

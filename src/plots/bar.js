@@ -4,7 +4,7 @@
   * auth: TR
   */
 
-'use strict'
+'use strict';
 
 import {deviation, extent, max, min} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
