@@ -414,7 +414,7 @@ export default function() {
 
         // If we don't render the identity matrix (i.e. row[i] == col[j]) then we remove
         // these ticks otherwise they are just labeling empty space
-        if (!renderIdentities) {
+        if (mirrorAxes && !renderIdentities) {
 
             xAxisObject.select('.tick:last-of-type').remove();
             yAxisObject.select('.tick:first-of-type').remove();

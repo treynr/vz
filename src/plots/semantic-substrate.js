@@ -483,6 +483,12 @@ export default function() {
         return exports;
     };
 
+    exports.margin = function(_) { 
+        if (!arguments.length) return margin;
+        margin = _;
+        return exports;
+    };
+
     exports.marginBottom = function(_) { 
         if (!arguments.length) return margin.bottom;
         margin.bottom = +_;
