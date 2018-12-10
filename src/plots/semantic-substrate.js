@@ -153,11 +153,6 @@ export default function() {
             //.attr('font-weight', 'normal')
             .call(xAxis);
 
-        xAxisObject.selectAll('text')
-            .attr('font', font)
-            .attr('font-size', `${fontSize}px`)
-            .attr('font-weight', 'normal');
-
         // Attach the x-axis label
         xAxisObject.append('text')
             .attr('class', 'x-axis-label')
@@ -175,6 +170,11 @@ export default function() {
             })
             .text(xLabel);
 
+        xAxisObject.selectAll('text')
+            .attr('font', font)
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', 'normal');
+
         let yAxisObject = svg.append('g')
             .attr('class', 'y-axis')
             .attr('transform', `translate(${margin.left}, 0)`)
@@ -182,11 +182,6 @@ export default function() {
             //.attr('font-size', `${fontSize}px`)
             //.attr('font-weight', 'normal')
             .call(yAxis);
-
-        yAxisObject.selectAll('text')
-            .attr('font', font)
-            .attr('font-size', `${fontSize}px`)
-            .attr('font-weight', 'normal');
 
         // Attach the y-axis label
         yAxisObject.append('text')
@@ -202,6 +197,11 @@ export default function() {
                 return altAxisLabels ? 0 : -40;
             })
             .text(yLabel);
+
+        yAxisObject.selectAll('text')
+            .attr('font', font)
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', 'normal');
     };
 
     /**
