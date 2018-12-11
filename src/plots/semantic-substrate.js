@@ -77,6 +77,8 @@ export default function() {
         // Padding in pixels for the x-axis label, if set to null then
         // semi-sensible default values are used instead
         xLabelPad = null,
+        // Niceify the x-axis scale
+        xNice = true,
         // d3 scale type to use for the x-axis
         xScaleFunction = scaleLinear,
         // Format string for x-axis ticks
@@ -92,6 +94,8 @@ export default function() {
         // Padding in pihels for the y-axis label, if set to null then
         // semi-sensible default values are used instead
         yLabelPad = null,
+        // Niceify the y-axis scale
+        yNice = true,
         // d3 scale type to use for the y-axis
         yScaleFunction = scaleLinear,
         // Format string for y-axis ticks
@@ -119,13 +123,17 @@ export default function() {
 
         xScale = xScaleFunction()
             .domain(xDomain)
-            .nice()
             .range([margin.left, getWidth()]);
 
         yScale = yScaleFunction()
             .domain(yDomain)
-            .nice()
             .range([getHeight(), 0]);
+        
+        if (xNice)
+            xScale.nice();
+
+        if (yNice)
+            yScale.nice();
     };
 
     /**
@@ -573,6 +581,12 @@ export default function() {
         return exports;
     };
 
+    exports.xNice = function(_) { 
+        if (!arguments.length) return xNice;
+        xNice = _;
+        return exports;
+    };
+
     exports.xScaleFunction = function(_) { 
         if (!arguments.length) return xScaleFunction;
         xScaleFunction = _;
@@ -618,6 +632,12 @@ export default function() {
     exports.yLabelPad = function(_) { 
         if (!arguments.length) return yLabelPad;
         yLabelPad = +_;
+        return exports;
+    };
+
+    exports.yNice = function(_) { 
+        if (!arguments.length) return yNice;
+        yNice = _;
         return exports;
     };
 
