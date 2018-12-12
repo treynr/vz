@@ -38,6 +38,7 @@ export default function() {
         altAxisLabels = false,
         // Shaded background color to use when rendering the grid background
         backgroundColor = '#cecece',
+        collisionForce = 5,
         // Data object containing objects/data to visualize
         data = null,
         // Transparency for rendered edges
@@ -286,7 +287,6 @@ export default function() {
 
             //nodePositions[d.id] = {x: node.attr('cx'), y: node.attr('cy')};
             if (d.cx !== undefined && d.cy !== undefined) {
-                console.log('shit');
                 nodePositions[d.id] = {x: d.cx, y: d.cy};
             } else {
                 nodePositions[d.id] = {x: xScale(d.x), y: yScale(d.y)};
@@ -341,7 +341,7 @@ export default function() {
         let simulation = forceSimulation(data.nodes)
             .force('x', forceX(d => xScale(d.x)).strength(xForceStrength))
             .force('y', forceY(d => yScale(d.y)).strength(yForceStrength))
-            .force('collide', forceCollide(5))
+            .force('collide', forceCollide(collisionForce))
             .stop();
 
         for (let i = 0; i < 120; i++)
@@ -356,13 +356,32 @@ export default function() {
 
     let renderGrid = function() {
 
-        let ticks = yScale.ticks();
+        // This is a shitty hack but we need to determine if the y-scale continues in
+        // rounded increments (e.g. 1, 2, 3, ...) or if it's being displayed in steps 
+        // (e.g. 2, 4, 6, ...). If it's the former, simply calling ticks() will cause an
+        // incorrect number of grid lines to be drawn. But, we have to render the grid
+        // first otherwise it will overlap the axis and any labels. So we render the
+        // axis, get the ticks, then remove the axis. 
+        renderAxes()
+
+        let values = svg.selectAll('.y-axis > .tick > text')
+            .nodes()
+            .map(d => d.innerHTML);
+        let ticks = [];
+
+        svg.selectAll('.y-axis').remove();
+        svg.selectAll('.x-axis').remove();
+
+        if (values.length >= 2 && parseInt(values[1]) - parseInt(values[0]) == 1)
+            ticks = yScale.ticks(yTicks);
+        else
+            ticks = yScale.ticks();
 
         for (let i = 0; i < ticks.length; i++) {
 
             let yt = yScale(ticks[i]);
             let yt1 = 0;
-            let x1 = xScale.range()[0];
+            let x1 = xScale.range()[0] + 1;
             let x2 = xScale.range()[1];
             let y1 = 0;
             let y2 = 0;
@@ -417,6 +436,7 @@ export default function() {
 
         renderAxes();
 
+
         if (useForce)
             positionWithForce();
 
@@ -446,6 +466,12 @@ export default function() {
     exports.data = function(_) { 
         if (!arguments.length) return data;
         data = _;
+        return exports;
+    };
+
+    exports.collisionForce = function(_) { 
+        if (!arguments.length) return collisionForce;
+        collisionForce = +_;
         return exports;
     };
 
