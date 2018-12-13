@@ -206,13 +206,17 @@ export default function() {
 
     let makeQuantizeScales = function() {
 
+        let colors = null;
+
         // Select the default color scheme if no colors have been specified
         if (!scaleColors)
-            scaleColors = schemeBlues[scaleTicks + 1];
+            colors = schemeBlues[scaleTicks + 1];
+        else
+            colors = scaleColors;
 
         quantScale = scaleQuantize()
             .domain(scaleDomain)
-            .range(scaleColors);
+            .range(colors);
 
         legendScale = scaleLinear()
             .domain(quantScale.domain())
@@ -229,13 +233,24 @@ export default function() {
             // add one to the count since we will render N+1 colors for the scale.
             scaleTicks = legendScale.ticks(scaleTicks).length - 1;
 
-            // TODO: handle user-specified colors properly
+            // TODO: handle user-specified colors properly:
+            //     This is a first attempt at handling user-defined colors, if they don't
+            //     provide enough colors in the array an exception will be thrown. Not 
+            //     sure how to gracefully handle this scenario just yet.
             // Color schemes only range in length from [3, 9]
-            scaleColors = scaleTicks > 9 ? schemeBlues[9] : schemeBlues[scaleTicks];
-            scaleColors = scaleTicks < 3 ? schemeBlues[3].slice(1) : schemeBlues[scaleTicks];
+            //scaleColors = scaleTicks > 9 ? schemeBlues[9] : schemeBlues[scaleTicks];
+            //scaleColors = scaleTicks < 3 ? schemeBlues[3].slice(1) : schemeBlues[scaleTicks];
+            if (scaleColors) {
+
+                colors = scaleColors;
+            } else {
+
+                colors = scaleTicks > 9 ? schemeBlues[9] : schemeBlues[scaleTicks];
+                colors = scaleTicks < 3 ? schemeBlues[3].slice(1) : schemeBlues[scaleTicks];
+            }
 
             // Redo the scale
-            quantScale.range(scaleColors);
+            quantScale.range(colors);
         }
 
         legendAxis = axisBottom(legendScale)
