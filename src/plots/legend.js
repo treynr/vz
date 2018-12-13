@@ -286,6 +286,94 @@ export default function() {
             .text(scaleTitle);
     };
 
+    let makeLegendObjects = function() {
+
+        let legend = svg.selectAll('stuff')
+            .data(data)
+            .enter()
+            .append('g')
+            .attr('transform', (_, i) => `translate(40, ${(i + 1) * keyPad})`);
+
+        return legend;
+    };
+
+    let renderRectLegend = function(objects) {
+
+        return objects.append('rect')
+            .attr('width', rectWidth)
+            .attr('height', rectHeight);
+    };
+
+    let renderSymbolLegend = function(objects) {
+
+        return objects.append('path')
+            .attr('d', d3.symbol()
+                .type(d => {
+
+                    if (d.symbol)
+                        return d.symbol;
+                    if (symbol)
+                        return symbol;
+
+                    return d3.symbolSquare;
+                })
+                .size(d => {
+                    if (d.size === undefined)
+                        return keySize;
+
+                    return d.size;
+                })
+            );
+    };
+
+    let styleLegend = function(legend) {
+
+        legend
+            .attr('fill-opacity', fillOpacity)
+            .attr('fill', (d, i) => {
+
+                if (d.fill === undefined)
+                    return '#000000';
+
+                return d.fill;
+            })
+            .attr('stroke', d => {
+                if (useLine)
+                    return d.fill;
+
+                return stroke;
+            })
+            .attr('stroke-width', strokeWidth)
+            .attr('shape-rendering', 'auto');
+    };
+
+    let renderLegendText = function(legend) {
+
+        legend.append("text")
+            .attr('dx', d => {
+                if (useRect && d.tx)
+                    return rectWidth + 5 + d.tx;
+
+                if (useRect)
+                    return rectWidth + 5;
+
+                return d.tx ? d.tx : tx; 
+            })
+            .attr('dy', d => {
+                if (useRect && d.ty)
+                    return (rectHeight / 2) + d.ty;
+
+                if (useRect)
+                    return rectHeight / 2;
+
+                return d.ty ? d.ty : ty; 
+            })
+            .attr('font-family', font)
+            .attr('font-size', fontSize)
+            .attr('font-weight', fontWeight)
+            .text(d => d.text);
+    };
+
     exports.draw = function() {
 
         svg = select('body')
@@ -313,7 +401,21 @@ export default function() {
 
             makeQuantizeScales();
             renderQuantizeScale();
+
+        } else {
+
+            let objects = makeLegendObjects();
+
+            if (useRect)
+                var legend = renderRectLegend(objects);
+            else
+                var legend = renderSymbolLegend(objects);
+
+            styleLegend(legend);
+            renderLegendText(objects);
         }
+
+
         /*
         if (textures)
             for (var i = 0; i < textures.length; i++)

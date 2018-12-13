@@ -306,7 +306,7 @@ export default function() {
             altMax = Math.floor((altMax / 2) * 0.95);
 
             // Or just ignore everything we just did if the user specifies a range
-            altValueRange = altValueRange ? altValueRange : [1, altMax];
+            altValueRange = altValueRange ? altValueRange : [3, altMax];
             altValueDomain = altValueDomain ? 
                              altValueDomain : extent(data.values, d => d.altValue);
 
