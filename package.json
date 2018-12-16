@@ -1,7 +1,7 @@
 {
-  "name": "idk",
+  "name": "reviz",
   "version": "0.3.0",
-  "description": "A javascript library, built on d3, for visualizing biological data.",
+  "description": "A reusable visualization and charts library based on d3js.",
   "main": "index.js",
   "repository": "git@s1k.pw:vizlib",
   "author": "TR <tim@fin0c.net>",

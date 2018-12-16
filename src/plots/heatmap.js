@@ -91,8 +91,16 @@ export default function() {
         altThresholdComparator = Threshold.GT,
         // Domain for the alternative
         altValueDomain = null,
+        // Cutoff threshold to use when showing displaying sizes
+        altValueThreshold = 1.0,
         // Range of sizes for the alternative value set
         altValueRange = null,
+        // Positioning for the first cell of the heatmap, default is to begin
+        // on the plot's left hand side
+        cellAlignHorizontal = Align.LEFT,
+        // Positioning for the first cell of the heatmap, default is to begin
+        // on the plot's bottom axis
+        cellAlignVertical = Align.BOTTOM,
         // Color used for the stroke around heatmap cells
         cellStroke = '#000000',
         // Width of the stroke around heatmap cells
@@ -101,18 +109,8 @@ export default function() {
         colorDomain = null,
         // List of user-defined colors to use for the quantized color scale
         colors = null,
-        // Number of colors to use for the quantized color scale
-        numColors = 5,
         // Data object containing objects/data to visualize
         data = null,
-        // Cutoff threshold to use when showing displaying sizes
-        altValueThreshold = 1.0,
-        // Positioning for the first cell of the heatmap, default is to begin
-        // on the plot's left hand side
-        cellAlignHorizontal = Align.LEFT,
-        // Positioning for the first cell of the heatmap, default is to begin
-        // on the plot's bottom axis
-        cellAlignVertical = Align.BOTTOM,
         // HTML element or ID the SVG should be appended to
         element = 'body',
         // Font family
@@ -125,8 +123,6 @@ export default function() {
         height = 600,
         // If true, inverts the alternative values scale
         invertAltValueScale = false,
-        // Color legend positioning, default is aligned to the left of the heatmap
-        legendAlign = Align.LEFT,
         // Margin object
         margin = {top: 90, right: 90, bottom: 90, left: 90},
         // If true, rows == columns so the plot removes a diagonal portion of the heatmap
@@ -134,6 +130,8 @@ export default function() {
         normalizeRows = false,
         normalizeColumns = false,
         normalizeMatrix = false,
+        // Number of colors to use for the quantized color scale
+        numColors = 5,
         // If true, renders heatmap cells where row[i] == column[j]
         renderIdentities = false,
         // Rotate x-axis labels so they aren't a straight vertical line and easy to read
