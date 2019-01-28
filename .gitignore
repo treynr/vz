@@ -5,6 +5,10 @@
 node_modules/**
 node_modules
 
+## the dist directory which contains compiled code and modules
+dist/**
+dist
+
 ## any raw data files
 *.tsv
 *.csv

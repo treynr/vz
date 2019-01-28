@@ -12,7 +12,6 @@ import {scaleBand, scaleLinear} from 'd3-scale';
 import {interpolateCool} from 'd3-scale-chromatic';
 import {select} from 'd3-selection';
 
-
 export default function() {
 
     let exports = {},
@@ -20,10 +19,12 @@ export default function() {
         /** private **/
 
         boxSvg = null,
-        // X value domain
-        xDomain = null,
+        // d3 axis object for the x-axis
+        xAxis = null,
         // X value scale
         xScale = null,
+        // d3 axis object for the y-axis
+        yAxis = null,
         // Y value scale
         yScale = null,
 
@@ -34,6 +35,8 @@ export default function() {
 
         /** public **/
 
+        // Color to use when filling in each boxplot
+        boxFill = '#FFFFFF',
         boxPadding = 0.5,
         // Color of the boxplot and whisker outline
         boxStroke = '#333',
@@ -46,24 +49,42 @@ export default function() {
         // SVG height
         height = 800,
         // X and y axis font
-        fontFamily = 'sans-serif',
+        font = 'sans-serif',
         // X and y axis font size
-        fontSize = 11,
+        fontSize = 12,
         // X and y axis font weight
         fontWeight = 'normal',
         // Margin object
         margin = {top: 40, right: 30, bottom: 50, left: 50},
+        outlierFill = 'none',
+        outlierRadius = 2,
+        outlierStroke = '#000000',
+        outlierStrokeWidth = 1,
+        // Rotates x-axis labels so longer labels fit
+        rotateXLabels = false,
+        // If true, draws outliers
+        showOutliers = false,
+        // If true, colors in each individual boxplot using colors from the
+        // colors array variable
         useColor = false,
         // SVG width
         width = 900,
+        // X value domain
+        xDomain = null,
         // X-axis label
         xLabel = '',
+        // Padding in pixels for the x-axis label
         xLabelPad = 40,
         xTickFormat = null,
         // Y value domain
         yDomain = null,
         // Y-axis label
         yLabel = '',
+        // Niceify the y-axis scale
+        yNice = true,
+        // d3 scale type to use for the x-axis
+        yScaleFunction = scaleLinear,
+        // Number of y-axis ticks
         yTicks = 10,
         yTickFormat = null;
 
@@ -86,6 +107,16 @@ export default function() {
     };
 
     /** 
+      * Returns the first quartile for the given set of values.
+      */
+    var getQ1 = function(values) { return quantile(values, 0.25); };
+
+    /** 
+      * Returns the third quartile for the given set of values.
+      */
+    var getQ3 = function(values) { return quantile(values, 0.75); };
+
+    /** 
       * Creates the x and y axis scales using the given domains and/or values.
       * Returns the D3 scale objects in a two element array.
       */
@@ -99,47 +130,58 @@ export default function() {
             .rangeRound([0, getWidth()])
             .padding(boxPadding);
 
-        yScale = scaleLinear()
+        yScale = yScaleFunction()
             .domain(yDomain)
-            .rangeRound([getHeight(), 0])
-            .nice();
+            .rangeRound([getHeight(), 0]);
+
+        if (yNice)
+            yScale.nice();
+    };
+
+    let makeAxes = function() {
+
+        // An outer tick size of 0 disables outer ticks which looks weird on this 
+        // chart
+        xAxis = axisBottom(xScale)
+            .ticks(xDomain.length, xTickFormat)
+            .tickSizeOuter(0);
+
+        yAxis = axisLeft(yScale)
+            .ticks(yTicks, yTickFormat);
     };
 
     /** 
-      * Creates the x and y axis objects and draws them. The axis objects are
-      * returned as a two element array.
+      * Creates the x and y axis objects and renders them.
       */
     let renderAxes = function() {
-
-        // An outer tick size of 0 disables outer ticks which looks weird on this chart
-        let xaxis = axisBottom(xScale)
-            .ticks(xDomain.length, xTickFormat)
-            .tickSizeOuter(0);
-        let yaxis = axisLeft(yScale).ticks(yTicks, yTickFormat);
 
         let xAxisObject = svg.append('g')
             .attr('class', 'x-axis')
             .attr('fill', 'none')
             .attr('transform', `translate(0, ${getHeight()})`)
-            .call(xaxis);
+            .call(xAxis);
+
+        xAxisObject.selectAll('text')
+            .attr('dx', rotateXLabels ? '.35em' : '')
+            .attr('text-anchor', rotateXLabels ? 'start' : 'middle')
+            .attr('transform', rotateXLabels ? 'rotate(-320)' : '');
 
         xAxisObject.append('text')
             .attr('class', 'x-axis-label')
             .attr('x', getWidth() / 2)
             .attr('y', xLabelPad)
             .attr('fill', '#000000')
-            .attr('text-anchor', 'middle')
             .text(xLabel);
 
         xAxisObject.selectAll('text')
-            .attr('font', fontFamily)
+            .attr('font', font)
             .attr('font-size', fontSize)
             .attr('font-weight', fontWeight);
 
         let yAxisObject = svg.append('g')
             .attr('class', 'y-axis')
             .attr('transform', 'translate(0, 0)')
-            .call(yaxis);
+            .call(yAxis);
 
         yAxisObject.append('text')
             .attr('class', 'y-axis-label')
@@ -152,48 +194,31 @@ export default function() {
             .text(yLabel);
 
         yAxisObject.selectAll('text')
-            .attr('font', fontFamily)
+            .attr('font', font)
             .attr('font-size', fontSize)
             .attr('font-weight', fontWeight);
-
-        // Remove the first and last ticks
-        //xAxisObject.select('.tick:first-of-type').remove();
-        //xAxisObject.select('.tick:last-of-type').remove();
     };
 
-    /*
-    var drawQ1 = function() {
+    /**
+      * Adds groups to the main SVG for each box plot. The selection is stored in
+      * the boxSVG variable. This is done as a function to facilitate testing.
+      */
+    let renderBoxSVG = function() {
 
-        svg.append('line')
-            .attr('x1', d => xScale(d.label))
-            .attr('y1', d => yScale(getQ1(d.values)))
-            .attr('x2', d => xScale(d.label) + xScale.bandwidth())
-            .attr('y2', d => yScale(getQ1(d.values)))
-            .attr('shape-rendering', 'auto')
-            .attr('stroke', boxStroke)
-            .attr('stroke-width', boxStrokeWidth);
+        boxSvg = svg.selectAll('box')
+            .data(data)
+            .enter()
+            .append('g');
     };
-
-    var drawQ3 = function() {
-
-        svg.append('line')
-            .attr('x1', d => xScale(d.label))
-            .attr('y1', d => yScale(getQ3(d.values)))
-            .attr('x2', d => xScale(d.label) + xScale.bandwidth())
-            .attr('y2', d => yScale(getQ3(d.values)))
-            .attr('shape-rendering', 'auto')
-            .attr('stroke', boxStroke)
-            .attr('stroke-width', boxStrokeWidth);
-    };
-    */
 
     /** 
-      * Draws the interquartile range (IQR) for each violin..
+      * Render boxes for each dataset.
       */
-    var drawQuartiles = function() {
+    var renderBoxes = function() {
 
         // Draws the box. The top of the box is Q3 and the bottom is Q1.
         boxSvg.append('rect')
+            .attr('class', 'box')
             .attr('x', d => xScale(d.label))
             .attr('y', d => yScale(getQ3(d.values)))
             .attr('width', xScale.bandwidth())
@@ -201,59 +226,75 @@ export default function() {
             .attr('fill', (d, i) => {
 
                 if (!useColor)
-                    return '#FFFFFF';
+                    return boxFill;
 
                 if (!d.color)
                     return colors[i];
 
                 return d.color;
             })
-            .attr('shape-rendering', 'auto')
+            .attr('shape-rendering', 'crispEdges')
             .attr('stroke', boxStroke)
             .attr('stroke-width', boxStrokeWidth);
 
+        // Draw the median line
         boxSvg.append('line')
+            .attr('class', 'median')
             .attr('x1', d => xScale(d.label))
             .attr('y1', d => yScale(median(d.values)))
             .attr('x2', d => xScale(d.label) + xScale.bandwidth())
             .attr('y2', d => yScale(median(d.values)))
-            .attr('shape-rendering', 'auto')
+            .attr('shape-rendering', 'crispEdges')
             .attr('stroke', boxStroke)
             .attr('stroke-width', boxStrokeWidth);
     };
 
     /**
-      * Draws the whisker ends of the boxplots. These are points with a range
-      * of 1.5 * IQR.
+      * Render the whisker ends of of each boxplot. The end of each whisker 
+      * corresponds to the min/max data point within the 1.5 * IQR, aka a Tukey
+      * boxplot.
       */
-    var drawWhiskers = function() {
+    var renderWhiskers = function() {
 
-        var whiskers = [];
-        //var iqr = getQ3(d.values) - getQ1(d.values);
-        //var q1end = getQ1(d.values) - 1.5 * iqr;
-        //var q3end = getQ3(d.values) + 1.5 * iqr;
-        for (var i = 0; i < data.length; i++) {
+        let whiskers = [];
 
-            var d = data[i];
-            var iqr = getQ3(d.values) - getQ1(d.values);
-            var q1end = getQ1(d.values) - 1.5 * iqr;
-            var q3end = getQ3(d.values) + 1.5 * iqr;
-            var min = 0.0;
-            var max = 0.0;
+        for (let d of data) {
 
+            let iqr = getQ3(d.values) - getQ1(d.values);
+            let q1end = getQ1(d.values) - 1.5 * iqr;
+            let q3end = getQ3(d.values) + 1.5 * iqr;
+            let min = 0.0;
+            let max = 0.0;
+
+            // This determines the position of the Q1 whisker
             for (let j = 0; j < d.values.length; j++) {
-                if (d.values[j] >= q1end) {
+
+                if (d.values[j] > q1end) {
                     min = d.values[j];
+
                     break;
                 }
+
+                if (j == d.values.length - 1)
+                    min = q1end;
             }
 
+            // This determines the position of the Q3 whisker
             for (let j = d.values.length - 1; j >= 0; j--) {
-                if (d.values[j] <= q3end) {
+
+                if (d.values[j] < q3end) {
                     max = d.values[j];
+
                     break;
                 }
+
+                if (j == 0)
+                    max = getQ3(d.values);
             }
+
+            // Prevents whiskers from being drawn inside the box itself
+            if (max < getQ3(d.values))
+                max = getQ3(d.values);
 
             whiskers.push({
                 label: d.label, 
@@ -264,10 +305,12 @@ export default function() {
             });
         }
 
-        boxSvg.selectAll('whiskers')
+        // Draws the Q1 whisker
+        svg.selectAll('whiskers')
             .data(whiskers)
             .enter()
             .append('line')
+            .attr('class', 'q1-whisker')
             .attr('x1', d => xScale(d.label) + xScale.bandwidth() / 4)
             .attr('y1', d => yScale(d.min))
             .attr('x2', d => xScale(d.label) + (xScale.bandwidth() / 4) * 3)
@@ -276,10 +319,12 @@ export default function() {
             .attr('stroke', boxStroke)
             .attr('stroke-width', boxStrokeWidth);
 
-        boxSvg.selectAll('whiskers')
+        // Draws the Q3 whisker
+        svg.selectAll('whiskers')
             .data(whiskers)
             .enter()
             .append('line')
+            .attr('class', 'q3-whisker')
             .attr('x1', d => xScale(d.label) + xScale.bandwidth() / 4)
             .attr('y1', d => yScale(d.max))
             .attr('x2', d => xScale(d.label) + (xScale.bandwidth() / 4) * 3)
@@ -288,10 +333,12 @@ export default function() {
             .attr('stroke', boxStroke)
             .attr('stroke-width', boxStrokeWidth);
 
-        boxSvg.selectAll('whiskers')
+        // Draws the Q3 line to the whisker
+        svg.selectAll('whiskers')
             .data(whiskers)
             .enter()
             .append('line')
+            .attr('class', 'q3-whisker-line')
             .attr('x1', d => xScale(d.label) + xScale.bandwidth() / 2)
             .attr('y1', d => yScale(d.max))
             .attr('x2', d => xScale(d.label) + xScale.bandwidth() / 2)
@@ -300,10 +347,12 @@ export default function() {
             .attr('stroke', boxStroke)
             .attr('stroke-width', boxStrokeWidth);
 
-        boxSvg.selectAll('whiskers')
+        // Draws the Q1 line to the whisker
+        svg.selectAll('whiskers')
             .data(whiskers)
             .enter()
             .append('line')
+            .attr('class', 'q1-whisker-line')
             .attr('x1', d => xScale(d.label) + xScale.bandwidth() / 2)
             .attr('y1', d => yScale(d.min))
             .attr('x2', d => xScale(d.label) + xScale.bandwidth() / 2)
@@ -313,23 +362,54 @@ export default function() {
             .attr('stroke-width', boxStrokeWidth);
     };
 
-    /** 
-      * Returns the first quartile for the given set of values.
+    /**
+      * Render outliers--data points outside the 1.5 * IQR range--as circles.
       */
-    var getQ1 = function(values) { return quantile(values, 0.25); };
+    let renderOutliers = function() {
+
+        // Find outliers for each plot
+        let outliers = data.reduce((ac, d) => {
+
+            let q1 = getQ1(d.values);
+            let q3 = getQ3(d.values);
+            let iqr = q3 - q1;
+            // If the data point is outside this range, we consider it an outlier
+            let q1end = q1 - 1.5 * iqr;
+            let q3end = q3 + 1.5 * iqr;
+
+            // Check each observation
+            d.values.forEach(x => {
+                if ((x > q3end && x > q3) || (x < q1end && x < q1))
+                    ac.push({label: d.label, value: x});
+            });
+
+            return ac;
+
+        }, []);
+
+        let outlierSvg = svg.selectAll('outliers')
+            .data(outliers)
+            .enter()
+            .append('g');
+
+        outlierSvg.append('circle')
+            .attr('class', 'outlier')
+            .attr('cx', d => xScale(d.label) + (xScale.bandwidth() / 2))
+            .attr('cy', d => yScale(d.value))
+            .attr('r', outlierRadius)
+            .attr('fill', outlierFill)
+            .attr('stroke', outlierStroke)
+            .attr('stroke-width', outlierStrokeWidth);
+    };
+
 
     /** 
-      * Returns the third quartile for the given set of values.
-      */
-    var getQ3 = function(values) { return quantile(values, 0.75); };
-
-    /** 
-      * Draws the background of the plot. Currently this is just grey lines
+      * Draws the background of the plot. Currently this is just a series ofgrey lines
       * indicating ticks on the y axis.
       */
-    var drawBackground = function() {
+    var renderBackground = function() {
 
-        var ticks = yScale.ticks();
+        let ticks = yScale.ticks();
 
         // Don't draw for the first tick which is essentially the x-axis
         for (var i = 1; i < ticks.length; i++) {
@@ -363,19 +443,17 @@ export default function() {
         data.forEach(d => { d.values.sort((a, b) => a - b ); });
 
         makeScales();
-        drawBackground();
+        makeAxes();
+        // Render the background first that way it doesn't sit on top of the axes
+        renderBackground();
         renderAxes();
 
-        boxSvg = svg.selectAll('box')
-            .data(data)
-            .enter()
-            .append('g');
-
-        //drawDistribution();
-        drawQuartiles();
-        drawWhiskers();
-        //drawCI();
-        //drawMedian();
+        renderBoxSVG();
+        renderBoxes();
+        renderWhiskers();
+        
+        if (showOutliers)
+            renderOutliers();
 
         return exports;
     };
@@ -385,6 +463,12 @@ export default function() {
       */
 
     exports.svg = function() { return svg; };
+
+    exports.boxFill = function(_) {
+        if (!arguments.length) return boxFill;
+        boxFill = _;
+        return exports;
+    };
 
     exports.boxPadding = function(_) {
         if (!arguments.length) return boxPadding;
@@ -410,9 +494,9 @@ export default function() {
         return exports;
     };
 
-    exports.fontFamily = function(_) {
-        if (!arguments.length) return fontFamily;
-        fontFamily = _;
+    exports.font = function(_) {
+        if (!arguments.length) return font;
+        font = _;
         return exports;
     };
 
@@ -431,6 +515,42 @@ export default function() {
     exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
+        return exports;
+    };
+
+    exports.outlierFill = function(_) {
+        if (!arguments.length) return outlierFill;
+        outlierFill = _;
+        return exports;
+    };
+
+    exports.outlierRadius = function(_) {
+        if (!arguments.length) return outlierRadius;
+        outlierRadius = +_;
+        return exports;
+    };
+
+    exports.outlierStroke = function(_) {
+        if (!arguments.length) return outlierStroke;
+        outlierStroke = _;
+        return exports;
+    };
+
+    exports.outlierStrokeWidth = function(_) {
+        if (!arguments.length) return outlierStrokeWidth;
+        outlierStrokeWidth = _;
+        return exports;
+    };
+
+    exports.rotateXLabels = function(_) {
+        if (!arguments.length) return rotateXLabels;
+        rotateXLabels = _;
+        return exports;
+    };
+
+    exports.showOutliers = function(_) {
+        if (!arguments.length) return showOutliers;
+        showOutliers = _;
         return exports;
     };
 
@@ -463,6 +583,46 @@ export default function() {
         yLabel = _;
         return exports;
     };
+
+    exports.yNice = function(_) {
+        if (!arguments.length) return yNice;
+        yNice = _;
+        return exports;
+    };
+
+    exports.yScaleFunction = function(_) {
+        if (!arguments.length) return yScaleFunction;
+        yScaleFunction = _;
+        return exports;
+    };
+
+    exports.yTicks = function(_) {
+        if (!arguments.length) return yTicks;
+        yTicks = _;
+        return exports;
+    };
+
+    // Enables testing for private methods
+    if (process.env.NODE_ENV == 'development') {
+
+        exports.makeScales = makeScales;
+        exports.makeAxes = makeAxes;
+        exports.renderAxes = renderAxes;
+        exports.renderBoxSVG = renderBoxSVG;
+        exports.renderBoxes = renderBoxes;
+        exports.renderWhiskers = renderWhiskers;
+        exports.renderOutliers = renderOutliers;
+        exports.xAxis = () => xAxis;
+        exports.xScale = () => xScale;
+        exports.yScale = () => yScale;
+        exports.yAxis = () => yAxis;
+
+        exports.svg = function(_) {
+            if (!arguments.length) return svg;
+            svg = _;
+            return exports;
+        };
+    }
 
     return exports;
 }

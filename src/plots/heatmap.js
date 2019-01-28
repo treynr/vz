@@ -466,6 +466,9 @@ export default function() {
             .attr('shape-rendering', 'crispEdges')
             .attr('stroke', cellStroke)
             .attr('stroke-width', cellStrokeWidth);
+
+        cells.append('svg:title')
+            .text(d => d.text ? d.text : '');
     };
 
     /**
@@ -525,6 +528,9 @@ export default function() {
     };
 
     /** public **/
+
+    exports.getHeight = getHeight;
+    exports.getWidth = getWidth;
 
     exports.draw = function() {
 
@@ -626,12 +632,6 @@ export default function() {
     exports.colorDomain = function(_) {
         if (!arguments.length) return colorDomain;
         colorDomain = _;
-        return exports;
-    };
-
-    exports.legendAlign = function(_) {
-        if (!arguments.length) return legendAlign;
-        legendAlign = _;
         return exports;
     };
 

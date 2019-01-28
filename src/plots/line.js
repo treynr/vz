@@ -4,7 +4,7 @@
   * auth: TR
   */
 
-import {extent, max, min} from 'd3-array';
+import {extent} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleLinear, scaleOrdinal} from 'd3-scale';
 import {schemeCategory10} from 'd3-scale-chromatic';
@@ -50,20 +50,24 @@ export default function() {
         fontSize = 13,
         // Graph title
         title = '',
-        // X position of the title
-        titleX = null,
-        // Y position of the title
-        titleY = null,
         // X-axis text
         xLabel = '',
-        // Y-axis text
-        yLabel = '',
-        // Y-axis padding
-        yAxisPad = 35,
+        // X position of the x-axis label
+        xLabelPad = null,
         // Scale for the x-axis
         xScale = null,
+        // Number of x-axis ticks
+        xTicks = 10,
+        // Y-axis text
+        yLabel = '',
+        // Y position of the x-axis label
+        yLabelPad = null,
+        // Y-axis padding
+        yAxisPad = 35,
         // Scale for the y-axis
         yScale = null,
+        // Number of y-axis ticks
+        yTicks = 10,
         // Format string for x-axis labels
         xTickFormat = null,
         yDomain = null,
@@ -112,27 +116,11 @@ export default function() {
       */
     var makeAxes = function() {
 
-        // The last part of the ternary statement forces the first and last
-        // ticks of the axis to be labeled.
-        let xticks = xTickValues ? xTickValues : 
-                     xScale.ticks().concat(xScale.domain());
-
-        let yticks = yTickValues ? yTickValues : 
-                     yScale.ticks().concat(yScale.domain());
-
         let xAxis = axisBottom(xScale)
-            .tickFormat(xTickFormat)
-            .tickValues(xticks);
-            //.tickSizeOuter(outerTicks ? 6 : 0);
-        ;
+            .ticks(xTicks, xTickFormat);
 
         let yAxis = axisLeft(yScale)
-            //.tickValues(yTickValues)
-            // Forces min/max ticks to be labeled
-            .tickFormat(yTickFormat)
-            .tickValues(yticks)
-            ;
-            //.tickFormat(d3.format(yFormat));
+            .ticks(yTicks, yTickFormat);
 
         let xAxisObject = svg.append('g')
             .attr('class', 'axis')
@@ -199,22 +187,21 @@ export default function() {
 
         svgLine.append('path')
             .attr('d', function(d) { return linePath(d.points); })
-            .style('stroke', function(d, i) { 
+            .attr('stroke', function(d, i) { 
 
                 if (d.color)
                     return d.color;
 
                 return lineColors(i); 
             })
-            .style('stroke-width', function(d) { 
+            .attr('stroke-width', function(d) { 
 
                 if (d.width)
                     return d.width;
 
                 return lineWidth;
             })
-            .style('fill', 'none')
-            ;
+            .attr('fill', 'none');
 
     };
 
@@ -232,8 +219,8 @@ export default function() {
             .attr('x2', function() { return xScale.range()[1]; })
             .attr('y2', function() { return yScale.range()[1]; })
             .attr('stroke-dasharray', '5,5')
-            .style('stroke', 'red')
-            .style('stroke-width', 1);
+            .attr('stroke', 'red')
+            .attr('stroke-width', 1);
     };
 
     /**
@@ -257,11 +244,9 @@ export default function() {
 
                     return nodeRadius;
                 })
-                .style('fill', nodeColor)
-                //.style('stroke', nodeStroke)
-                .style('stroke', function() { return nodeStrokes(i); })
-                .style('stroke-width', nodeStrokeWidth)
-                ;
+                .attr('fill', nodeColor)
+                .attr('stroke', function() { return nodeStrokes(i); })
+                .attr('stroke-width', nodeStrokeWidth);
         }
     };
 
@@ -270,22 +255,22 @@ export default function() {
       */
     var drawTitle = function() {
 
-            svg.append('text')
-                .attr('x', function() {
-                    if (titleX !== null)
-                        return titleX;
+        svg.append('text')
+            .attr('x', function() {
+                if (xLabelPad !== null)
+                    return xLabelPad;
 
-                    return (width - margin.left) / 2;
-                })
-                .attr('y', function() {
-                    if (titleY !== null)
-                        return titleY;
+                return (width - margin.left) / 2;
+            })
+            .attr('y', function() {
+                if (xLabelPad !== null)
+                    return xLabelPad;
 
-                    return margin.top;
-                })
-                .style('font-family', 'sans-serif')
-                .style('font-size', `${fontSize}px`)
-                .text(title);
+                return margin.top;
+            })
+            .style('font-family', 'sans-serif')
+            .style('font-size', `${fontSize}px`)
+            .text(title);
     };
 
     /** public **/
@@ -369,45 +354,9 @@ export default function() {
         return exports;
     };
 
-    exports.titleSize = function(_) {
-        if (!arguments.length) return titleSize;
-        titleSize = _;
-        return exports;
-    };
-
-    exports.titleX = function(_) {
-        if (!arguments.length) return titleX;
-        titleX = +_;
-        return exports;
-    };
-
-    exports.titleY = function(_) {
-        if (!arguments.length) return titleY;
-        titleY = _;
-        return exports;
-    };
-
     exports.title = function(_) {
         if (!arguments.length) return title;
         title = _;
-        return exports;
-    };
-
-    exports.xLabel = function(_) {
-        if (!arguments.length) return xLabel;
-        xLabel = _;
-        return exports;
-    };
-
-    exports.yFormat = function(_) {
-        if (!arguments.length) return yFormat;
-        yFormat = _;
-        return exports;
-    };
-
-    exports.yLabel = function(_) {
-        if (!arguments.length) return yLabel;
-        yLabel = _;
         return exports;
     };
 
@@ -425,7 +374,7 @@ export default function() {
 
     exports.nodeStrokes = function(_) {
         if (!arguments.length) return nodeStrokes;
-        nodeStrokes = d3.scaleOrdinal(_);
+        nodeStrokes = scaleOrdinal(_);
         return exports;
     };
 
@@ -441,27 +390,27 @@ export default function() {
         return exports;
     };
 
-    exports.xScaleZero = function(_) {
-        if (!arguments.length) return xScaleZero;
-        xScaleZero = _;
-        return exports;
-    };
-
-    exports.yScaleZero = function(_) {
-        if (!arguments.length) return yScaleZero;
-        yScaleZero = _;
-        return exports;
-    };
-
     exports.xDomain = function(_) {
         if (!arguments.length) return xDomain;
         xDomain = _;
         return exports;
     };
 
-    exports.yDomain = function(_) {
-        if (!arguments.length) return yDomain;
-        yDomain = _;
+    exports.xLabel = function(_) {
+        if (!arguments.length) return xLabel;
+        xLabel = _;
+        return exports;
+    };
+
+    exports.xLabelPad = function(_) {
+        if (!arguments.length) return xLabelPad;
+        xLabelPad = +_;
+        return exports;
+    };
+
+    exports.xTickFormat = function(_) {
+        if (!arguments.length) return xTickFormat;
+        xTickFormat = _;
         return exports;
     };
 
@@ -471,9 +420,21 @@ export default function() {
         return exports;
     };
 
-    exports.xTickFormat = function(_) {
-        if (!arguments.length) return xTickFormat;
-        xTickFormat = _;
+    exports.yDomain = function(_) {
+        if (!arguments.length) return yDomain;
+        yDomain = _;
+        return exports;
+    };
+
+    exports.yLabel = function(_) {
+        if (!arguments.length) return yLabel;
+        yLabel = _;
+        return exports;
+    };
+
+    exports.yLabelPad = function(_) {
+        if (!arguments.length) return yLabelPad;
+        yLabelPad = +_;
         return exports;
     };
 
@@ -490,5 +451,5 @@ export default function() {
     };
 
     return exports;
-};
+}
 

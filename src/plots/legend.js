@@ -22,7 +22,7 @@
 
 'use strict';
 
-import {ticks, max} from 'd3-array';
+import {max} from 'd3-array';
 import {axisBottom} from 'd3-axis';
 import {select} from 'd3-selection';
 import {scaleLinear, scaleQuantize} from 'd3-scale';
@@ -67,7 +67,7 @@ export default function() {
         rectHeight = 30,
         fillOpacity = 1.0,
         // Use a d3 symbol for colored keys
-        symbol = null,
+        symbolType = null,
         textures = null,
         // Domain values, only required when rendering scales
         scaleDomain = [0, 1],
@@ -82,16 +82,15 @@ export default function() {
         scaleFormat = null,
         scaleTickSize = 15,
         scaleTitle = '',
-        useCircleScale = false,
-        useQuantizeScale = false,
         // Render a quantized scale
-        quantize = false
-        ;
+        useCircleScale = false,
+        // Render a quantized scale
+        useQuantizeScale = false;
 
-    let getHeight = function() { return height - margin.bottom - margin.top; };
+    //let getHeight = function() { return height - margin.bottom - margin.top; };
     let getWidth = function() { return width - margin.left - margin.right; };
 
-    var makeGradient = function(svg, gid, type, c0, c1) {
+    let makeGradient = function(svg, gid, type, c0, c1) {
 
         gid = (gid === undefined) ? 'gradient' : gid;
         type = (type === undefined) ? 'linearGradient' : type;
@@ -115,15 +114,15 @@ export default function() {
             .attr('offset', '100%')
             .attr('stop-color', c1)
             .attr('stop-opacity', 1);
-    }
+    };
 
-    var makeSplitColor = function(svg, gid, c0, c1) {
+    let makeSplitColor = function(svg, gid, c0, c1) {
 
         gid = (gid === undefined) ? 'gradient' : gid;
         c0 = (c0 === undefined) ? '#FFFFFF' : c0;
         c1 = (c1 === undefined) ? '#DD0000' : c1;
 
-        var gradient = svg.append('linearGradient')
+        let gradient = svg.append('linearGradient')
             .attr('id', gid)
             .attr('x1', '0%')
             //.attr('y1', '0%')
@@ -142,7 +141,7 @@ export default function() {
             .attr('offset', '50%')
             .attr('stop-color', c1)
             .attr('stop-opacity', 1);
-    }
+    };
 
     let makeCircleScales = function() {
 
@@ -171,7 +170,7 @@ export default function() {
             .append('circle')
             .attr('cx', d => legendScale(d))
             .attr('r', d => circleScale(d))
-            .attr('fill', d => scaleColor)
+            .attr('fill', scaleColor)
             .attr('stroke', 'none')
             .attr('stroke-width', 0)
             .attr('shape-rendering', 'auto');
@@ -220,8 +219,7 @@ export default function() {
 
         legendScale = scaleLinear()
             .domain(quantScale.domain())
-            .rangeRound([0, getWidth()])
-            ;
+            .rangeRound([0, getWidth()]);
 
         // Specifying a value for the ticks function is just a suggestion, it may return
         // more or less values, so we have to align our colors with the correct number of
@@ -322,15 +320,15 @@ export default function() {
     let renderSymbolLegend = function(objects) {
 
         return objects.append('path')
-            .attr('d', d3.symbol()
+            .attr('d', symbol()
                 .type(d => {
 
                     if (d.symbol)
                         return d.symbol;
-                    if (symbol)
-                        return symbol;
+                    if (symbolType)
+                        return symbolType;
 
-                    return d3.symbolSquare;
+                    return symbolSquare;
                 })
                 .size(d => {
                     if (d.size === undefined)
@@ -345,7 +343,7 @@ export default function() {
 
         legend
             .attr('fill-opacity', fillOpacity)
-            .attr('fill', (d, i) => {
+            .attr('fill', (d) => {
 
                 if (d.fill === undefined)
                     return '#000000';
@@ -364,7 +362,7 @@ export default function() {
 
     let renderLegendText = function(legend) {
 
-        legend.append("text")
+        legend.append('text')
             .attr('dx', d => {
                 if (useRect && d.tx)
                     return rectWidth + 5 + d.tx;
@@ -391,21 +389,13 @@ export default function() {
 
     exports.draw = function() {
 
-        svg = select('body')
+        svg = select(element)
             .append('svg')
             .attr('width', width)
             .attr('height', height)
             .append('g')
             .attr('class', 'legend')
-            .attr('transform', `translate(${margin.left}, ${margin.top})`)
-            ;
-            //.selectAll('g')
-            //.data(data)
-            //.enter()
-            //.append('g')
-            //.attr('transform', function(d, i) { 
-            //    return 'translate(40,' + (i + 1) * keyPad + ')'; 
-            //});
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
         if (useCircleScale) {
 
@@ -420,16 +410,25 @@ export default function() {
         } else {
 
             let objects = makeLegendObjects();
+            let legend = null;
 
             if (useRect)
-                var legend = renderRectLegend(objects);
+                legend = renderRectLegend(objects);
             else
-                var legend = renderSymbolLegend(objects);
+                legend = renderSymbolLegend(objects);
 
             styleLegend(legend);
             renderLegendText(objects);
         }
 
+        let no = null;
+
+        // Just to prevent eslint errors
+        if (no) {
+
+            makeGradient();
+            makeSplitColor();
+        }
 
         /*
         if (textures)
@@ -542,7 +541,7 @@ export default function() {
         return exports;
     };
 
-    exports.svg = function(_) { return svg; };
+    exports.svg = function() { return svg; };
 
     exports.data = function(_) {
         if (!arguments.length) return data;
@@ -640,9 +639,9 @@ export default function() {
         return exports;
     };
 
-    exports.symbol = function(_) {
-        if (!arguments.length) return symbol;
-        symbol = _;
+    exports.symbolType = function(_) {
+        if (!arguments.length) return symbolType;
+        symbolType = _;
         return exports;
     };
 

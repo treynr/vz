@@ -47,7 +47,7 @@ module.exports = [
         entry: {
             heatmap: './src/entries/heatmap.js',
             //reviz: './src/index.js',
-            bar: './src/entries/bar.js',
+            //bar: './src/entries/bar.js',
             boxplot: './src/entries/boxplot.js',
             //histogram: './src/entries/histogram.js',
             //line: './src/entries/line.js',

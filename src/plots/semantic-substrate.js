@@ -11,7 +11,7 @@
 import {extent} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleLinear} from 'd3-scale';
-import {select, selectAll} from 'd3-selection';
+import {select} from 'd3-selection';
 import {forceCollide, forceSimulation, forceX, forceY} from 'd3-force';
 
 export default function() {
@@ -332,12 +332,6 @@ export default function() {
 
     let positionWithForce = function() {
 
-        for (let node of data.nodes) {
-
-            //node.fy = yScale(node.y);
-            //node.fx = xScale(node.x);
-        }
-
         let simulation = forceSimulation(data.nodes)
             .force('x', forceX(d => xScale(d.x)).strength(xForceStrength))
             .force('y', forceY(d => yScale(d.y)).strength(yForceStrength))
@@ -362,7 +356,7 @@ export default function() {
         // incorrect number of grid lines to be drawn. But, we have to render the grid
         // first otherwise it will overlap the axis and any labels. So we render the
         // axis, get the ticks, then remove the axis. 
-        renderAxes()
+        renderAxes();
 
         let values = svg.selectAll('.y-axis > .tick > text')
             .nodes()
@@ -407,7 +401,7 @@ export default function() {
 
             svg.append('path')
                 .attr('class', `background-${i}`)
-                .attr('d', _ => {
+                .attr('d', () => {
 
                     return `M ${x1}, ${y1} ` +
                            `L ${x2}, ${y1} ` +
