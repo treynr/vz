@@ -414,6 +414,68 @@ export default function() {
         }
     };
 
+    /**
+      * Performs data integrity checks. This function ensures node and edge objects have
+      * the required fields. In cases of invalid or missing attributes, those objects are
+      * removed from the dataset.
+      */
+    let checkIntegrity = function() {
+
+        // If nodes are added to this then any edges that reference these nodes are
+        // removed
+        let nodeRemoval = {};
+        let nodeIds = {};
+
+        // Remove nodes lacking an identifier
+        data.nodes = data.nodes.filter(n => {
+
+            // Make sure this node has an ID
+            if (n.id == undefined || n.id == null) {
+
+                console.warn('The following node object is missing an ID:');
+                console.warn(n);
+
+                return false;
+            }
+
+            nodeIds[n.id] = 0;
+
+            return true;
+        });
+
+        // Remove edges that don't have valid node IDs, or are missing a required field
+        data.edges = data.edges.filter(e => {
+
+            if (e.source == undefined || e.source == null) {
+
+                console.warn('The following edge object is missing a source: %o', e);
+
+                return false;
+            }
+
+            if (e.target == undefined || e.target == null) {
+
+                console.warn('The following edge object is missing a target: %o', e);
+
+                return false;
+            }
+
+            if (!(e.source in nodeIds) || !(e.target in nodeIds)) {
+
+                console.warn('The following edge object has an invalid node ID: %o', e);
+
+                return false;
+            }
+
+            return true;
+        });
+    };
+
+    /** public **/
+
+    exports.getHeight = getHeight;
+    exports.getWidth = getWidth;
+
     exports.draw = function() {
 
         svg = select(element)
@@ -423,20 +485,17 @@ export default function() {
             .append('g')
             .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
+        checkIntegrity();
         makeScales();
         makeAxes();
-
         renderGrid();
-
         renderAxes();
-
 
         if (useForce)
             positionWithForce();
 
         renderEdges();
         renderNodes();
-
 
         return exports;
     };

@@ -525,6 +525,9 @@ export default function() {
             .attr('shape-rendering', 'auto')
             .attr('stroke', altCellStroke)
             .attr('stroke-width', altCellStrokeWidth);
+
+        cells.append('svg:title')
+            .text(d => d.text ? d.text : '');
     };
 
     /** public **/
