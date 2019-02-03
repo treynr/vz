@@ -64,6 +64,8 @@ export default function() {
         nodeStroke = '#ffffff',
         // Width of the stroke around nodes
         nodeStrokeWidth = 2,
+        // Remove nodes that don't have edges to other nodes
+        removeLoners = true,
         // SVG object for the plot
         svg = null,
         // Position nodes in the graph using collision forces to avoid node overlap
@@ -421,20 +423,16 @@ export default function() {
       */
     let checkIntegrity = function() {
 
-        // If nodes are added to this then any edges that reference these nodes are
-        // removed
-        let nodeRemoval = {};
+        // Lists of node IDs that shouldn't be removed from the graph
         let nodeIds = {};
+        let edgeTargets = {};
 
         // Remove nodes lacking an identifier
         data.nodes = data.nodes.filter(n => {
 
             // Make sure this node has an ID
             if (n.id == undefined || n.id == null) {
-
-                console.warn('The following node object is missing an ID:');
-                console.warn(n);
-
+                //console.warn('The following node object is missing an ID: %o', n);
                 return false;
             }
 
@@ -447,28 +445,28 @@ export default function() {
         data.edges = data.edges.filter(e => {
 
             if (e.source == undefined || e.source == null) {
-
-                console.warn('The following edge object is missing a source: %o', e);
-
+                //console.warn('The following edge object is missing a source: %o', e);
                 return false;
             }
 
             if (e.target == undefined || e.target == null) {
-
-                console.warn('The following edge object is missing a target: %o', e);
-
+                //console.warn('The following edge object is missing a target: %o', e);
                 return false;
             }
 
             if (!(e.source in nodeIds) || !(e.target in nodeIds)) {
-
-                console.warn('The following edge object has an invalid node ID: %o', e);
-
+                //console.warn('The following edge object has an invalid node ID: %o', e);
                 return false;
             }
 
+            edgeTargets[e.source] = 0;
+            edgeTargets[e.target] = 0;
+
             return true;
         });
+
+        if (removeLoners)
+            data.nodes = data.nodes.filter(n => n.id in edgeTargets);
     };
 
     /** public **/
@@ -627,6 +625,12 @@ export default function() {
     exports.useForce = function(_) { 
         if (!arguments.length) return useForce;
         useForce = _;
+        return exports;
+    };
+
+    exports.removeLoners = function(_) { 
+        if (!arguments.length) return removeLoners;
+        removeLoners = _;
         return exports;
     };
 

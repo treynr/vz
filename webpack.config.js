@@ -49,7 +49,7 @@ module.exports = [
             //reviz: './src/index.js',
             //bar: './src/entries/bar.js',
             boxplot: './src/entries/boxplot.js',
-            //histogram: './src/entries/histogram.js',
+            histogram: './src/entries/histogram.js',
             //line: './src/entries/line.js',
             legend: './src/entries/legend.js',
         },
