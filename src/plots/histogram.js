@@ -288,6 +288,8 @@ export default function() {
 
     exports.getWidth = getWidth;
     exports.getHeight = getHeight;
+    exports.xScale = () => xScale;
+    exports.yScale = () => yScale;
 
     exports.draw = function() {
 
@@ -377,6 +379,36 @@ export default function() {
     exports.grouped = function(_) {
         if (!arguments.length) return grouped;
         grouped = _;
+        return exports;
+    };
+
+    exports.margin = function(_) {
+        if (!arguments.length) return margin;
+        margin = _;
+        return exports;
+    };
+
+    exports.marginBottom = function(_) {
+        if (!arguments.length) return marginBottom;
+        marginBottom = _;
+        return exports;
+    };
+
+    exports.marginLeft = function(_) {
+        if (!arguments.length) return marginLeft;
+        marginLeft = _;
+        return exports;
+    };
+
+    exports.marginRight = function(_) {
+        if (!arguments.length) return marginRight;
+        marginRight = _;
+        return exports;
+    };
+
+    exports.marginTop = function(_) {
+        if (!arguments.length) return marginTop;
+        marginTop = _;
         return exports;
     };
 
