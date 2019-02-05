@@ -286,6 +286,9 @@ export default function() {
 
     /** public **/
 
+    exports.getWidth = getWidth;
+    exports.getHeight = getHeight;
+
     exports.draw = function() {
 
         svg = select('body')
