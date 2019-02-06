@@ -389,26 +389,26 @@ export default function() {
     };
 
     exports.marginBottom = function(_) {
-        if (!arguments.length) return marginBottom;
-        marginBottom = _;
+        if (!arguments.length) return margin.bottom;
+        margin.bottom = +_;
         return exports;
     };
 
     exports.marginLeft = function(_) {
-        if (!arguments.length) return marginLeft;
-        marginLeft = _;
+        if (!arguments.length) return margin.left;
+        margin.left = +_;
         return exports;
     };
 
     exports.marginRight = function(_) {
-        if (!arguments.length) return marginRight;
-        marginRight = _;
+        if (!arguments.length) return margin.right;
+        margin.right = +_;
         return exports;
     };
 
     exports.marginTop = function(_) {
-        if (!arguments.length) return marginTop;
-        marginTop = _;
+        if (!arguments.length) return margin.top;
+        margin.top = +_;
         return exports;
     };
 
