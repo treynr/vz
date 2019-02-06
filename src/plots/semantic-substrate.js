@@ -12,7 +12,7 @@ import {extent} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleLinear} from 'd3-scale';
 import {select} from 'd3-selection';
-import {forceCollide, forceSimulation, forceX, forceY} from 'd3-force';
+import {forceCollide, forceManyBody, forceSimulation, forceX, forceY} from 'd3-force';
 
 export default function() {
 
@@ -39,6 +39,7 @@ export default function() {
         // Shaded background color to use when rendering the grid background
         backgroundColor = '#cecece',
         collisionForce = 5,
+        manyBodyForce = null,
         // Data object containing objects/data to visualize
         data = null,
         // Transparency for rendered edges
@@ -70,6 +71,7 @@ export default function() {
         svg = null,
         // Position nodes in the graph using collision forces to avoid node overlap
         useForce = false,
+        useSingleAxis = false,
         // SVG width
         width = 600,
         xDomain = null,
@@ -335,12 +337,24 @@ export default function() {
     let positionWithForce = function() {
 
         let simulation = forceSimulation(data.nodes)
-            .force('x', forceX(d => xScale(d.x)).strength(xForceStrength))
+            .force('x', 
+                forceX(d => { 
+                    if (useSingleAxis)
+                        return getWidth() / 2;
+                    else
+                        return xScale(d.x);
+                }).strength(xForceStrength))
             .force('y', forceY(d => yScale(d.y)).strength(yForceStrength))
-            .force('collide', forceCollide(collisionForce))
+            .force(
+                'collide', 
+                collisionForce ? forceCollide(collisionForce) : null)
+            .force(
+                'charge', 
+                manyBodyForce ? forceManyBody().strength(manyBodyForce) : null
+            )
             .stop();
 
-        for (let i = 0; i < 120; i++)
+        for (let i = 0; i < 250; i++)
             simulation.tick();
 
         for (let node of data.nodes) {
@@ -574,6 +588,12 @@ export default function() {
         return exports;
     };
 
+    exports.manyBodyForce = function(_) { 
+        if (!arguments.length) return manyBodyForce;
+        manyBodyForce = +_;
+        return exports;
+    };
+
     exports.marginBottom = function(_) { 
         if (!arguments.length) return margin.bottom;
         margin.bottom = +_;
@@ -627,6 +647,13 @@ export default function() {
         useForce = _;
         return exports;
     };
+
+    exports.useSingleAxis = function(_) { 
+        if (!arguments.length) return useSingleAxis;
+        useSingleAxis = _;
+        return exports;
+    };
+
 
     exports.removeLoners = function(_) { 
         if (!arguments.length) return removeLoners;
