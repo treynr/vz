@@ -285,90 +285,54 @@ export default function() {
             });
     };
 
-    var drawSE = function() {
+    var renderConfidenceIntervals = function() {
 
-        var traitMeans = {}
+        // Draws the confidence interval lines
+        svg.selectAll('.bar')
+            .filter(d => d.se !== undefined && d.se)
+            .append('line')
+            .attr('x1', d => xScale(d.x) + (xScale.bandwidth() / 2))
+            .attr('y1', d => yScale(d.y + (1.96 * d.se)))
+            .attr('x2', d => xScale(d.x) + (xScale.bandwidth() / 2))
+            .attr('y2', d => yScale(d.y - (1.96 * d.se)))
+            .attr('shape-rendering', 'auto')
+            .attr('stroke', '#000')
+            .attr('stroke-width', 1);
 
-        for (let d of data) {
+        // Draw the whiskers at each end of the interval
+        svg.selectAll('.bar')
+            .filter(d => d.se !== undefined)
+            .append('line')
+            .attr('x1', d => {
+                return xScale(d.x) + (xScale.bandwidth() / 2) +
+                       (xScale.bandwidth() / 6);
+            })
+            .attr('y1', d => yScale(d.y + (1.96 * d.se)))
+            .attr('x2', d => {
+                return xScale(d.x) + (xScale.bandwidth() / 2) -
+                       (xScale.bandwidth() / 6);
+            })
+            .attr('y2', d => yScale(d.y + (1.96 * d.se)))
+            .attr('shape-rendering', 'auto')
+            .attr('stroke', '#000')
+            .attr('stroke-width', 1);
 
-            if (!(d.x in traitMeans))
-                traitMeans[d.x] = []
-
-            traitMeans[d.x].push(d.y);
-        }
-
-        data.map(d => {
-
-            d.error = deviation(traitMeans[d.x]) / Math.sqrt(traitMeans[d.x].length);
-
-            return d;
-        });
-
-        var line2 = line()
-            .curve(curveCatmullRom.alpha(0.5))
-            //.x(function(d) { return xScale(d.group); })
-            //.y(function(d) { return yScale(d.y); })
-            .x(function(d) { return xScale(d[0]); })
-            .y(function(d) { return yScale(d[1]); })
-            ;
-
-        for (let d of data) {
-
-            var points = [
-                [d.group, d.y],
-                [d.group, d.y + d.error]
-            ];
-            //points.x = d.x;
-
-            svg.append('line')
-                .attr('x1', function() { 
-                    return xScale(d.group) + (xScale.bandwidth() / 2); 
-                })
-                .attr('y1', function() { 
-                    return yScale(parseFloat(d.y) + parseFloat(d.error));
-                })
-                .attr('x2', function() { 
-                    return xScale(d.group) + (xScale.bandwidth() / 2);
-                })
-                .attr('y2', function() {
-                    return yScale(d.y);
-                })
-                //.style('stroke-linecap', 'round')
-                .attr('shape-rendering', 'auto')
-                .attr('stroke', '#000')
-                .attr('stroke-width', 2)
-                .attr('transform', function() { 
-                    if (grouped)
-                        return 'translate(' + xGroupScale(d.x) + ',0)'; 
-                    else
-                        return 'translate(0,0)'; 
-                })
-                ;
-            svg.append('line')
-                .attr('x1', function() { 
-                    return xScale(d.group) + (xScale.bandwidth() / 2); 
-                })
-                .attr('y1', function() { 
-                    return yScale(parseFloat(d.y) - parseFloat(d.error));
-                })
-                .attr('x2', function() { 
-                    return xScale(d.group) + (xScale.bandwidth() / 2);
-                })
-                .attr('y2', function() {
-                    return yScale(d.y);
-                })
-                //.style('stroke-linecap', 'round')
-                .attr('shape-rendering', 'auto')
-                .attr('stroke', '#000')
-                .attr('stroke-width', 2)
-                .attr('transform', function() { 
-                    if (grouped)
-                        return 'translate(' + xGroupScale(d.x) + ',0)'; 
-                    else
-                        return 'translate(0,0)'; 
-                });
-        }
-
+        svg.selectAll('.bar')
+            .filter(d => d.se !== undefined)
+            .append('line')
+            .attr('x1', d => {
+                return xScale(d.x) + (xScale.bandwidth() / 2) +
+                       (xScale.bandwidth() / 6);
+            })
+            .attr('y1', d => yScale(d.y - (1.96 * d.se)))
+            .attr('x2', d => {
+                return xScale(d.x) + (xScale.bandwidth() / 2) -
+                       (xScale.bandwidth() / 6);
+            })
+            .attr('y2', d => yScale(d.y - (1.96 * d.se)))
+            .attr('shape-rendering', 'auto')
+            .attr('stroke', '#000')
+            .attr('stroke-width', 1);
     };
 
     var drawText = function() {
@@ -418,6 +382,7 @@ export default function() {
         makeAxes();
         drawBars();
         drawText();
+        drawSE();
 
         //if (distribution)
         //    drawdist();
