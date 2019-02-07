@@ -101,6 +101,7 @@ export default function() {
         // Positioning for the first cell of the heatmap, default is to begin
         // on the plot's bottom axis
         cellAlignVertical = Align.BOTTOM,
+        cellPadding = 0,
         // Color used for the stroke around heatmap cells
         cellStroke = '#000000',
         // Width of the stroke around heatmap cells
@@ -136,6 +137,7 @@ export default function() {
         renderIdentities = false,
         // Rotate x-axis labels so they aren't a straight vertical line and easy to read
         rotateXLabels = true,
+        roundFactor = 0,
         useAltValues = false,
         // Y-axis position, default is aligned to the right of the heatmap
         yAxisAlign = Align.RIGHT,
@@ -449,10 +451,12 @@ export default function() {
             .attr('class', 'cell');
 
         cells.append('rect')
-            .attr('x', d => xScale(d.x))
-            .attr('y', d => yScale(d.y))
-            .attr('height', yScale.bandwidth())
-            .attr('width', xScale.bandwidth())
+            .attr('x', d => xScale(d.x) + cellPadding)
+            .attr('y', d => yScale(d.y) + cellPadding)
+            .attr('rx', roundFactor)
+            .attr('ry', roundFactor)
+            .attr('height', yScale.bandwidth() - cellPadding)
+            .attr('width', xScale.bandwidth() - cellPadding)
             .attr('fill', d => {
 
                 if (d.fill)
@@ -614,6 +618,12 @@ export default function() {
         return exports;
     };
 
+    exports.cellPadding = function(_) {
+        if (!arguments.length) return cellPadding;
+        cellPadding = +_;
+        return exports;
+    };
+
     exports.cellStroke = function(_) {
         if (!arguments.length) return cellStroke;
         cellStroke = _;
@@ -725,6 +735,12 @@ export default function() {
     exports.renderIdentities = function(_) {
         if (!arguments.length) return renderIdentities;
         renderIdentities = _;
+        return exports;
+    };
+
+    exports.roundFactor = function(_) {
+        if (!arguments.length) return roundFactor;
+        roundFactor = +_;
         return exports;
     };
 
