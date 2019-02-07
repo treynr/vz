@@ -354,7 +354,7 @@ export default function() {
             )
             .stop();
 
-        for (let i = 0; i < 250; i++)
+        for (let i = 0; i < 800; i++)
             simulation.tick();
 
         for (let node of data.nodes) {
