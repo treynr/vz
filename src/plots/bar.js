@@ -382,7 +382,7 @@ export default function() {
         makeAxes();
         drawBars();
         drawText();
-        drawSE();
+        renderConfidenceIntervals();
 
         //if (distribution)
         //    drawdist();
