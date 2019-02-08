@@ -39,7 +39,9 @@
 
 import {extent} from 'd3-array';
 import {axisBottom, axisLeft, axisRight, axisTop} from 'd3-axis';
+import {cluster, hierarchy} from 'd3-hierarchy';
 import {scaleBand, scaleLinear, scaleQuantize} from 'd3-scale';
+import {line, curveBasis, curveStepAfter, linkVertical, linkHorizontal} from 'd3-shape';
 import {schemeBlues} from 'd3-scale-chromatic';
 import {select, selectAll} from 'd3-selection';
 
@@ -69,8 +71,12 @@ export default function() {
 
         // d3 scale used for alt. secondary values
         altValueScale = null,
+        // D3 clusters built from hierarchies of the data and used to render dendograms
+        clusters = [],
         // d3 scale used to convert heatmap values to colors
         colorScale = null,
+        // D3 hierarchies used as inputs to D3's clustering functions
+        hierarchies = [],
         // x-axis scale
         xScale = null,
         // y-axis scale
@@ -258,6 +264,86 @@ export default function() {
     };
 
     /**
+      * Sorts the rows and columns of the matrix based on 1) dendogram clusters or 2)
+      * labels. If the user provides clustering data to draw a dendogram, then we sort
+      * rows/columns based on in-order traversal of the tree structure. Otherwise, we
+      * just sort the rows/columns based on their labels.
+      *
+      * arguments
+      *     xd: the x-domain (columns)
+      *     yd: the y-domain (rows)
+      *
+      * returns
+      *     sorted column and row lists
+      */
+    let sortMatrix = function(xd, yd) {
+
+        if ((!data.clusters || !data.clusters.length) && mirrorAxes) {
+
+            return [
+                xd.sort((a, b) => a.localeCompare(b)),
+                yd.sort((a, b) => a.localeCompare(b)),
+            ];
+        }
+
+        for (let clust of data.clusters) {
+
+            // In-order traversal of the tree, only returning leaves
+            let leaves = clust.hierarchy.leaves();
+
+            // Map labels to their indices in the array
+            let indexMap = leaves.reduce((ac, d, idx) => {
+
+                return ac[d.data.data.label] = idx, ac;
+            }, {});
+
+            let labels = null;
+
+            // The the user wants the cluster positioned along the top/bottom axes, this
+            // means we're clustering over columns
+            if (clust.axis == Align.TOP || clust.axis == Align.BOTTOM)
+                labels = new Set(xd);
+            else
+                labels = new Set(yd);
+
+            // The intersection of all clustering labels and column labels
+            let inters = new Set(Object.keys(indexMap).filter(d => labels.has(d)));
+
+            // Ensure the clusters has exactly the same labels as the ones in the matrix
+            if (inters.length != labels.length) {
+
+                console.error(
+                    'The cluster does not contain the same labels used by the matrix'
+                );
+
+                // Null out the clustering data so it isn't used later on
+                data.clusters = null;
+
+                break;
+            }
+
+            // Rearrange the domain based on cluster order
+            for (let k of Object.keys(indexMap)) {
+
+                if (clust.axis == Align.TOP || clust.axis == Align.BOTTOM)
+                    xd[indexMap[k]] = k;
+                else
+                    yd[indexMap[k]] = k;
+            }
+
+            if (mirrorAxes) {
+
+                if (clust.axis == Align.TOP || clust.axis == Align.BOTTOM)
+                    yd = xd;
+                else
+                    xd = yd;
+            }
+        }
+
+        return [xd, yd];
+    };
+
+    /**
       * Creates the d3 scale objects for x- and y-axes using the available x and y
       * domains. Also creates a scale of colors based on either the values 
       * associated with the data, or a custom domain specified by the user.
@@ -269,8 +355,9 @@ export default function() {
 
         if (mirrorAxes) {
 
-            xDomain.sort((a, b) => a.localeCompare(b));
-            yDomain.sort((a, b) => a.localeCompare(b));
+            [xDomain, yDomain] = sortMatrix(xDomain, yDomain);
+            //xDomain.sort((a, b) => a.localeCompare(b));
+            //yDomain.sort((a, b) => a.localeCompare(b));
         }
 
         colorDomain = colorDomain ? colorDomain : extent(data.values.map(d => d.value));
@@ -534,6 +621,112 @@ export default function() {
             .text(d => d.text ? d.text : '');
     };
 
+    let generateClusters = function() {
+
+        if (!data.clusters || !data.clusters.length)
+            return;
+
+        for (let clust of data.clusters) {
+
+            let dendogram = null;
+            
+            if (clust.axis == Align.TOP || clust.axis == Align.BOTTOM) {
+
+                dendogram = cluster()
+                    .size([
+                        xScale.bandwidth() * xScale.domain().length,
+                        50
+                        //clust.axis == Align.TOP ? margin.top - 10 : margin.bottom - 10
+                    ])
+                    .separation(() => xScale.bandwidth())
+                    (clust.hierarchy);
+
+            } else {
+
+                dendogram = cluster()
+                    .size([
+                        yScale.bandwidth() * yScale.domain().length,
+                        clust.axis == Align.LEFT ? margin.left - 10 : margin.right - 10
+                    ])
+                    .separation(() => yScale.bandwidth())
+                    (clust.hierarchy);
+            }
+
+            // Add a field specifying the axis the cluster should be rendered along
+            dendogram.axis = clust.axis;
+
+            clusters.push(dendogram);
+        }
+    };
+
+    let renderDendogram = function() {
+
+        if (!clusters.length)
+            return;
+
+        for (let dendogram of clusters) {
+
+            let dendoSVG = svg.append('g')
+                .attr('class', 'dendogram')
+                .attr('transform', () => {
+
+                    if (dendogram.axis == Align.TOP) {
+
+                        return `translate(0, ${-50})`
+
+                    } else if (dendogram.axis == Align.BOTTOM) {
+
+                        return `translate(0, ${-margin.bottom-10+margin.top+getHeight()}) scale(1, -1)`;
+
+                    } else if (dendogram.axis == Align.LEFT) {
+
+                        return `translate(${-margin.left+10}, 0) rotate(-90) scale(-1, 1)`;
+
+                    } else {
+
+                        return `translate(${+getWidth()+margin.right-10}, 0) rotate(90) `;
+                    }
+                });
+
+            let linkStep = (sx, sy, tx, ty) => {
+
+                return `M ${sx}, ${sy}` +
+                       `L ${tx}, ${sy}` +
+                       `L ${tx}, ${ty}`;
+            };
+
+            let vlink = linkVertical()
+                .x(d => d.x)
+                .y(d => d.y);
+                ;
+
+            let vlink2 = line()
+                //.x(d => { console.log(d); return d.x})
+                //.y(d => d.y)
+                //.curve(curveBasis);
+                .curve(curveStepAfter);
+
+            dendoSVG.selectAll('edges')
+                .data(dendogram.links())
+                .enter()
+                .append('path')
+                .attr('class', 'dendogram-edge')
+                .attr('fill', 'none')
+                .attr('stroke', '#222')
+                .attr('stroke-width', 1)
+                .attr('d', d => {
+                    return vlink2([
+                        [d.source.x, d.source.y],
+                        [d.target.x, d.target.y]
+                    ]);
+                });
+                //.attr(
+                //    'd',
+                //    d => linkStep(d.source.x, d.source.y, d.target.x, d.target.y)
+                //);
+        }
+    };
+
     /** public **/
 
     exports.getHeight = getHeight;
@@ -541,6 +734,7 @@ export default function() {
 
     exports.draw = function() {
 
+        console.log(margin);
         svg = select(element)
             .append('svg')
             .attr('height', height)
@@ -557,6 +751,10 @@ export default function() {
 
         if (useAltValues)
             renderAltCells();
+
+        generateClusters();
+
+        renderDendogram();
 
         return exports;
     };
