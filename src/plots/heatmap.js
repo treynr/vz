@@ -118,6 +118,14 @@ export default function() {
         colors = null,
         // Data object containing objects/data to visualize
         data = null,
+        // The height (or width if positioned across left/right axes) of the dendrogram
+        dendrogramSize = null,
+        // Extra padding for the dendrogram position
+        dendrogramPadding = 0,
+        // Stroke color for dendrogram lines
+        dendrogramStroke = '#222222',
+        // Stroke width for dendrogram lines
+        dendrogramStrokeWidth = 1,
         // HTML element or ID the SVG should be appended to
         element = 'body',
         // Font family
@@ -353,12 +361,12 @@ export default function() {
         xDomain = xDomain ? xDomain : getColumnCategories();
         yDomain = yDomain ? yDomain : (mirrorAxes ? xDomain : getRowCategories());
 
-        if (mirrorAxes) {
+        //if (mirrorAxes) {
 
             [xDomain, yDomain] = sortMatrix(xDomain, yDomain);
             //xDomain.sort((a, b) => a.localeCompare(b));
             //yDomain.sort((a, b) => a.localeCompare(b));
-        }
+        //}
 
         colorDomain = colorDomain ? colorDomain : extent(data.values.map(d => d.value));
         colors = colors ? colors : schemeBlues[numColors];
@@ -526,6 +534,13 @@ export default function() {
             .enter()
             .filter(d => {
 
+                if (d.x == 'UCMS+fluoxetine (anterior cingulate) GS355423') {
+                    if (d.y == 'UCMS+fluoxetine (anterior cingulate) GS355423') {
+                        console.log(`shit value: ${d.value}`);
+                        console.log(`shit x: ${indexMap[d.x]}`);
+                        console.log(`shit y: ${indexMap[d.y]}`);
+                    }
+                }
                 // If rows == columns, we only a diagonal cross section of the heatmap
                 if (mirrorAxes && renderIdentities)
                     return indexMap[d.y] <= indexMap[d.x];
@@ -589,6 +604,7 @@ export default function() {
                     return indexMap[d.y] < indexMap[d.x];
                 else
                     return true;
+
             })
             .append('g')
             .attr('class', 'alt-cell');
@@ -621,6 +637,21 @@ export default function() {
             .text(d => d.text ? d.text : '');
     };
 
+    let determineDendrogramSize = function(axis=null) {
+
+        if (dendrogramSize !== null)
+            return dendrogramSize;
+
+        if (axis == undefined || axis == null || axis == Align.TOP)
+            return margin.top - 10;
+        else if (axis == Align.BOTTOM)
+            return margin.bottom - 10;
+        else if (axis == Align.LEFT)
+            return margin.left - 10;
+        else
+            return margin.right - 10;
+    };
+
     let generateClusters = function() {
 
         if (!data.clusters || !data.clusters.length)
@@ -629,25 +660,19 @@ export default function() {
         for (let clust of data.clusters) {
 
             let dendogram = null;
+            let dendSize = determineDendrogramSize(clust.axis);
             
             if (clust.axis == Align.TOP || clust.axis == Align.BOTTOM) {
 
                 dendogram = cluster()
-                    .size([
-                        xScale.bandwidth() * xScale.domain().length,
-                        50
-                        //clust.axis == Align.TOP ? margin.top - 10 : margin.bottom - 10
-                    ])
+                    .size([xScale.bandwidth() * xScale.domain().length, dendSize])
                     .separation(() => xScale.bandwidth())
                     (clust.hierarchy);
 
             } else {
 
                 dendogram = cluster()
-                    .size([
-                        yScale.bandwidth() * yScale.domain().length,
-                        clust.axis == Align.LEFT ? margin.left - 10 : margin.right - 10
-                    ])
+                    .size([yScale.bandwidth() * yScale.domain().length, dendSize])
                     .separation(() => yScale.bandwidth())
                     (clust.hierarchy);
             }
@@ -659,71 +684,64 @@ export default function() {
         }
     };
 
-    let renderDendogram = function() {
+    /**
+      * Rneder dendrograms for the given clusters. We're lazy so we make a single
+      * dendrograms and just flip/rotate it depending on the axis it should be aligned 
+      * to.
+      */
+    let renderDendrogram = function() {
 
+        // No clusters so no dendrograms
         if (!clusters.length)
             return;
 
-        for (let dendogram of clusters) {
+        for (let dend of clusters) {
 
-            let dendoSVG = svg.append('g')
-                .attr('class', 'dendogram')
-                .attr('transform', () => {
+            console.log('dend: %o', dend);
+            let dendSVG = svg.append('g')
+                .datum(dend)
+                .attr('class', 'dend')
+                .attr('transform', d => {
 
-                    if (dendogram.axis == Align.TOP) {
+                    let dendSize = determineDendrogramSize(d.axis);
+                    console.log(`dsize: ${dendSize}`);
+                    console.log(`axis: ${d.axis}`);
+                    console.log('dendobj: %o', dend);
 
-                        return `translate(0, ${-50})`
+                    if (d.axis == Align.TOP) {
 
-                    } else if (dendogram.axis == Align.BOTTOM) {
+                        return `translate(0, ${-dendSize + dendrogramPadding})`
 
-                        return `translate(0, ${-margin.bottom-10+margin.top+getHeight()}) scale(1, -1)`;
+                    } else if (d.axis == Align.BOTTOM) {
 
-                    } else if (dendogram.axis == Align.LEFT) {
+                        return `translate(0, ${ getHeight() + dendSize + dendrogramPadding}) scale(1, -1)`;
 
-                        return `translate(${-margin.left+10}, 0) rotate(-90) scale(-1, 1)`;
+                    } else if (d.axis == Align.LEFT) {
+
+                        return `translate(${-dendSize + dendrogramPadding}, ${getHeight()}) rotate(-90) scale(1, 1)`;
 
                     } else {
 
-                        return `translate(${+getWidth()+margin.right-10}, 0) rotate(90) `;
+                        return `translate(${getWidth() + dendSize + dendrogramPadding}, ${getHeight()}) rotate(90) scale(-1,1)`;
                     }
                 });
 
-            let linkStep = (sx, sy, tx, ty) => {
+            let link = line().curve(curveStepAfter);
 
-                return `M ${sx}, ${sy}` +
-                       `L ${tx}, ${sy}` +
-                       `L ${tx}, ${ty}`;
-            };
-
-            let vlink = linkVertical()
-                .x(d => d.x)
-                .y(d => d.y);
-                ;
-
-            let vlink2 = line()
-                //.x(d => { console.log(d); return d.x})
-                //.y(d => d.y)
-                //.curve(curveBasis);
-                .curve(curveStepAfter);
-
-            dendoSVG.selectAll('edges')
-                .data(dendogram.links())
+            dendSVG.selectAll('edges')
+                .data(dend.links())
                 .enter()
                 .append('path')
                 .attr('class', 'dendogram-edge')
                 .attr('fill', 'none')
-                .attr('stroke', '#222')
-                .attr('stroke-width', 1)
+                .attr('stroke', dendrogramStroke)
+                .attr('stroke-width', dendrogramStrokeWidth)
                 .attr('d', d => {
-                    return vlink2([
+                    return link([
                         [d.source.x, d.source.y],
                         [d.target.x, d.target.y]
                     ]);
                 });
-                //.attr(
-                //    'd',
-                //    d => linkStep(d.source.x, d.source.y, d.target.x, d.target.y)
-                //);
         }
     };
 
@@ -734,7 +752,6 @@ export default function() {
 
     exports.draw = function() {
 
-        console.log(margin);
         svg = select(element)
             .append('svg')
             .attr('height', height)
@@ -744,6 +761,7 @@ export default function() {
 
         stringifyCategories();
         completeMatrix(mirrorAxes);
+        console.log(data);
 
         makeScales();
         renderAxes();
@@ -754,7 +772,7 @@ export default function() {
 
         generateClusters();
 
-        renderDendogram();
+        renderDendrogram();
 
         return exports;
     };
@@ -843,6 +861,30 @@ export default function() {
     exports.colorDomain = function(_) {
         if (!arguments.length) return colorDomain;
         colorDomain = _;
+        return exports;
+    };
+
+    exports.dendrogramPadding = function(_) {
+        if (!arguments.length) return dendrogramPadding;
+        dendrogramPadding = +_;
+        return exports;
+    };
+
+    exports.dendrogramSize = function(_) {
+        if (!arguments.length) return dendrogramSize;
+        dendrogramSize = +_;
+        return exports;
+    };
+
+    exports.dendrogramStroke = function(_) {
+        if (!arguments.length) return dendrogramStroke;
+        dendrogramStroke = _;
+        return exports;
+    };
+
+    exports.dendrogramStrokeWidth = function(_) {
+        if (!arguments.length) return dendrogramStrokeWidth;
+        dendrogramStrokeWidth = +_;
         return exports;
     };
 
