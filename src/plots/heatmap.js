@@ -534,13 +534,6 @@ export default function() {
             .enter()
             .filter(d => {
 
-                if (d.x == 'UCMS+fluoxetine (anterior cingulate) GS355423') {
-                    if (d.y == 'UCMS+fluoxetine (anterior cingulate) GS355423') {
-                        console.log(`shit value: ${d.value}`);
-                        console.log(`shit x: ${indexMap[d.x]}`);
-                        console.log(`shit y: ${indexMap[d.y]}`);
-                    }
-                }
                 // If rows == columns, we only a diagonal cross section of the heatmap
                 if (mirrorAxes && renderIdentities)
                     return indexMap[d.y] <= indexMap[d.x];
@@ -697,16 +690,12 @@ export default function() {
 
         for (let dend of clusters) {
 
-            console.log('dend: %o', dend);
             let dendSVG = svg.append('g')
                 .datum(dend)
                 .attr('class', 'dend')
                 .attr('transform', d => {
 
                     let dendSize = determineDendrogramSize(d.axis);
-                    console.log(`dsize: ${dendSize}`);
-                    console.log(`axis: ${d.axis}`);
-                    console.log('dendobj: %o', dend);
 
                     if (d.axis == Align.TOP) {
 
@@ -761,7 +750,6 @@ export default function() {
 
         stringifyCategories();
         completeMatrix(mirrorAxes);
-        console.log(data);
 
         makeScales();
         renderAxes();
