@@ -151,6 +151,7 @@ export default function() {
         renderIdentities = false,
         // Rotate x-axis labels so they aren't a straight vertical line and easy to read
         rotateXLabels = true,
+        // Factor to use for rounding out rectangles
         roundFactor = 0,
         useAltValues = false,
         // Y-axis position, default is aligned to the right of the heatmap
