@@ -10,7 +10,7 @@
 
 import {extent} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
-import {scaleLinear} from 'd3-scale';
+import {scaleLinear, scaleOrdinal} from 'd3-scale';
 import {select} from 'd3-selection';
 import {forceCollide, forceManyBody, forceSimulation, forceX, forceY} from 'd3-force';
 
@@ -22,8 +22,12 @@ export default function() {
 
         // d3 axis object for the x-axis
         xAxis = null,
+        // d3 axis for a discontinuous log scale
+        x0Axis = null,
         // d3 scale for the x-axis
         xScale = null,
+        // discontinuous d3 scale to model zero as part of a log scale
+        x0Scale = scaleOrdinal,
         // d3 axis object for the y-axis
         yAxis = null,
         // d3 scale for the y-axis
@@ -84,6 +88,9 @@ export default function() {
         xLabelPad = null,
         // Niceify the x-axis scale
         xNice = true,
+        // If true, will model the zero tick as discontinuous from the rest of the 
+        // x-axis scale. Useful for log scales.
+        xScaleDiscontinuity = false,
         // d3 scale type to use for the x-axis
         xScaleFunction = scaleLinear,
         // Format string for x-axis ticks
@@ -130,6 +137,15 @@ export default function() {
             .domain(xDomain)
             .range([margin.left, getWidth()]);
 
+        if (xScaleDiscontinuity) {
+
+            xScale.range([margin.left, getWidth() - 30]);
+
+            x0Scale = scaleOrdinal()
+                .domain([0])
+                .range([getWidth()]);
+        }
+
         yScale = yScaleFunction()
             .domain(yDomain)
             .range([getHeight(), 0]);
@@ -148,6 +164,9 @@ export default function() {
 
         xAxis = axisBottom(xScale).ticks(xTicks, xTickFormat);
         yAxis = axisLeft(yScale).ticks(yTicks, yTickFormat);
+
+        if (xScaleDiscontinuity)
+            x0Axis = axisBottom(x0Scale);
 
         if (xTickValues)
             xAxis.tickValues(xTickValues);
@@ -215,6 +234,20 @@ export default function() {
             .attr('font', font)
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', 'normal');
+
+
+        if (xScaleDiscontinuity) {
+
+            let x0AxisObject = svg.append('g')
+                .attr('class', 'x0-axis')
+                .attr('transform', `translate(0, ${getHeight()})`)
+                .call(x0Axis);
+
+            x0AxisObject.selectAll('text')
+                .attr('font', font)
+                .attr('font-size', `${fontSize}px`)
+                .attr('font-weight', 'normal');
+        }
     };
 
     /**
@@ -392,7 +425,7 @@ export default function() {
             let yt = yScale(ticks[i]);
             let yt1 = 0;
             let x1 = xScale.range()[0] + 1;
-            let x2 = xScale.range()[1];
+            let x2 = xScaleDiscontinuity ? x0Scale.range()[0] : xScale.range()[1];
             let y1 = 0;
             let y2 = 0;
 
@@ -694,6 +727,12 @@ export default function() {
     exports.xNice = function(_) { 
         if (!arguments.length) return xNice;
         xNice = _;
+        return exports;
+    };
+    
+    exports.xScaleDiscontinuity = function(_) { 
+        if (!arguments.length) return xScaleDiscontinuity;
+        xScaleDiscontinuity = _;
         return exports;
     };
 

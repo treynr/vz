@@ -5,7 +5,7 @@
 
 'use strict';
 
-import {extent} from 'd3-array';
+import {extent, mean} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleLinear} from 'd3-scale';
 import {select} from 'd3-selection';
@@ -61,10 +61,11 @@ export default function() {
         renderYDomain = true,
         // SVG object for the plot
         svg = null,
-        // Position points in the graph using collision forces to avoid overlap
-        useForce = false,
         // Draw background grid
         useBackground = false,
+        // Position points in the graph using collision forces to avoid overlap
+        useForce = false,
+        useRegression = false,
         // SVG width
         width = 600,
         xDomain = null,
@@ -236,23 +237,25 @@ export default function() {
     let renderPoints = function() {
 
         // Apply clipping area to the rendered points
-        let points = svg.append('g')
+        let pointGroups = svg.append('g')
+            .attr('class', 'points')
             .attr('clip-path', 'url(#clipping-area)')
             .selectAll('point')
             .data(data.values)
             .enter()
-            .append('g');
+            .append('g')
+            .attr('class', 'point');
 
         // This will render data points as circles. The user could render these points
         // as symbols, so we filter out any potential symbol points.
-        points.filter(d => !d.symbol)
+        let circles = pointGroups.filter(d => !d.symbol)
             .append('circle')
             .attr('cx', d => useForce ? d.x : xScale(d.x))
             .attr('cy', d => useForce ? d.y : yScale(d.y))
             .attr('r', d => d.radius ? d.radius : pointRadius);
 
         // In this case, symbols are used for points instead
-        points.filter(d => d.symbol)
+        let symbols = pointGroups.filter(d => d.symbol)
             .append('path')
             .attr('x', d => xScale(d.x))
             .attr('y', d => yScale(d.y))
@@ -262,14 +265,27 @@ export default function() {
              );
 
         // Styling
-        points.attr('class', 'point')
-            .attr('fill', d => d.fill ? d.fill : pointFill)
+        circles.attr('fill', d => d.fill ? d.fill : pointFill)
             .attr('stroke', d => d.stroke ? d.stroke : pointStroke)
-            .attr('stroke-width', d => d.strokeWidth ? d.strokeWidth : pointStrokeWidth)
+            .attr(
+                'stroke-width', 
+                d => d.strokeWidth ? d.strokeWidth : pointStrokeWidth
+            )
             .attr('shape-rendering', 'auto');
 
         // Tooltip when hovering over a datapoint
-        points.append('title').text(d => d.label ? d.label : '');
+        circles.append('title').text(d => d.label ? d.label : '');
+
+        symbols.attr('fill', d => d.fill ? d.fill : pointFill)
+            .attr('stroke', d => d.stroke ? d.stroke : pointStroke)
+            .attr(
+                'stroke-width', 
+                d => d.strokeWidth ? d.strokeWidth : pointStrokeWidth
+            )
+            .attr('shape-rendering', 'auto');
+
+        // Tooltip when hovering over a datapoint
+        symbols.append('title').text(d => d.label ? d.label : '');
             
     };
 
@@ -313,8 +329,10 @@ export default function() {
         let simulation = forceSimulation(data.values)
             .force('x', forceX(d => xScale(d.x)).strength(xForceStrength))
             .force('y', forceY(d => yScale(d.y)).strength(yForceStrength))
-            .force('collide', forceCollide(collisionForce)
-                                .radius(d => d.radius ? d.radius : pointRadius))
+            .force('collide', 
+                forceCollide(collisionForce)
+                    .radius(d => d.radius ? d.radius : pointRadius)
+            )
             .stop();
 
         for (let i = 0; i < 250; i++)
@@ -338,8 +356,6 @@ export default function() {
         makeScales();
         makeAxes();
 
-        //renderGrid();
-
         renderClipping();
 
         if (useBackground)
@@ -348,7 +364,6 @@ export default function() {
         if (useForce)
             positionWithForce();
 
-        console.log(data);
         renderAxes();
         renderPoints();
 
@@ -467,15 +482,21 @@ export default function() {
         return exports;
     };
 
+    exports.useBackground = function(_) { 
+        if (!arguments.length) return useBackground;
+        useBackground = _;
+        return exports;
+    };
+
     exports.useForce = function(_) { 
         if (!arguments.length) return useForce;
         useForce = _;
         return exports;
     };
 
-    exports.useBackground = function(_) { 
-        if (!arguments.length) return useBackground;
-        useBackground = _;
+    exports.useRegression = function(_) { 
+        if (!arguments.length) return useRegression;
+        useRegression = _;
         return exports;
     };
 

@@ -566,6 +566,10 @@ export default function() {
             .attr('stroke', cellStroke)
             .attr('stroke-width', cellStrokeWidth);
 
+        // Mark identity cells if they are rendered
+        cells.filter(d => d.x == d.y)
+            .attr('class', 'cell identity-cell');
+
         cells.append('svg:title')
             .text(d => d.text ? d.text : '');
     };
@@ -732,6 +736,14 @@ export default function() {
                     ]);
                 });
         }
+    };
+
+    /** properties **/
+
+    exports = {
+        ...exports,
+        get xScale() { return xScale; },
+        get yScale() { return yScale; }
     };
 
     /** public **/
