@@ -231,7 +231,7 @@ The default font weight is 'normal'.
 The function returns the current value if no argument is given.
 
 
-heatmap.\ **invertAltValueScale**\ ([*bool*])
+heatmap.\ **invertAltValueScale**\ ([*boolean*])
 
 If set to true, inverts the alt. value scale.
 The default is false. 
@@ -334,14 +334,14 @@ By default, this option is uses the set of x labels given in input dataset.
 The function returns the current value if no argument is given.
 
 
-heatmap.\ **xLabel**\ ([*domain*])
+heatmap.\ **xLabel**\ ([*label*])
 
 Text label for the x-axis
 By default, this option is ``null``.
 The function returns the current value if no argument is given.
 
 
-heatmap.\ **xLabelPad**\ ([*domain*])
+heatmap.\ **xLabelPad**\ ([*padding*])
 
 Padding, in pixels, for the x-axis label.
 By default, this option is ``50``.
@@ -356,21 +356,21 @@ By default, this option is uses the set of y labels given in input dataset.
 The function returns the current value if no argument is given.
 
 
-heatmap.\ **yLabel**\ ([*domain*])
+heatmap.\ **yLabel**\ ([*label*])
 
-Teyt label for the y-ayis
+Text label for the y-ayis
 By default, this option is ``null``.
 The function returns the current value if no argument is given.
 
 
-heatmap.\ **yLabelPad**\ ([*domain*])
+heatmap.\ **yLabelPad**\ ([*padding*])
 
-Padding, in piyels, for the y-ayis label.
+Padding, in pixels, for the y-ayis label.
 By default, this option is ``50``.
 The function returns the current value if no argument is given.
 
 
-heatmap.\ **width**\ ([*domain*])
+heatmap.\ **width**\ ([*width*])
 
 SVG width in pixels.
 By default, this option is ``600``.
