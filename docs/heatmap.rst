@@ -35,6 +35,7 @@ The JSON object used as input should be in the following format.
           * The axis property specifies the side on which the dendrogram is drawn and
           * should be one of the Alignment values. The hierarchy property is a
           * d3.hierarchy object.
+          */
         clusters: [
 
             {axis: Align.LEFT, hierarchy: valueHierarchy}
@@ -302,7 +303,7 @@ heatmap.\ **yAxisAlign**\ ([*alignment*])
 Specifies the position of the y-axis.
 Valid y-axis positions are on either the right or left side of the heatmap:
 
-..code:: javascript
+.. code:: javascript
 
     Align.RIGHT
     Align.LEFT
@@ -316,7 +317,7 @@ heatmap.\ **xAxisAlign**\ ([*alignment*])
 Specifies the position of the x-axis.
 Valid x-axis positions are on either the bottom or top of the heatmap:
 
-..code:: javascript
+.. code:: javascript
 
     Align.BOTTOM
     Align.TOP
