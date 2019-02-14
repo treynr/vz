@@ -48,7 +48,7 @@ The JSON object used as input should be in the following format.
 API
 ---
 
-heatmap.**altCellStroke**([color])
+heatmap.\ **altCellStroke**\ ([*color*])
 
 If *color* is specified, sets the stroke color used for drawing heatmap cells
 with alternative values.
