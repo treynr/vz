@@ -287,7 +287,7 @@ export default function() {
       */
     let sortMatrix = function(xd, yd) {
 
-        if ((!data.clusters || !data.clusters.length) && mirrorAxes) {
+        if (!data.clusters || !data.clusters.length) {
 
             return [
                 xd.sort((a, b) => a.localeCompare(b)),
@@ -563,7 +563,7 @@ export default function() {
 
                 return colorScale(d.value);
             })
-            .attr('shape-rendering', 'crispEdges')
+            .attr('shape-rendering', roundFactor == 0 ? 'crispEdges' : 'auto')
             .attr('stroke', cellStroke)
             .attr('stroke-width', cellStrokeWidth);
 
@@ -739,13 +739,6 @@ export default function() {
         }
     };
 
-    /** properties **/
-
-    exports = {
-        ...exports,
-        get xScale() { return xScale; },
-        get yScale() { return yScale; }
-    };
 
     /** public **/
 
@@ -1056,6 +1049,18 @@ export default function() {
             if (!arguments.length) return svg;
             svg = _;
             return exports;
+        };
+
+    // Properties for production/release. We don't allow x/yScale to be setters like in
+    // the dev releases.
+    } else {
+
+        /** properties **/
+
+        exports = {
+            ...exports,
+            get xScale() { return xScale; },
+            get yScale() { return yScale; }
         };
     }
 
