@@ -9,11 +9,6 @@ node_js:
 cache:
     yarn: true
 
-## Ensure only postgres 10 is running
-before_install:
-    - sudo service postgresql stop
-    - sudo service postgresql start 10
-
 ## Install testing requirements: psycopg2, flake8, and pytest
 install:
     - yarn install
