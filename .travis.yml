@@ -1,0 +1,31 @@
+
+sudo: true
+
+language: node_js
+
+node_js:
+    - "8"
+
+cache:
+    yarn: true
+
+## Ensure only postgres 10 is running
+before_install:
+    - sudo service postgresql stop
+    - sudo service postgresql start 10
+
+## Install testing requirements: psycopg2, flake8, and pytest
+install:
+    - yarn install
+
+## Setup the test database
+before_script:
+    - (cd tests && ./setup-db.sh)
+
+## Run the linter, build dev and production instances, then run the tests
+script:
+    - eslint src/plots
+    - yarn run dev
+    - yarn run build
+    - yarn run test
+

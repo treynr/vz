@@ -1,9 +1,9 @@
 {
-  "name": "reviz",
+  "name": "vz",
   "version": "0.3.0",
   "description": "A reusable visualization and charts library based on d3js.",
   "main": "index.js",
-  "repository": "git@s1k.pw:vizlib",
+  "repository": "github.com/treynr/vz",
   "author": "TR <tim@fin0c.net>",
   "license": "AGPLv3",
   "private": true,
@@ -23,8 +23,6 @@
   "scripts": {
     "build": "webpack --config webpack.prod.js",
     "dev": "webpack --config webpack.dev.js",
-    "test": "tape test/*.js",
-    "test-only": "tape test/*.js",
-    "test-heatmap": "tape test/heatmap-test.js"
+    "test": "tape test/*.js"
   }
 }
