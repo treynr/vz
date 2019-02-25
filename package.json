@@ -23,7 +23,7 @@
   "scripts": {
     "build": "webpack --config webpack.prod.js",
     "dev": "webpack --config webpack.dev.js",
-    "test": "webpack --config webpack.dev.js && tape test/*.js",
+    "test": "tape test/*.js",
     "test-only": "tape test/*.js",
     "test-heatmap": "tape test/heatmap-test.js"
   }

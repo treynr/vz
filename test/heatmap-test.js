@@ -243,7 +243,7 @@ tape('renderCells() renders default cells for mirrored data', t => {
 
     t.notOk(d3.select('.cells').empty());
     t.notOk(d3.select('.cell').empty());
-    t.ok(d3.selectAll('.cell').size() == 6);
+    t.ok(d3.selectAll('.cell').size() == 3);
     t.end();
 });
 
@@ -252,7 +252,11 @@ tape('renderAltCells() renders default cells with extra alt data', t => {
 
     global.document = (new jsdom.JSDOM(`...`)).window.document;
     let svg = d3.select('body').append('svg');
-    let h = heatmap().data(mirroredDataAlt).useAltValues(true).mirrorAxes(true).svg(svg);
+    let h = heatmap().data(mirroredDataAlt)
+        .useAltValues(true)
+        .altThresholdComparator(heatmap().Threshold.LT)
+        .mirrorAxes(true)
+        .svg(svg);
 
     h.stringifyCategories();
     h.makeScales();
@@ -265,7 +269,7 @@ tape('renderAltCells() renders default cells with extra alt data', t => {
     t.notOk(d3.select('.cell').empty());
     t.notOk(d3.select('.alt-cell').empty());
     t.ok(d3.selectAll('.alt-cell').size() == 3);
-    t.ok(d3.selectAll('.cell').size() == 6);
+    t.ok(d3.selectAll('.cell').size() == 3);
     t.end();
 });
 
@@ -292,7 +296,36 @@ tape('renderAltCells() properly uses a different threshold comparator', t => {
     t.notOk(d3.select('.cell').empty());
     t.notOk(d3.select('.alt-cell').empty());
     t.ok(d3.selectAll('.alt-cell').size() == 3);
-    t.ok(d3.selectAll('.cell').size() == 6);
+    t.ok(d3.selectAll('.cell').size() == 3);
+
     t.end();
 });
 
+tape('renderIdentities() properly renders identity cells', t => {
+
+
+    global.document = (new jsdom.JSDOM(`...`)).window.document;
+    let svg = d3.select('body').append('svg');
+    let h = heatmap()
+        .data(mirroredDataAlt)
+        .useAltValues(true)
+        .altThresholdComparator(heatmap().Threshold.LT)
+        .mirrorAxes(true)
+        .renderIdentities(true)
+        .svg(svg);
+
+    h.stringifyCategories();
+    h.makeScales();
+    h.renderAxes();
+    h.renderCells();
+    h.renderAltCells();
+
+    t.notOk(d3.select('.cells').empty());
+    t.notOk(d3.select('.alt-cells').empty());
+    t.notOk(d3.select('.cell').empty());
+    t.notOk(d3.select('.alt-cell').empty());
+    t.ok(d3.selectAll('.alt-cell').size() == 3);
+    t.ok(d3.selectAll('.cell').size() == 6);
+
+    t.end();
+});

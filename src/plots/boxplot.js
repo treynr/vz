@@ -387,6 +387,8 @@ export default function() {
 
         }, []);
 
+        console.log(`outliers: ${outliers.length}`);
+
         let outlierSvg = svg.selectAll('outliers')
             .data(outliers)
             .enter()

@@ -48,10 +48,10 @@ module.exports = [
             heatmap: './src/entries/heatmap.js',
             //reviz: './src/index.js',
             bar: './src/entries/bar.js',
-            //boxplot: './src/entries/boxplot.js',
+            boxplot: './src/entries/boxplot.js',
             histogram: './src/entries/histogram.js',
             scatter: './src/entries/scatter.js',
-            //line: './src/entries/line.js',
+            line: './src/entries/line.js',
             legend: './src/entries/legend.js',
         },
         output: {
