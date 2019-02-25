@@ -39,9 +39,9 @@
 
 import {extent} from 'd3-array';
 import {axisBottom, axisLeft, axisRight, axisTop} from 'd3-axis';
-import {cluster, hierarchy} from 'd3-hierarchy';
+import {cluster} from 'd3-hierarchy';
 import {scaleBand, scaleLinear, scaleQuantize} from 'd3-scale';
-import {line, curveBasis, curveStepAfter, linkVertical, linkHorizontal} from 'd3-shape';
+import {line, curveStepAfter} from 'd3-shape';
 import {schemeBlues} from 'd3-scale-chromatic';
 import {select, selectAll} from 'd3-selection';
 
@@ -76,7 +76,7 @@ export default function() {
         // d3 scale used to convert heatmap values to colors
         colorScale = null,
         // D3 hierarchies used as inputs to D3's clustering functions
-        hierarchies = [],
+        //hierarchies = [],
         // x-axis scale
         xScale = null,
         // y-axis scale
@@ -321,9 +321,9 @@ export default function() {
             // Ensure the clusters has exactly the same labels as the ones in the matrix
             if (inters.length != labels.length) {
 
-                console.error(
-                    'The cluster does not contain the same labels used by the matrix'
-                );
+                //console.error(
+                //    'The cluster does not contain the same labels used by the matrix'
+                //);
 
                 // Null out the clustering data so it isn't used later on
                 data.clusters = null;
@@ -362,12 +362,7 @@ export default function() {
         xDomain = xDomain ? xDomain : getColumnCategories();
         yDomain = yDomain ? yDomain : (mirrorAxes ? xDomain : getRowCategories());
 
-        //if (mirrorAxes) {
-
-            [xDomain, yDomain] = sortMatrix(xDomain, yDomain);
-            //xDomain.sort((a, b) => a.localeCompare(b));
-            //yDomain.sort((a, b) => a.localeCompare(b));
-        //}
+        [xDomain, yDomain] = sortMatrix(xDomain, yDomain);
 
         colorDomain = colorDomain ? colorDomain : extent(data.values.map(d => d.value));
         colors = colors ? colors : schemeBlues[numColors];
@@ -664,15 +659,13 @@ export default function() {
 
                 dendogram = cluster()
                     .size([xScale.bandwidth() * xScale.domain().length, dendSize])
-                    .separation(() => xScale.bandwidth())
-                    (clust.hierarchy);
+                    .separation(() => xScale.bandwidth())(clust.hierarchy);
 
             } else {
 
                 dendogram = cluster()
                     .size([yScale.bandwidth() * yScale.domain().length, dendSize])
-                    .separation(() => yScale.bandwidth())
-                    (clust.hierarchy);
+                    .separation(() => yScale.bandwidth())(clust.hierarchy);
             }
 
             // Add a field specifying the axis the cluster should be rendered along
@@ -704,7 +697,7 @@ export default function() {
 
                     if (d.axis == Align.TOP) {
 
-                        return `translate(0, ${-dendSize + dendrogramPadding})`
+                        return `translate(0, ${-dendSize + dendrogramPadding})`;
 
                     } else if (d.axis == Align.BOTTOM) {
 

@@ -5,7 +5,7 @@
 
 'use strict';
 
-import {extent, mean} from 'd3-array';
+import {extent} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleLinear} from 'd3-scale';
 import {select} from 'd3-selection';
@@ -261,8 +261,8 @@ export default function() {
             .attr('y', d => yScale(d.y))
             .attr('d', symbol()
                 .type(d => d.symbol)
-                .size(d => d.radius ? d.radius * 20 : radius * 20)
-             );
+                .size(d => d.radius ? d.radius * 20 : pointRadius * 20)
+            );
 
         // Styling
         circles.attr('fill', d => d.fill ? d.fill : pointFill)

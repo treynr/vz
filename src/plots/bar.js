@@ -6,11 +6,10 @@
 
 'use strict';
 
-import {deviation, extent, max, min} from 'd3-array';
+import {extent} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleBand, scaleLinear, scaleOrdinal} from 'd3-scale';
 import {select} from 'd3-selection';
-import {line, curveCatmullRom} from 'd3-shape';
 
 /*
  * The data structure necessary for this viz is an array of objects, each of
@@ -40,7 +39,7 @@ export default function() {
             '#98abc5', '#8a89a6', '#7b6888', '#6b486b', '#a05d56', '#d0743c', '#ff8c00'
         ]),
         // List of data groups
-        groups = null,
+        //groups = null,
         // d3 SVG object
         svg = null,
         // x-axis object
@@ -150,21 +149,21 @@ export default function() {
     var makeAxes = function() {
 
         if (grouped) {
+
             xAxis = axisBottom(xGroupScale)
                 .tickSizeOuter(outerTicks ? 6 : 0)
-                .tickFormat(null)
-                ;
+                .tickFormat(null);
+
         } else {
+
             xAxis = axisBottom(xScale)
                 .tickSizeOuter(outerTicks ? 6 : 0)
-                .tickFormat(xTickFormat)
-                ;
+                .tickFormat(xTickFormat);
         }
 
         yAxis = axisLeft(yScale)
             .tickFormat(yTickFormat)
-            .tickValues(yTickValues)
-            ;
+            .tickValues(yTickValues);
 
         var xAxisObject = svg.append('g')
             .attr('class', 'x-axis')
@@ -172,17 +171,15 @@ export default function() {
                 return 'translate(0' + ',' + (getHeight() + 1) + ')';
             })
             .attr('fill', 'none')
-            .call(xAxis)
-            ;
+            .call(xAxis);
 
         xAxisObject.selectAll('text')
-            .attr('transform', d => rotateXLabel ? 'rotate(-320)' : '')
-            .attr('x', d => rotateXLabel ? 5 : 0)
-            .attr('y', d => rotateXLabel ? 8 : fontSize + 2)
+            .attr('transform', rotateXLabel ? 'rotate(-320)' : '')
+            .attr('x', rotateXLabel ? 5 : 0)
+            .attr('y', rotateXLabel ? 8 : fontSize + 2)
             .attr('dy', '.35em')
-            .attr('dx', d => rotateXLabel ? '.30em' : '')
-            .attr('text-anchor', d => rotateXLabel ? 'start': 'middle')
-            ;
+            .attr('dx', rotateXLabel ? '.30em' : '')
+            .attr('text-anchor', rotateXLabel ? 'start': 'middle');
 
         xAxisObject.append('text')
             .attr('class', 'x-axis-label')
@@ -190,8 +187,7 @@ export default function() {
             .attr('y', xLabelPad)
             .attr('fill', '#000')
             .attr('text-anchor', 'middle')
-            .text(xLabel)
-            ;
+            .text(xLabel);
 
         xAxisObject.selectAll('text')
             .attr('font-family', 'sans-serif')
@@ -339,7 +335,6 @@ export default function() {
 
         if (title) {
 
-            var ma = margin.left + margin.right;
             svg.append('text')
                 //.attr('transform', 'translate(-' + margin.left  + ',-' + margin.top + ')')
                 .attr('transform', 'translate(' + 0  + ',-' + margin.top + ')')
@@ -365,8 +360,7 @@ export default function() {
             .attr('height', height)
             .attr('width', width)
             .append('g')
-            .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
-            ;
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
         if (textures)
             for (var i = 0; i < textures.length; i++)
@@ -376,8 +370,8 @@ export default function() {
 
         makeScales();
 
-        if (grouped)
-            groups = returnKeyUniques('group');
+        //if (grouped)
+        //    groups = returnKeyUniques('group');
 
         makeAxes();
         drawBars();
@@ -392,7 +386,7 @@ export default function() {
 
     /** setters/getters **/
 
-    exports.svg = function(_) { return svg; };
+    exports.svg = function() { return svg; };
 
     exports.data = function(_) {
         if (!arguments.length) return data;
@@ -547,12 +541,6 @@ export default function() {
     exports.title = function(_) {
         if (!arguments.length) return title;
         title = _;
-        return exports;
-    };
-
-    exports.svgLabel = function(_) {
-        if (!arguments.length) return svgLabel;
-        svgLabel = _;
         return exports;
     };
 
