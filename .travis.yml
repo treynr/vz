@@ -13,10 +13,6 @@ cache:
 install:
     - yarn install
 
-## Setup the test database
-before_script:
-    - (cd tests && ./setup-db.sh)
-
 ## Run the linter, build dev and production instances, then run the tests
 script:
     - eslint src/plots
