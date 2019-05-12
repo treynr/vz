@@ -875,6 +875,12 @@ export default function() {
         return exports;
     };
 
+    exports.colors = function(_) {
+        if (!arguments.length) return colors;
+        colors = _;
+        return exports;
+    };
+
     exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
