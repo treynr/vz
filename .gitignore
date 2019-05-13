@@ -9,6 +9,10 @@ node_modules
 dist/**
 dist
 
+## webstorm stuff
+.idea/**
+.idea
+
 ## any raw data files
 *.tsv
 *.csv
@@ -16,3 +20,8 @@ dist
 
 ## vim swap files
 *.sw*
+
+## yarn stuff
+yarn-error.log
+
+

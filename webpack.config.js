@@ -1,67 +1,35 @@
 
-const path = require('path');
+let hyphenRegex = /(.+)(-)(.+)/;
 
-//module.exports = {
-//
-//    entry: {
-//        bioviz: './src/index.js',
-//        bar: './src/entries/bar.js',
-//        histogram: './src/entries/histogram.js',
-//        line: './src/entries/line.js',
-//        'semantic-substrate': './src/entries/semantic-substrate.js',
-//    },
-//    output: {
-//        path: path.resolve(__dirname, 'dist'),
-//        filename: '[name].js',
-//        // bug fix for umd target
-//        globalObject: 'this',
-//        //library: '[name]',
-//        library: {
-//            'semantic-substrate': 'substrate',
-//            '[name]': '[name]'
-//        },
-//        libraryExport: 'default',
-//        libraryTarget: 'umd'
-//    }
-//};
+let hyphenReplacer = (_, p1, p2, p3, __, s) => {
 
-module.exports = [
-    {
-        entry: {
-            'semantic-substrate': './src/entries/semantic-substrate.js'
-        },
-        output: {
-            path: path.resolve(__dirname, 'dist'),
-            //filename: '[name].js',
-            // bug fix for umd target
-            globalObject: 'this',
-            library: 'substrate',
-            libraryExport: 'default',
-            libraryTarget: 'umd'
-            //libraryTarget: 'var'
-        }
-    },
-    /*
-    */
-    {
-        entry: {
-            heatmap: './src/entries/heatmap.js',
-            //reviz: './src/index.js',
-            bar: './src/entries/bar.js',
-            boxplot: './src/entries/boxplot.js',
-            histogram: './src/entries/histogram.js',
-            scatter: './src/entries/scatter.js',
-            line: './src/entries/line.js',
-            legend: './src/entries/legend.js',
-        },
-        output: {
-            path: path.resolve(__dirname, 'dist'),
-            //filename: '[name].js',
-            // bug fix for umd target
-            globalObject: 'this',
-            library: '[name]',
-            libraryExport: 'default',
-            libraryTarget: 'umd'
-        }
-    }
+    return p1 + p3.charAt(0).toUpperCase() + p3.slice(1);
+};
+
+const plots = [
+    //'bar',
+    //'boxplot',
+    'force-graph',
+    //'heatmap',
+    //'histogram',
+    //'legend',
+    //'line',
+    //'scatter',
+    //'semantic-substrate'
 ];
+
+let entries = plots.map(d => {
+
+    return {
+        entry: {[d]: `./src/entries/${d}.js`},
+        output: {
+            globalObject: 'this',
+            library: d.replace(hyphenRegex, hyphenReplacer),
+            libraryExport: 'default',
+            libraryTarget: 'umd'
+        }
+    };
+});
+
+module.exports = entries;
+
