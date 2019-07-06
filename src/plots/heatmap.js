@@ -216,7 +216,7 @@ export default function() {
         let matrix = data.values.reduce((ac, d) => {
 
             ac[d.y] = ac[d.y] || {};
-            ac[d.y][d.x] = ac[d.y][d.x] || d.value;
+            ac[d.y][d.x] = ac[d.y][d.x] || d;
 
             return ac;
         }, {});
@@ -249,11 +249,11 @@ export default function() {
                 // similarity is 1.0
                 // TODO: this is behavior that should be user-defined
                 else if (matrix[r][c] === undefined && r === c)
-                    matrix[r][c] = 1.0;
+                    matrix[r][c] = {value: 1.0, altValue: 1.0};
 
                 // (r, c) is missing so we just give it a default value of zero
                 else if (matrix[r][c] === undefined)
-                    matrix[r][c] = 0.0;
+                    matrix[r][c] = {value: 1.0, altValue: 1.0};
 
                 // Otherwise (r, c) is not missing and there is nothing we need to do
             }
@@ -267,7 +267,12 @@ export default function() {
                     continue;
 
                 // otherwise we add the missing comparison to our values array
-                data.values.push({x: c, y: r, value: matrix[r][c]});
+                data.values.push({
+                    x: c,
+                    y: r,
+                    value: matrix[r][c].value,
+                    altValue: matrix[c][r].altValue
+                });
             }
         }
     };
