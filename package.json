@@ -23,6 +23,7 @@
   "scripts": {
     "build": "webpack --config webpack.prod.js",
     "dev": "webpack --config webpack.dev.js",
-    "test": "tape test/*.js"
+    "test": "tape test/*.js",
+    "test-force-graph": "tape test/force-graph-test.js"
   }
 }

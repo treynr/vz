@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script src="../dist/development/force-graph.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+            const data = {
+                nodes: [
+                    {id: 'a'},
+                    {id: 'b'},
+                    {id: 'c'},
+                    {id: 'd'},
+                    {id: 'e'}
+                ],
+                edges: [
+                    {source: 'a', target: 'b'},
+                    {source: 'a', target: 'c'},
+                    {source: 'a', target: 'd'},
+                    {source: 'b', target: 'c'},
+                    {source: 'd', target: 'e'},
+                ]
+            };
+
+            const data2 = {"nodes": [{"id": 0}, {"id": 1}, {"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}, {"id": 6}, {"id": 7}, {"id": 8}, {"id": 9}, {"id": 10}, {"id": 11}, {"id": 12}, {"id": 13}, {"id": 14}, {"id": 15}, {"id": 16}, {"id": 17}, {"id": 18}, {"id": 19}], "edges": [{"source": 0, "target": 1}, {"source": 1, "target": 2}, {"source": 1, "target": 3}, {"source": 1, "target": 4}, {"source": 1, "target": 13}, {"source": 1, "target": 17}, {"source": 1, "target": 18}, {"source": 2, "target": 7}, {"source": 3, "target": 5}, {"source": 3, "target": 16}, {"source": 4, "target": 5}, {"source": 4, "target": 16}, {"source": 5, "target": 6}, {"source": 5, "target": 9}, {"source": 5, "target": 12}, {"source": 5, "target": 14}, {"source": 5, "target": 18}, {"source": 7, "target": 8}, {"source": 7, "target": 15}, {"source": 8, "target": 10}, {"source": 9, "target": 11}, {"source": 10, "target": 15}, {"source": 14, "target": 16}, {"source": 14, "target": 19}, {"source": 16, "target": 18}]};
+
+
+            let graph = forceGraph()
+                .data(data)
+                .width(200)
+                .height(200)
+				.draw();
+
+            let graph2 = forceGraph()
+                .data(data2)
+                .width(400)
+                .height(400)
+                .draw();
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>
+
