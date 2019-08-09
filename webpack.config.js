@@ -8,13 +8,13 @@ let hyphenReplacer = (_, p1, p2, p3, __, s) => {
 
 const plots = [
     //'bar',
-    //'boxplot',
+    'boxplot',
     'force-graph',
-    //'heatmap',
+    'heatmap',
     //'histogram',
-    //'legend',
+    'legend',
     //'line',
-    //'scatter',
+    'scatter',
     //'semantic-substrate'
 ];
 

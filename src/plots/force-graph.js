@@ -91,9 +91,11 @@ export default function() {
             .selectAll('node')
             .data(data.nodes)
             .enter()
-            .append('circle')
+            .append('g')
             .attr('class', 'node')
-            .attr('id', d => `node-${d.id}`)
+            .attr('id', d => `node-${d.id}`);
+
+        graphNodes.append('circle')
             .attr('fill', d => {
 
                 if (d.fill)
@@ -180,7 +182,9 @@ export default function() {
             .force(
                 'collide',
                 useCollideForce ?
-                    forceCollide.radius(collideForceRadius).strength(collideForceStrength) : null)
+                    //forceCollide.radius(collideForceRadius).strength(collideForceStrength) : null
+                    forceCollide(collideForceRadius).strength(collideForceStrength) : null
+            )
             .force(
                 'charge',
                 useManyBodyForce ?
@@ -194,9 +198,14 @@ export default function() {
 
         simulation.on('tick', () => {
 
-            graphNodes
-                .attr('cx', d => d.x)
-                .attr('cy', d => d.y);
+            // Typically we just transform the node group (<g>) but if we do this,
+            // the group transformation isn't preserved and when we
+            // download/format/convert the image later on everything is fucked.
+            graphNodes.attr('transform', d => `translate(${d.x}, ${d.y})`);
+            //graphNodes//.attr('transform', d => `translate(${d.x}, ${d.y})`);
+            //    .selectAll('circle')
+            //    .attr('cx', d => d.x)
+            //    .attr('cy', d => d.y);
 
             graphEdges
                 .attr('x1', d => d.source.x)
@@ -238,6 +247,7 @@ export default function() {
 
     exports.getHeight = getHeight;
     exports.getWidth = getWidth;
+    exports.simulation = d => simulation;
 
     exports.draw = function() {
 
@@ -263,6 +273,18 @@ export default function() {
     exports.data = function(_) {
         if (!arguments.length) return data;
         data = _;
+        return exports;
+    };
+
+    exports.collideForceRadius = function(_) {
+        if (!arguments.length) return collideForceRadius;
+        collideForceRadius = +_;
+        return exports;
+    };
+
+    exports.collideForceStrength = function(_) {
+        if (!arguments.length) return collideForceStrength;
+        collideForceStrength = _;
         return exports;
     };
 
@@ -302,9 +324,21 @@ export default function() {
         return exports;
     };
 
+    exports.linkForceDistance = function(_) { 
+        if (!arguments.length) return linkForceDistance;
+        linkForceDistance = +_;
+        return exports;
+    };
+
     exports.height = function(_) { 
         if (!arguments.length) return height;
         height = +_;
+        return exports;
+    };
+
+    exports.manyBodyForceStrength = function(_) { 
+        if (!arguments.length) return manyBodyForceStrength;
+        manyBodyForceStrength = +_;
         return exports;
     };
 
@@ -359,6 +393,30 @@ export default function() {
     exports.nodeStrokeWidth = function(_) { 
         if (!arguments.length) return nodeStrokeWidth;
         nodeStrokeWidth = +_;
+        return exports;
+    };
+
+    exports.useCenterForce = function(_) {
+        if (!arguments.length) return useCenterForce;
+        useCenterForce = _;
+        return exports;
+    };
+
+    exports.useCollideForce = function(_) {
+        if (!arguments.length) return useCollideForce;
+        useCollideForce = _;
+        return exports;
+    };
+
+    exports.useLinkForce = function(_) {
+        if (!arguments.length) return useLinkForce;
+        useLinkForce = _;
+        return exports;
+    };
+
+    exports.useManyBodyForce = function(_) {
+        if (!arguments.length) return useManyBodyForce;
+        useManyBodyForce = _;
         return exports;
     };
 

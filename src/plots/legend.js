@@ -22,11 +22,11 @@
 
 'use strict';
 
-import {max} from 'd3-array';
+import {max, range} from 'd3-array';
 import {axisBottom} from 'd3-axis';
 import {select} from 'd3-selection';
-import {scaleLinear, scaleQuantize} from 'd3-scale';
-import {schemeBlues} from 'd3-scale-chromatic';
+import {scaleLinear, scaleSequential, scaleQuantize} from 'd3-scale';
+import {interpolateBlues, schemeBlues} from 'd3-scale-chromatic';
 import {symbol, symbolSquare} from 'd3-shape';
 
 export default function() {
@@ -40,6 +40,7 @@ export default function() {
         legendScale = null,
         quantScale = null,
         circleScale = null,
+        seqScale = null,
         /** public **/
 
         // HTML element or ID the SVG should be appended to
@@ -50,6 +51,7 @@ export default function() {
         fontSize = 12,
         // Font weight for the legend text
         fontWeight = 'normal',
+        interpolator = interpolateBlues,
         keySize = 150,
         // Vertical padding in-between individual keys in the legend
         keyPad = 30,
@@ -84,10 +86,11 @@ export default function() {
         scaleTitle = '',
         // Render a quantized scale
         useCircleScale = false,
+        useSequentialScale = false,
         // Render a quantized scale
         useQuantizeScale = false;
 
-    //let getHeight = function() { return height - margin.bottom - margin.top; };
+    let getHeight = function() { return height - margin.bottom - margin.top; };
     let getWidth = function() { return width - margin.left - margin.right; };
 
     let makeGradient = function(svg, gid, type, c0, c1) {
@@ -158,6 +161,12 @@ export default function() {
             .tickSize(scaleTickSize);
     };
 
+    let makeSequentialScale = function() {
+
+        seqScale = scaleSequential(interpolateBlues)
+            .domain(scaleDomain);
+    };
+
     let renderCircleScale = function() {
 
         let legScale = svg.append('g')
@@ -221,6 +230,8 @@ export default function() {
             .domain(quantScale.domain())
             .rangeRound([0, getWidth()]);
 
+        console.log(`scaleTicks: ${scaleTicks}`);
+        console.log(`lengend ticks: ${legendScale.ticks(scaleTicks)}`);
         // Specifying a value for the ticks function is just a suggestion, it may return
         // more or less values, so we have to align our colors with the correct number of
         // values. -2 because we don't render the first and last ticks.
@@ -251,9 +262,73 @@ export default function() {
             quantScale.range(colors);
         }
 
+
         legendAxis = axisBottom(legendScale)
             //.tickValues(legendScale.ticks(scaleTicks))
             .ticks(legendScale.ticks(scaleTicks).length, scaleFormat)
+            .tickSize(scaleTickSize);
+    };
+
+    let makeQuantizeScales2 = function() {
+
+        let colors = null;
+
+        // Select the default color scheme if no colors have been specified
+        if (!scaleColors)
+            colors = schemeBlues[scaleTicks + 1];
+        else
+            colors = scaleColors;
+
+        quantScale = scaleQuantize()
+            .domain(scaleDomain)
+            .range(colors);
+
+        legendScale = scaleLinear()
+            .domain(quantScale.domain())
+            .rangeRound([0, getWidth()]);
+
+        console.log('ticks');
+        let tstep = (scaleDomain[1] - scaleDomain[0]) / 5;
+        console.log(`tstep: ${tstep}`);
+        console.log(range(scaleDomain[0], scaleDomain[1] + tstep, tstep));
+
+        // Specifying a value for the ticks function is just a suggestion, it may return
+        // more or less values, so we have to align our colors with the correct number of
+        // values. -2 because we don't render the first and last ticks.
+        //if ((legendScale.ticks(scaleTicks).length - 2) != scaleTicks) {
+
+        //    // The formula for this is actually (length - 2) + 1, simplified it's just 
+        //    // (length - 1). The logic: remove the first and last ticks from the count, 
+        //    // add one to the count since we will render N+1 colors for the scale.
+        //    scaleTicks = legendScale.ticks(scaleTicks).length - 1;
+
+        //    // TODO: handle user-specified colors properly:
+        //    //     This is a first attempt at handling user-defined colors, if they don't
+        //    //     provide enough colors in the array an exception will be thrown. Not 
+        //    //     sure how to gracefully handle this scenario just yet.
+        //    // Color schemes only range in length from [3, 9]
+        //    //scaleColors = scaleTicks > 9 ? schemeBlues[9] : schemeBlues[scaleTicks];
+        //    //scaleColors = scaleTicks < 3 ? schemeBlues[3].slice(1) : schemeBlues[scaleTicks];
+        //    if (scaleColors) {
+
+        //        colors = scaleColors;
+        //    } else {
+
+        //        colors = scaleTicks > 9 ? schemeBlues[9] : schemeBlues[scaleTicks];
+        //        colors = scaleTicks < 3 ? schemeBlues[3].slice(1) : schemeBlues[scaleTicks];
+        //    }
+
+        //    // Redo the scale
+        //    quantScale.range(colors);
+        //}
+
+
+        legendAxis = axisBottom(legendScale)
+            //.tickValues(legendScale.ticks(scaleTicks))
+            //.ticks(legendScale.ticks(scaleTicks).length, scaleFormat)
+            //.ticks(someticks.count, scaleFormat)
+            .tickValues(range(scaleDomain[0], scaleDomain[1] + tstep, tstep))
+            .tickFormat(scaleFormat)
             .tickSize(scaleTickSize);
     };
 
@@ -393,6 +468,7 @@ export default function() {
             .append('svg')
             .attr('width', width)
             .attr('height', height)
+            .attr('class', 'legend-svg')
             .append('g')
             .attr('class', 'legend')
             .attr('transform', `translate(${margin.left}, ${margin.top})`);
@@ -402,9 +478,91 @@ export default function() {
             makeCircleScales();
             renderCircleScale();
 
+        } else if (useSequentialScale) {
+
+            //makeSequentialScale();
+            seqScale = scaleSequential(interpolateBlues)
+                .domain([0, width]);
+
+            let bars = svg.selectAll(".bars")
+                .data(range(getWidth()), d => d)
+                .enter()
+                .append('rect')
+                .attr('transform', `translate(${-margin.left}, ${-margin.top})`)
+                .attr('class', 'bars')
+                .attr('x', (d, i) => i)
+                .attr('y', 0)
+                .attr('height', height)
+                .attr('width', 1)
+                .attr('fill', (d, i) => seqScale(d));
+
+        legendScale = scaleLinear()
+            .domain(scaleDomain)
+            .rangeRound([0, getWidth()]);
+
+        legendAxis = axisBottom(legendScale)
+            //.tickValues(legendScale.ticks(scaleTicks))
+            .ticks(legendScale.ticks(scaleTicks).length, scaleFormat)
+            .tickSize(scaleTickSize);
+
+        let legAxis = svg.append('g')
+            //.attr('transform', `translate(0, ${height + 1})`)
+            .call(legendAxis);
+
+        legAxis.selectAll('text')
+            .attr('font-family', font)
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', fontWeight);
+
+        // Remove the first and last ticks, and the domain line
+        svg.select('.legend-scale > .tick:first-of-type').remove();
+        svg.select('.legend-scale > .tick:last-of-type').remove();
+        svg.select('.legend-scale > .domain').remove();
+
+        // Add legend text
+
+        //let legScale = svg.append('g')
+        //    .attr('class', 'legend-scale');
+
+        //legScale.selectAll('legend')
+        //    .data(quantScale.range().map(d => quantScale.invertExtent(d)))
+        //    .enter()
+        //    .append('rect')
+        //    .attr('x', d => legendScale(d[0]))
+        //    .attr('height', 10)
+        //    .attr('width', d => legendScale(d[1]) - legendScale(d[0]))
+        //    .attr('fill', d => quantScale(d[0]))
+        //    .attr('stroke', 'none')
+        //    .attr('stroke-width', 0)
+        //    .attr('shape-rendering', 'crispEdges');
+
+        //let legAxis = legScale.call(legendAxis);
+
+        //legAxis.selectAll('text')
+        //    .attr('font-family', font)
+        //    .attr('font-size', `${fontSize}px`)
+        //    .attr('font-weight', fontWeight);
+
+        //// Remove the first and last ticks, and the domain line
+        //svg.select('.legend-scale > .tick:first-of-type').remove();
+        //svg.select('.legend-scale > .tick:last-of-type').remove();
+        //svg.select('.legend-scale > .domain').remove();
+
+        //// Add legend text
+        //svg.append('text')
+        //    .attr('class', 'legend-title')
+        //    .attr('fill', '#000000')
+        //    .attr('font-family', font)
+        //    .attr('font-size', `${fontSize}px`)
+        //    .attr('font-weight', fontWeight)
+        //    .attr('text-anchor', 'end')
+        //    .attr('x', getWidth())
+        //    .attr('y', -5)
+        //    .text(scaleTitle);
+
         } else if (useQuantizeScale) {
 
-            makeQuantizeScales();
+            makeQuantizeScales2();
             renderQuantizeScale();
 
         } else {
@@ -738,6 +896,12 @@ export default function() {
     exports.useCircleScale = function(_) {
         if (!arguments.length) return useCircleScale;
         useCircleScale = _;
+        return exports;
+    };
+
+    exports.useSequentialScale = function(_) {
+        if (!arguments.length) return useSequentialScale;
+        useSequentialScale = _;
         return exports;
     };
 

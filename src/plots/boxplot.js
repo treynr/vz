@@ -458,6 +458,9 @@ export default function() {
         return exports;
     };
 
+    exports.getWidth = getWidth;
+    exports.getHeight = getHeight;
+
     /**
       * Setters and getters.
       */
@@ -515,6 +518,12 @@ export default function() {
     exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
+        return exports;
+    };
+
+    exports.marginBottom = function(_) {
+        if (!arguments.length) return margin.bottom;
+        margin.bottom = +_;
         return exports;
     };
 

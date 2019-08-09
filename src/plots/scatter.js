@@ -346,6 +346,7 @@ export default function() {
 
     exports.draw = function() {
 
+        console.log(data);
         svg = select(element)
             .append('svg')
             .attr('height', height)

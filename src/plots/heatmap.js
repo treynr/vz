@@ -147,8 +147,13 @@ export default function() {
         normalizeMatrix = false,
         // Number of colors to use for the quantized color scale
         numColors = 5,
+        // Only render the upper triangle of the matrix (should only be used when
+        // rows == columns)
+        renderTriangle = false,
         // If true, renders heatmap cells where row[i] == column[j]
         renderIdentities = false,
+        // If true, render the dendrogram representing the hierarchical clusters
+        renderHierarchy = true,
         // Rotate x-axis labels so they aren't a straight vertical line and easy to read
         rotateXLabels = true,
         // Factor to use for rounding out rectangles
@@ -326,9 +331,9 @@ export default function() {
             // Ensure the clusters has exactly the same labels as the ones in the matrix
             if (inters.length != labels.length) {
 
-                //console.error(
-                //    'The cluster does not contain the same labels used by the matrix'
-                //);
+                console.error(
+                    'The cluster does not contain the same labels used by the matrix'
+                );
 
                 // Null out the clustering data so it isn't used later on
                 data.clusters = null;
@@ -528,6 +533,14 @@ export default function() {
         getRowCategories().forEach(d => { indexMap[d] = xScale(d); });
         getColumnCategories().forEach(d => { indexMap[d] = yScale(d); });
 
+        console.log(getRowCategories());
+        console.log(getColumnCategories());
+        console.log(xScale.domain())
+        console.log(xScale.range())
+        console.log(indexMap);
+        console.log(getRowCategories()[0]);
+        console.log(xScale[getRowCategories()[0]]);
+
         let cells = svg.append('g')
             .attr('class', 'cells')
             .selectAll('cells')
@@ -536,9 +549,13 @@ export default function() {
             .filter(d => {
 
                 // If rows == columns, we only a diagonal cross section of the heatmap
-                if (mirrorAxes && renderIdentities)
+                //if (mirrorAxes && renderIdentities)
+                //    return indexMap[d.y] <= indexMap[d.x];
+                //else if (mirrorAxes)
+                //    return indexMap[d.y] < indexMap[d.x];
+                if (renderTriangle && renderIdentities)
                     return indexMap[d.y] <= indexMap[d.x];
-                else if (mirrorAxes)
+                else if (renderTriangle)
                     return indexMap[d.y] < indexMap[d.x];
                 else
                     return true;
@@ -596,9 +613,15 @@ export default function() {
             .filter(d => {
 
                 // If rows == columns, we only a diagonal cross section of the heatmap
-                if (mirrorAxes && renderIdentities)
+                //if (mirrorAxes && renderIdentities)
+                //    return indexMap[d.y] <= indexMap[d.x];
+                //else if (mirrorAxes)
+                //    return indexMap[d.y] < indexMap[d.x];
+                //else
+                //    return true;
+                if (renderTriangle && renderIdentities)
                     return indexMap[d.y] <= indexMap[d.x];
-                else if (mirrorAxes)
+                else if (renderTriangle)
                     return indexMap[d.y] < indexMap[d.x];
                 else
                     return true;
@@ -614,9 +637,9 @@ export default function() {
 
         cells
             .append('circle')
-            .attr('cx', d => xScale(d.x) + (xScale.bandwidth() / 2))
-            .attr('cy', d => yScale(d.y) + (yScale.bandwidth() / 2))
-            .attr('r', d => altValueScale(d.altValue))
+            .attr('cx', d => xScale(d.x) + ((xScale.bandwidth() + cellPadding) / 2))
+            .attr('cy', d => yScale(d.y) + ((yScale.bandwidth() + cellPadding) / 2))
+            .attr('r', d => altValueScale(d.altValue) - (cellPadding))
             .attr('fill', d => {
 
                 if (d.fill)
@@ -764,7 +787,8 @@ export default function() {
 
         generateClusters();
 
-        renderDendrogram();
+        if (renderHierarchy)
+            renderDendrogram();
 
         return exports;
     };
@@ -973,6 +997,18 @@ export default function() {
     exports.renderIdentities = function(_) {
         if (!arguments.length) return renderIdentities;
         renderIdentities = _;
+        return exports;
+    };
+
+    exports.renderTriangle = function(_) {
+        if (!arguments.length) return renderTriangle;
+        renderTriangle = _;
+        return exports;
+    };
+
+    exports.renderHierarchy = function(_) {
+        if (!arguments.length) return renderHierarchy;
+        renderHierarchy = _;
         return exports;
     };
 
