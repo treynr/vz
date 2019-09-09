@@ -7,14 +7,14 @@ let hyphenReplacer = (_, p1, p2, p3, __, s) => {
 };
 
 const plots = [
-    //'bar',
+    'bar',
     'boxplot',
-    'force-graph',
-    'heatmap',
+    //'force-graph',
+    //'heatmap',
     //'histogram',
     'legend',
     //'line',
-    'scatter',
+    //'scatter',
     //'semantic-substrate'
 ];
 

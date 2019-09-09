@@ -55,6 +55,8 @@ export default function() {
 
         /** public **/
 
+        //
+        altYAxis = false,
         // Bar chart color
         barColor = '#98ABC5',
         // Bar chart edge color
@@ -98,6 +100,7 @@ export default function() {
         xTickFormat = null,
         // d3 format string for y-axis tick values
         yTickFormat = null,
+        yTicks = 5,
         // Y-axis tick values
         yTickValues = null,
         yDomain = null,
@@ -162,8 +165,9 @@ export default function() {
         }
 
         yAxis = axisLeft(yScale)
-            .tickFormat(yTickFormat)
-            .tickValues(yTickValues);
+            .ticks(yTicks, yTickFormat);
+            //.tickFormat(yTickFormat)
+            //.tickValues(yTickValues);
 
         var xAxisObject = svg.append('g')
             .attr('class', 'x-axis')
@@ -206,11 +210,11 @@ export default function() {
         yAxisObject.append('text')
             .attr('class', 'y-axis-label')
             // Weird x, y argumetnns cause of the -90 rotation
-            .attr('x', function() { return -getHeight() / 2; })
+            .attr('x', altYAxis ? 5 : -getHeight() / 2)
             .attr('y', yLabelPad)
             .attr('fill', '#000')
-            .attr('transform', 'rotate(-90)')
-            .attr('text-anchor', 'middle')
+            .attr('transform', altYAxis ? '' : 'rotate(-90)')
+            .attr('text-anchor', altYAxis ? 'start' : 'middle')
             .text(yLabel);
 
         yAxisObject.selectAll('text')
@@ -297,7 +301,7 @@ export default function() {
 
         // Draw the whiskers at each end of the interval
         svg.selectAll('.bar')
-            .filter(d => d.se !== undefined)
+            .filter(d => d.se !== undefined && d.se)
             .append('line')
             .attr('x1', d => {
                 return xScale(d.x) + (xScale.bandwidth() / 2) +
@@ -314,7 +318,7 @@ export default function() {
             .attr('stroke-width', 1);
 
         svg.selectAll('.bar')
-            .filter(d => d.se !== undefined)
+            .filter(d => d.se !== undefined && d.se)
             .append('line')
             .attr('x1', d => {
                 return xScale(d.x) + (xScale.bandwidth() / 2) +
@@ -391,6 +395,12 @@ export default function() {
     exports.data = function(_) {
         if (!arguments.length) return data;
         data = _;
+        return exports;
+    };
+
+    exports.altYAxis = function(_) {
+        if (!arguments.length) return altYAxis;
+        altYAxis = _;
         return exports;
     };
 
@@ -559,6 +569,12 @@ export default function() {
     exports.yTickValues = function(_) {
         if (!arguments.length) return yTickValues;
         yTickValues = _;
+        return exports;
+    };
+
+    exports.yTicks = function(_) {
+        if (!arguments.length) return yTicks;
+        yTicks = +_;
         return exports;
     };
 

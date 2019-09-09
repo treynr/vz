@@ -7,7 +7,7 @@
 'use strict';
 
 import {extent, median, quantile, ticks} from 'd3-array';
-import {axisBottom, axisLeft} from 'd3-axis';
+import {axisBottom, axisLeft, axisRight} from 'd3-axis';
 import {scaleBand, scaleLinear} from 'd3-scale';
 import {interpolateCool} from 'd3-scale-chromatic';
 import {select} from 'd3-selection';
@@ -35,6 +35,7 @@ export default function() {
 
         /** public **/
 
+        altAxisLabels = false,
         // Color to use when filling in each boxplot
         boxFill = '#FFFFFF',
         boxPadding = 0.5,
@@ -56,6 +57,7 @@ export default function() {
         fontWeight = 'normal',
         // Margin object
         margin = {top: 40, right: 30, bottom: 50, left: 50},
+        medianStroke = '#640000',
         outlierFill = 'none',
         outlierRadius = 2,
         outlierStroke = '#000000',
@@ -64,9 +66,11 @@ export default function() {
         rotateXLabels = false,
         // If true, draws outliers
         showOutliers = false,
+        useBackgroundBox = false,
         // If true, colors in each individual boxplot using colors from the
         // colors array variable
         useColor = false,
+        useWhiskers = true,
         // SVG width
         width = 900,
         // X value domain
@@ -80,6 +84,8 @@ export default function() {
         yDomain = null,
         // Y-axis label
         yLabel = '',
+        // Padding in pixels for the y-axis label
+        yLabelPadY = 40,
         // Niceify the y-axis scale
         yNice = true,
         // d3 scale type to use for the x-axis
@@ -168,8 +174,9 @@ export default function() {
 
         xAxisObject.append('text')
             .attr('class', 'x-axis-label')
-            .attr('x', getWidth() / 2)
+            .attr('x', altAxisLabels ? getWidth() - 5: getWidth() / 2)
             .attr('y', xLabelPad)
+            .attr('text-anchor', altAxisLabels ? 'end' : 'middle')
             .attr('fill', '#000000')
             .text(xLabel);
 
@@ -185,18 +192,43 @@ export default function() {
 
         yAxisObject.append('text')
             .attr('class', 'y-axis-label')
-            // Weird x, y arguments cause of the -90 rotation
-            .attr('x', -getHeight() / 2)
-            .attr('y', -30)
+            .attr('x', altAxisLabels ? 5 : -getHeight() / 2)
+            //.attr('y', altAxisLabels ? yScale(yScale.ticks()[yScale.ticks().length - 2]) : -30)
+            .attr('y', yLabelPadY)
+            .attr('text-anchor', altAxisLabels ? 'start': 'middle')
             .attr('fill', '#000000')
-            .attr('transform', 'rotate(-90)')
-            .attr('text-anchor', 'middle')
+            .attr('transform', altAxisLabels ? '' : 'rotate(-90)')
             .text(yLabel);
 
         yAxisObject.selectAll('text')
             .attr('font', font)
             .attr('font-size', fontSize)
             .attr('font-weight', fontWeight);
+
+        if (useBackgroundBox) {
+
+            let rAxisObject = svg.append('g')
+                .attr('class', 'r-axis')
+                .attr('transform', `translate(${getWidth()}, 0)`)
+                .call(yAxis);
+
+            rAxisObject.selectAll('text')
+                .attr('font', font)
+                .attr('font-size', fontSize)
+                .attr('font-weight', fontWeight)
+                .remove();
+
+            let tAxisObject = svg.append('g')
+                .attr('class', 't-axis')
+                .attr('transform', `translate(0, 0)`)
+                .call(xAxis);
+
+            tAxisObject.selectAll('text')
+                .attr('font', font)
+                .attr('font-size', fontSize)
+                .attr('font-weight', fontWeight)
+                .remove();
+        }
     };
 
     /**
@@ -211,10 +243,27 @@ export default function() {
             .append('g');
     };
 
+    let renderMedian = function() {
+
+        // Draw the median line
+        boxSvg.append('line')
+            .attr('class', 'median')
+            .attr('x1', d => xScale(d.label))
+            .attr('y1', d => yScale(median(d.values)))
+            .attr('x2', d => xScale(d.label) + xScale.bandwidth())
+            .attr('y2', d => yScale(median(d.values)))
+            .attr('shape-rendering', 'crispEdges')
+            .attr('stroke', medianStroke)
+            .attr('stroke-width', boxStrokeWidth);
+    };
+
     /** 
       * Render boxes for each dataset.
       */
     var renderBoxes = function() {
+
+        //if (!useColor && boxFill == 'none')
+        //    renderMedian();
 
         // Draws the box. The top of the box is Q3 and the bottom is Q1.
         boxSvg.append('rect')
@@ -237,15 +286,25 @@ export default function() {
             .attr('stroke', boxStroke)
             .attr('stroke-width', boxStrokeWidth);
 
-        // Draw the median line
-        boxSvg.append('line')
-            .attr('class', 'median')
-            .attr('x1', d => xScale(d.label))
-            .attr('y1', d => yScale(median(d.values)))
-            .attr('x2', d => xScale(d.label) + xScale.bandwidth())
-            .attr('y2', d => yScale(median(d.values)))
+        //if (useColor)
+        //    renderMedian();
+        renderMedian();
+
+        boxSvg.append('rect')
+            .attr('class', 'box')
+            .attr('x', d => xScale(d.label))
+            .attr('y', d => yScale(getQ3(d.values)))
+            .attr('width', xScale.bandwidth())
+            .attr('height', d => yScale(getQ1(d.values)) - yScale(getQ3(d.values)))
+            .attr('fill', 'none')
             .attr('shape-rendering', 'crispEdges')
-            .attr('stroke', boxStroke)
+            .attr('stroke', d => {
+
+                if (!d.stroke)
+                    return boxStroke;
+
+                return d.stroke;
+            })
             .attr('stroke-width', boxStrokeWidth);
     };
 
@@ -296,42 +355,61 @@ export default function() {
             if (max < getQ3(d.values))
                 max = getQ3(d.values);
 
+            if (min > getQ1(d.values))
+                min = getQ1(d.values);
+
             whiskers.push({
                 label: d.label, 
                 max: max,
                 min: min, 
                 q1: getQ1(d.values),
                 q3: getQ3(d.values),
+                stroke: d.stroke ? d.stroke : null
             });
         }
 
-        // Draws the Q1 whisker
-        svg.selectAll('whiskers')
-            .data(whiskers)
-            .enter()
-            .append('line')
-            .attr('class', 'q1-whisker')
-            .attr('x1', d => xScale(d.label) + xScale.bandwidth() / 4)
-            .attr('y1', d => yScale(d.min))
-            .attr('x2', d => xScale(d.label) + (xScale.bandwidth() / 4) * 3)
-            .attr('y2', d => yScale(d.min))
-            .attr('shape-rendering', 'auto')
-            .attr('stroke', boxStroke)
-            .attr('stroke-width', boxStrokeWidth);
+        if (useWhiskers) {
 
-        // Draws the Q3 whisker
-        svg.selectAll('whiskers')
-            .data(whiskers)
-            .enter()
-            .append('line')
-            .attr('class', 'q3-whisker')
-            .attr('x1', d => xScale(d.label) + xScale.bandwidth() / 4)
-            .attr('y1', d => yScale(d.max))
-            .attr('x2', d => xScale(d.label) + (xScale.bandwidth() / 4) * 3)
-            .attr('y2', d => yScale(d.max))
-            .attr('shape-rendering', 'auto')
-            .attr('stroke', boxStroke)
-            .attr('stroke-width', boxStrokeWidth);
+            // Draws the Q1 whisker
+            svg.selectAll('whiskers')
+                .data(whiskers)
+                .enter()
+                .append('line')
+                .attr('class', 'q1-whisker')
+                .attr('x1', d => xScale(d.label) + xScale.bandwidth() / 4)
+                .attr('y1', d => yScale(d.min))
+                .attr('x2', d => xScale(d.label) + (xScale.bandwidth() / 4) * 3)
+                .attr('y2', d => yScale(d.min))
+                .attr('shape-rendering', 'crispEdges')
+                .attr('stroke', d => {
+
+                    if (!d.stroke)
+                        return boxStroke;
+
+                    return d.stroke;
+                })
+                .attr('stroke-width', boxStrokeWidth);
+
+            // Draws the Q3 whisker
+            svg.selectAll('whiskers')
+                .data(whiskers)
+                .enter()
+                .append('line')
+                .attr('class', 'q3-whisker')
+                .attr('x1', d => xScale(d.label) + xScale.bandwidth() / 4)
+                .attr('y1', d => yScale(d.max))
+                .attr('x2', d => xScale(d.label) + (xScale.bandwidth() / 4) * 3)
+                .attr('y2', d => yScale(d.max))
+                .attr('shape-rendering', 'crispEdges')
+                .attr('stroke', d => {
+
+                    if (!d.stroke)
+                        return boxStroke;
+
+                    return d.stroke;
+                })
+                .attr('stroke-width', boxStrokeWidth);
+        }
 
         // Draws the Q3 line to the whisker
         svg.selectAll('whiskers')
@@ -343,8 +421,14 @@ export default function() {
             .attr('y1', d => yScale(d.max))
             .attr('x2', d => xScale(d.label) + xScale.bandwidth() / 2)
             .attr('y2', d => yScale(d.q3))
-            .attr('shape-rendering', 'auto')
-            .attr('stroke', boxStroke)
+            .attr('shape-rendering', 'crispEdges')
+            .attr('stroke', d => {
+
+                if (!d.stroke)
+                    return boxStroke;
+
+                return d.stroke;
+            })
             .attr('stroke-width', boxStrokeWidth);
 
         // Draws the Q1 line to the whisker
@@ -357,8 +441,14 @@ export default function() {
             .attr('y1', d => yScale(d.min))
             .attr('x2', d => xScale(d.label) + xScale.bandwidth() / 2)
             .attr('y2', d => yScale(d.q1))
-            .attr('shape-rendering', 'auto')
-            .attr('stroke', boxStroke)
+            .attr('shape-rendering', 'crispEdges')
+            .attr('stroke', d => {
+
+                if (!d.stroke)
+                    return boxStroke;
+
+                return d.stroke;
+            })
             .attr('stroke-width', boxStrokeWidth);
     };
 
@@ -409,7 +499,7 @@ export default function() {
       */
     var renderBackground = function() {
 
-        let ticks = yScale.ticks();
+        let ticks = yScale.ticks(yTicks);
 
         // Don't draw for the first tick which is essentially the x-axis
         for (var i = 1; i < ticks.length; i++) {
@@ -424,6 +514,23 @@ export default function() {
                 .attr('stroke', '#ddd')
                 .attr('stroke-width', 1);
         }
+
+        // Draw lines between ticks
+        for (let i = 0; i < ticks.length; i++) {
+
+            if (i + 1 >= ticks.length)
+                break;
+
+            svg.append('line')
+                .attr('x1', 0)
+                .attr('y1', yScale(d3.mean([ticks[i], ticks[i + 1]])) + 0)
+                .attr('x2', getWidth())
+                .attr('y2', yScale(d3.mean([ticks[i], ticks[i + 1]])) + 1)
+                .attr('shape-rendering', 'crispEdges')
+                .attr('stroke', '#ddd')
+                .attr('stroke-width', 1);
+        }
+
     };
 
     /** public **/
@@ -466,6 +573,15 @@ export default function() {
       */
 
     exports.svg = function() { return svg; };
+
+    exports.altAxisLabels = function(_) {
+        if (!arguments.length) return altAxisLabels;
+        altAxisLabels = _;
+        // Sensible defaults for this option
+        xLabelPad = -5;
+        yLabelPadY = 20;
+        return exports;
+    };
 
     exports.boxFill = function(_) {
         if (!arguments.length) return boxFill;
@@ -527,6 +643,12 @@ export default function() {
         return exports;
     };
 
+    exports.medianStroke = function(_) {
+        if (!arguments.length) return medianStroke;
+        medianStroke = _;
+        return exports;
+    };
+
     exports.outlierFill = function(_) {
         if (!arguments.length) return outlierFill;
         outlierFill = _;
@@ -563,6 +685,24 @@ export default function() {
         return exports;
     };
 
+    exports.useBackgroundBox = function(_) {
+        if (!arguments.length) return useBackgroundBox;
+        useBackgroundBox = _;
+        return exports;
+    };
+
+    exports.useColor = function(_) {
+        if (!arguments.length) return useColor;
+        useColor = _;
+        return exports;
+    };
+
+    exports.useWhiskers = function(_) {
+        if (!arguments.length) return useWhiskers;
+        useWhiskers = _;
+        return exports;
+    };
+
     exports.width = function(_) {
         if (!arguments.length) return width;
         width = +_;
@@ -590,6 +730,12 @@ export default function() {
     exports.yLabel = function(_) {
         if (!arguments.length) return yLabel;
         yLabel = _;
+        return exports;
+    };
+
+    exports.yLabelPadY = function(_) {
+        if (!arguments.length) return yLabelPadY;
+        yLabelPadY = +_;
         return exports;
     };
 

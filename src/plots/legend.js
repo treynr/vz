@@ -84,6 +84,7 @@ export default function() {
         scaleFormat = null,
         scaleTickSize = 15,
         scaleTitle = '',
+        scaleTitlePosition = 'end',
         // Render a quantized scale
         useCircleScale = false,
         useSequentialScale = false,
@@ -172,6 +173,7 @@ export default function() {
         let legScale = svg.append('g')
             .attr('class', 'legend-scale');
 
+        console.log(`scaleColor ${scaleColor}`);
         legScale.selectAll('legend')
             //.data(quantScale.range().map(d => quantScale.invertExtent(d)))
             .data(circleScale.ticks(scaleTicks))
@@ -205,8 +207,10 @@ export default function() {
             .attr('font-family', font)
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', fontWeight)
-            .attr('text-anchor', 'end')
-            .attr('x', getWidth())
+            .attr('x', 0)
+            .attr('text-anchor', scaleTitlePosition)
+            //.attr('x', getWidth())
+            //.attr('text-anchor', 'end')
             // Prevent the text from overlapping with any circles
             .attr('y', -max(circleScale.range()) - 5)
             .text(scaleTitle);
@@ -368,8 +372,9 @@ export default function() {
             .attr('font-family', font)
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', fontWeight)
-            .attr('text-anchor', 'end')
-            .attr('x', getWidth())
+            .attr('text-anchor', scaleTitlePosition)
+            //.attr('x', getWidth())
+            .attr('x', 0)
             .attr('y', -5)
             .text(scaleTitle);
     };
@@ -426,8 +431,11 @@ export default function() {
                 return d.fill;
             })
             .attr('stroke', d => {
+
                 if (useLine)
                     return d.fill;
+                if (d.stroke)
+                    return d.stroke;
 
                 return stroke;
             })
@@ -890,6 +898,12 @@ export default function() {
     exports.scaleTitle = function(_) {
         if (!arguments.length) return scaleTitle;
         scaleTitle = _;
+        return exports;
+    };
+
+    exports.scaleTitlePosition = function(_) {
+        if (!arguments.length) return scaleTitlePosition;
+        scaleTitlePosition = _;
         return exports;
     };
 

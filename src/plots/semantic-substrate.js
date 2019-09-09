@@ -73,6 +73,8 @@ export default function() {
         removeLoners = true,
         // SVG object for the plot
         svg = null,
+        // Prevent nodes from being rendered outside the plot boundaries
+        useClipping = false,
         // Position nodes in the graph using collision forces to avoid node overlap
         useForce = false,
         useSingleAxis = false,
@@ -251,12 +253,29 @@ export default function() {
     };
 
     /**
+      * Adds and renders a clipPath element to the plot so nodes don't overlap
+      * into the axes or cross plot boundaries.
+      */
+    let renderClipping = function() {
+
+        svg.append('clipPath')
+            .attr('id', 'clipping-area')
+            .attr('class', 'clipping')
+            .append('rect')
+            .attr('x', margin.left)
+            .attr('y', 0)
+            .attr('height', getHeight())
+            .attr('width', getWidth() - margin.right);
+    };
+
+    /**
       * Renders each node in the graph and attaches the objects to the SVG.
       */
     let renderNodes = function() {
 
         let nodes = svg.append('g')
             .attr('class', 'nodes')
+            .attr('clip-path', useClipping ? 'url(#clipping-area)' : '')
             .selectAll('nodestuff')
             .data(data.nodes)
             .enter()
@@ -532,15 +551,16 @@ export default function() {
 
         checkIntegrity();
         makeScales();
+        renderClipping()
         makeAxes();
         renderGrid();
-        renderAxes();
 
         if (useForce)
             positionWithForce();
 
         renderEdges();
         renderNodes();
+        renderAxes();
 
         return exports;
     };
@@ -672,6 +692,12 @@ export default function() {
     exports.nodeStrokeWidth = function(_) { 
         if (!arguments.length) return nodeStrokeWidth;
         nodeStrokeWidth = +_;
+        return exports;
+    };
+
+    exports.useClipping = function(_) { 
+        if (!arguments.length) return useClipping;
+        useClipping = _;
         return exports;
     };
 
