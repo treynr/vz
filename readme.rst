@@ -87,7 +87,7 @@ To build development modules (unminified):
 
 Development modules are generated and compiled to the `dist/development`
 directory.
-To build for minified modules for production:
+To build minified modules for production:
 
 .. code:: text
 
