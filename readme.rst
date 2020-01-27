@@ -68,20 +68,20 @@ should take care of installing these.
 
 Start by cloning the github repo:
 
-..code:: text
+.. code:: text
 
     $ git clone https://github.com/treynr/vz.git
     $ cd vz
 
 Install the required dependencies:
 
-..code:: text
+.. code:: text
 
     $ yarn install
 
 To build development modules (unminified):
 
-..code:: text
+.. code:: text
 
     $ yarn run dev
 
@@ -89,7 +89,7 @@ Development modules are generated and compiled to the `dist/development`
 directory.
 To build for minified modules for production:
 
-..code:: text
+.. code:: text
 
     $ yarn run build
 
