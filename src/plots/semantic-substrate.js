@@ -12,7 +12,10 @@ import {extent} from 'd3-array';
 import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleLinear, scaleOrdinal} from 'd3-scale';
 import {select} from 'd3-selection';
-import {forceCollide, forceManyBody, forceSimulation, forceX, forceY} from 'd3-force';
+import {forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY} from 'd3-force';
+
+import _ from 'lodash';
+
 
 export default function() {
 
@@ -46,6 +49,7 @@ export default function() {
         manyBodyForce = null,
         // Data object containing objects/data to visualize
         data = null,
+        disableXAxis = false,
         // Transparency for rendered edges
         edgeOpacity = 0.6,
         // Edge color
@@ -73,6 +77,7 @@ export default function() {
         removeLoners = true,
         // SVG object for the plot
         svg = null,
+        useBackgroundBox = false,
         // Prevent nodes from being rendered outside the plot boundaries
         useClipping = false,
         // Position nodes in the graph using collision forces to avoid node overlap
@@ -157,6 +162,130 @@ export default function() {
 
         if (yNice)
             yScale.nice();
+
+        if (disableXAxis) {
+
+            // Determine the number of nodes per y-axis layer
+            let shit = data.nodes.reduce((ac, d) => {
+
+                if (!(d.y in ac))
+                    ac[d.y] = 0;
+
+                ac[d.y]++;
+
+                return ac;
+            }, {});
+
+            let xScaleSize = xScale.range()[1] - xScale.range()[0];
+
+            let ySizes = Object.entries(shit).reduce((ac, [k, v]) => {
+                ac[k] = xScaleSize / (v + 1);
+                return ac;
+            }, {});
+
+            let nodeMap = data.nodes.reduce((ac, d) => {
+                ac[d.id] = d;
+                return ac;
+            }, {});
+
+            let edges = data.edges.reduce((ac, d) => {
+
+                if (!(d.source in nodeMap))
+                    return ac;
+                if (!(d.target in nodeMap))
+                    return ac;
+
+                if (!(d.source in ac)) {
+
+                    ac[d.source] = {};
+                    ac[d.source].parents = [];
+                    ac[d.source].children = [];
+                }
+
+                if (!(d.target in ac)) {
+
+                    ac[d.target] = {};
+                    ac[d.target].parents = [];
+                    ac[d.target].children = [];
+                }
+
+                if (nodeMap[d.source].y > nodeMap[d.target].y) {
+
+                    ac[d.source].children.push(d.target);
+                    ac[d.target].parents.push(d.source);
+
+                } else {
+
+                    ac[d.target].children.push(d.source);
+                    ac[d.source].parents.push(d.target);
+                }
+
+                return ac;
+            }, {});
+
+            _.chain(data.nodes)
+                .groupBy('y')
+                .sortBy('y')
+                .reverse()
+                .slice(0, 1)
+                .map((v, k) => {
+                    v.forEach((d, i) => {
+                        d.position = i;
+                    });
+                })
+                .value();
+
+            //let idk = _.chain(data.nodes)
+            //    .groupBy('y')
+            //    .sortBy('y')
+            //    .reverse()
+            //    .slice(1)
+            //    .map((v, k) => {
+
+            //        let cp = 0;
+
+            //        //v.sort((a, b) => {
+            //        //    if (edges[d.id].parents.length == 0)
+            //        //        return Number.MAX_SAFE_INTEGER;
+            //        //    if (edges[d.id].parents.length == 1)
+            //        //});
+            //        v.forEach(d => {
+
+            //            if (edges[d.id].parents.length == 0)
+            //                d.position = -1;
+
+            //            if (edges[d.id].parents.length == 1)
+
+            //        });
+            //        console.log(v);
+            //    })
+            //    .value();
+
+            //Object.entries(edges).forEach(([k, v]) => {
+
+            //    edges[k] = Array.from(new Set(v));
+            //});
+
+            //data.nodes.sort((a, b) => {
+            //    return new Set([...new Set(edges[a.node_id])].filter(x => new Set(edges[b.node_id]).has(x))).size;
+            //});
+
+            let yNodes = data.nodes.reduce((ac, d) => {
+                if (!(d.y in ac))
+                    ac[d.y] = [];
+
+                ac[d.y].push(d);
+                return ac;
+            }, {});
+
+            // Determine fixed positions
+            Object.entries(yNodes).forEach(([k, a]) => {
+
+                a.forEach((d, i) => {
+                    d.fixedx = margin.left + ySizes[k] * (i + 1);
+                })
+            });
+        }
     };
 
     /**
@@ -172,6 +301,9 @@ export default function() {
 
         if (xTickValues)
             xAxis.tickValues(xTickValues);
+
+        if (useSingleAxis)
+            xAxis.tickSizeOuter(0);
     };
 
     /**
@@ -182,9 +314,6 @@ export default function() {
         let xAxisObject = svg.append('g')
             .attr('class', 'x-axis')
             .attr('transform', `translate(0, ${getHeight()})`)
-            //.attr('font', font)
-            //.attr('font-size', `${fontSize}px`)
-            //.attr('font-weight', 'normal')
             .call(xAxis);
 
         // Attach the x-axis label
@@ -212,9 +341,6 @@ export default function() {
         let yAxisObject = svg.append('g')
             .attr('class', 'y-axis')
             .attr('transform', `translate(${margin.left}, 0)`)
-            //.attr('font', font)
-            //.attr('font-size', `${fontSize}px`)
-            //.attr('font-weight', 'normal')
             .call(yAxis);
 
         // Attach the y-axis label
@@ -249,6 +375,41 @@ export default function() {
                 .attr('font', font)
                 .attr('font-size', `${fontSize}px`)
                 .attr('font-weight', 'normal');
+        }
+
+        // Rather than encase all the x-axis drawing in if statements, we just delete
+        // if we don't need it.
+        if (useBackgroundBox && useSingleAxis)
+            svg.selectAll('.x-axis > .tick').remove();
+        else if (useSingleAxis)
+            svg.select('.x-axis').remove();
+
+        if (useBackgroundBox) {
+
+            let rAxisObject = svg.append('g')
+                .attr('class', 'r-axis')
+                .attr('transform', `translate(${getWidth()}, 0)`)
+                .call(yAxis);
+
+            rAxisObject.selectAll('text')
+                .attr('font', font)
+                .attr('font-size', fontSize)
+                .attr('font-weight', 'normal')
+                .remove();
+
+            let tAxisObject = svg.append('g')
+                .attr('class', 't-axis')
+                .attr('transform', `translate(0, 0)`)
+                .call(xAxis);
+
+            tAxisObject.selectAll('text')
+                .attr('font', font)
+                .attr('font-size', fontSize)
+                .attr('font-weight', 'normal')
+                .remove();
+
+            if (useSingleAxis)
+                tAxisObject.selectAll('.tick').remove();
         }
     };
 
@@ -285,8 +446,19 @@ export default function() {
             ;
 
         nodes.append('circle')
-            .attr('cx', d => d.cx !== undefined ? d.cx : xScale(d.x))
-            .attr('cy', d => d.cy !== undefined ? d.cy : yScale(d.y))
+            .attr('cx', d => {
+
+                if (disableXAxis)
+                    return d.fixedx;
+
+                return d.cx !== undefined ? d.cx : xScale(d.x);
+            })
+            .attr('cy', d => {
+                if (d.fy)
+                    return d.fy;
+
+                return d.cy !== undefined ? d.cy : yScale(d.y);
+            })
             //.attr('cy', d => yScale(d.y))
             .attr('r', d => {
 
@@ -341,9 +513,12 @@ export default function() {
 
             //let node = select(this);
 
-            //nodePositions[d.id] = {x: node.attr('cx'), y: node.attr('cy')};
-            if (d.cx !== undefined && d.cy !== undefined) {
+            if (disableXAxis) {
+                nodePositions[d.id] = {x: d.fixedx, y: yScale(d.y)};
+
+            } else if (d.cx !== undefined && d.cy !== undefined) {
                 nodePositions[d.id] = {x: d.cx, y: d.cy};
+
             } else {
                 nodePositions[d.id] = {x: xScale(d.x), y: yScale(d.y)};
             }
@@ -358,10 +533,14 @@ export default function() {
             .attr('class', 'edge');
 
         edges.append('line')
-            .attr('x1', d => nodePositions[d.source].x)
-            .attr('y1', d => nodePositions[d.source].y)
-            .attr('x2', d => nodePositions[d.target].x)
-            .attr('y2', d => nodePositions[d.target].y)
+            //.attr('x1', d => nodePositions[d.source].x)
+            //.attr('y1', d => nodePositions[d.source].y)
+            //.attr('x2', d => nodePositions[d.target].x)
+            //.attr('y2', d => nodePositions[d.target].y)
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y)
             .attr('fill', 'none')
             .attr('opacity', d => {
 
@@ -388,25 +567,57 @@ export default function() {
 
     let positionWithForce = function() {
 
-        let simulation = forceSimulation(data.nodes)
-            .force('x', 
-                forceX(d => { 
-                    if (useSingleAxis)
-                        return getWidth() / 2;
-                    else
-                        return xScale(d.x);
-                }).strength(xForceStrength))
-            .force('y', forceY(d => yScale(d.y)).strength(yForceStrength))
-            .force(
-                'collide', 
-                collisionForce ? forceCollide(collisionForce) : null)
-            .force(
-                'charge', 
-                manyBodyForce ? forceManyBody().strength(manyBodyForce) : null
-            )
-            .stop();
+        let simulation = null;
 
-        for (let i = 0; i < 800; i++)
+        if (useSingleAxis) {
+
+            data.nodes.forEach(d => d.fy = yScale(d.y));
+
+            simulation = forceSimulation(data.nodes)
+                //.force('x', forceX(d => {
+                //
+                //        //if (useSingleAxis)
+                //        //    return getWidth() / 2;
+                //        //else
+                //            return xScale(d.x);
+                //}).strength(xForceStrength))
+                //.force('y', forceY(d => yScale(d.y)).strength(yForceStrength))
+                //.force('y', d => yScale(d.y))
+                //.force(
+                //    'collide',
+                //    collisionForce ? forceCollide(collisionForce) : null)
+                .force('center', forceCenter().x(getWidth() / 2))
+                .force('collide', forceCollide().radius(nodeRadius + 2).strength(0.7))
+                .force('link', forceLink().links(data.edges).id(d => d.id).iterations(130).distance(5))
+                //.force(
+                //    'charge',
+                //    manyBodyForce ? forceManyBody().strength(manyBodyForce) : null
+                //)
+                .stop();
+
+            console.log(simulation.nodes());
+        } else {
+            simulation = forceSimulation(data.nodes)
+                .force('x',
+                    forceX(d => {
+                        if (useSingleAxis)
+                            return getWidth() / 2;
+                        else
+                            return xScale(d.x);
+                    }).strength(xForceStrength))
+                .force('y', forceY(d => yScale(d.y)).strength(yForceStrength))
+                .force(
+                    'collide',
+                    collisionForce ? forceCollide(collisionForce) : null)
+                .force(
+                    'charge',
+                    manyBodyForce ? forceManyBody().strength(manyBodyForce) : null
+                )
+                .stop();
+        }
+
+
+        for (let i = 0; i < 1800; i++)
             simulation.tick();
 
         for (let node of data.nodes) {
@@ -414,6 +625,60 @@ export default function() {
             node.cx = node.x;
             node.cy = node.y;
         }
+    };
+
+    let arrangeSingleAxisNodes = function() {
+
+        console.log(data.nodes);
+
+        _.chain(data.nodes)
+            .groupBy(d => d.data.y)
+            .map((v, k) => {
+
+                // The number of nodes in this layer
+                let size = v.length;
+                // Width the chart area where we can actually place nodes
+                let xScaleSize = xScale.range()[1] - xScale.range()[0];
+                // Spacing between individual nodes
+                let nodeSpace = xScaleSize / (size + 1);
+                // Sort nodes so we order them based on their current x-position which was assigned
+                // using the force simulation
+                v.sort((a, b) => a.x - b.x);
+                // Now update each nodes x-position so everything is evenly spaced for each layer
+                v.forEach((d, i) => d.cx = margin.left + nodeSpace * (i + 1));
+                v.forEach((d, i) => d.x = margin.left + nodeSpace * (i + 1));
+            })
+            .value();
+
+        console.log(data.nodes)
+        console.log(data.edges)
+        /*
+        // Determine the number of nodes per y-axis layer
+        let shit = data.nodes.reduce((ac, d) => {
+
+            if (!(d.y in ac))
+                ac[d.y] = 0;
+
+            ac[d.y]++;
+
+            return ac;
+        }, {});
+
+        let xScaleSize = xScale.range()[1] - xScale.range()[0];
+
+        let ySizes = Object.entries(shit).reduce((ac, [k, v]) => {
+            ac[k] = xScaleSize / (v + 1);
+            return ac;
+        }, {});
+
+        // Determine fixed positions
+        Object.entries(yNodes).forEach(([k, a]) => {
+
+            a.forEach((d, i) => {
+                d.fixedx = margin.left + ySizes[k] * (i + 1);
+            })
+        });
+         */
     };
 
     let renderGrid = function() {
@@ -549,6 +814,9 @@ export default function() {
             .append('g')
             .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
+        // Save original node data since it may get altered by the force simulations
+        data.nodes.forEach(d => d.data = _.cloneDeep(d));
+
         checkIntegrity();
         makeScales();
         renderClipping()
@@ -557,6 +825,9 @@ export default function() {
 
         if (useForce)
             positionWithForce();
+
+        if (useSingleAxis)
+            arrangeSingleAxisNodes();
 
         renderEdges();
         renderNodes();
@@ -584,6 +855,12 @@ export default function() {
     exports.data = function(_) { 
         if (!arguments.length) return data;
         data = _;
+        return exports;
+    };
+
+    exports.disableXAxis = function(_) {
+        if (!arguments.length) return disableXAxis;
+        disableXAxis = _;
         return exports;
     };
 
@@ -692,6 +969,12 @@ export default function() {
     exports.nodeStrokeWidth = function(_) { 
         if (!arguments.length) return nodeStrokeWidth;
         nodeStrokeWidth = +_;
+        return exports;
+    };
+
+    exports.useBackgroundBox = function(_) {
+        if (!arguments.length) return useBackgroundBox;
+        useBackgroundBox = _;
         return exports;
     };
 

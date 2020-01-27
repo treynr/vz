@@ -7,7 +7,7 @@
 'use strict';
 
 import {extent, median, quantile, ticks} from 'd3-array';
-import {axisBottom, axisLeft, axisRight} from 'd3-axis';
+import {axisBottom, axisLeft} from 'd3-axis';
 import {scaleBand, scaleLinear} from 'd3-scale';
 import {interpolateCool} from 'd3-scale-chromatic';
 import {select} from 'd3-selection';
@@ -52,9 +52,11 @@ export default function() {
         // X and y axis font
         font = 'sans-serif',
         // X and y axis font size
-        fontSize = 12,
+        fontSize = 13,
         // X and y axis font weight
         fontWeight = 'normal',
+        // When using alt axis label positioning, keep the rotation of the y-axis
+        keepAxisRotation = false,
         // Margin object
         margin = {top: 40, right: 30, bottom: 50, left: 50},
         medianStroke = '#640000',
@@ -78,14 +80,16 @@ export default function() {
         // X-axis label
         xLabel = '',
         // Padding in pixels for the x-axis label
-        xLabelPad = 40,
+        xLabeldx = null,
+        xLabeldy = null,
         xTickFormat = null,
         // Y value domain
         yDomain = null,
         // Y-axis label
         yLabel = '',
         // Padding in pixels for the y-axis label
-        yLabelPadY = 40,
+        yLabeldy = null,
+        yLabeldx = null,
         // Niceify the y-axis scale
         yNice = true,
         // d3 scale type to use for the x-axis
@@ -153,7 +157,8 @@ export default function() {
             .tickSizeOuter(0);
 
         yAxis = axisLeft(yScale)
-            .ticks(yTicks, yTickFormat);
+            .ticks(yTicks, yTickFormat)
+            .tickSizeOuter(0);
     };
 
     /** 
@@ -175,7 +180,12 @@ export default function() {
         xAxisObject.append('text')
             .attr('class', 'x-axis-label')
             .attr('x', altAxisLabels ? getWidth() - 5: getWidth() / 2)
-            .attr('y', xLabelPad)
+            .attr('y', () => {
+                if (xLabeldy !== null)
+                    return xLabeldy;
+
+                return altAxisLabels ? -5 : 40;
+            })
             .attr('text-anchor', altAxisLabels ? 'end' : 'middle')
             .attr('fill', '#000000')
             .text(xLabel);
@@ -192,12 +202,32 @@ export default function() {
 
         yAxisObject.append('text')
             .attr('class', 'y-axis-label')
-            .attr('x', altAxisLabels ? 5 : -getHeight() / 2)
+            .attr('dx', () => {
+                if (yLabeldx != null)
+                    return yLabeldx;
+
+                return altAxisLabels ? 5 : -getHeight() / 2
+            })
             //.attr('y', altAxisLabels ? yScale(yScale.ticks()[yScale.ticks().length - 2]) : -30)
-            .attr('y', yLabelPadY)
+            .attr('y', () => {
+                if (yLabeldy != null)
+                    return yLabeldy;
+
+                return altAxisLabels ? 5 : -50;
+            })
             .attr('text-anchor', altAxisLabels ? 'start': 'middle')
             .attr('fill', '#000000')
-            .attr('transform', altAxisLabels ? '' : 'rotate(-90)')
+            //.attr('transform', altAxisLabels ? '' : 'rotate(-90)')
+            .attr('transform', () => {
+
+                if (altAxisLabels && keepAxisRotation)
+                    return 'rotate(-90)';
+
+                else if (altAxisLabels)
+                    return '';
+
+                return 'rotate(-90)';
+            })
             .text(yLabel);
 
         yAxisObject.selectAll('text')
@@ -262,16 +292,29 @@ export default function() {
       */
     var renderBoxes = function() {
 
-        //if (!useColor && boxFill == 'none')
-        //    renderMedian();
-
         // Draws the box. The top of the box is Q3 and the bottom is Q1.
-        boxSvg.append('rect')
+        //boxSvg.append('rect')
+        //    .attr('class', 'box')
+        //    .attr('x', d => xScale(d.label))
+        //    .attr('y', d => yScale(getQ3(d.values)))
+        //    .attr('width', xScale.bandwidth())
+        //    .attr('height', d => yScale(getQ1(d.values)) - yScale(getQ3(d.values)))
+        //    .attr('fill', (d, i) => {
+
+        //        if (!useColor)
+        //            return boxFill;
+
+        //        if (!d.color)
+        //            return colors[i];
+
+        //        return d.color;
+        //    })
+        //    .attr('shape-rendering', 'crispEdges')
+        //    .attr('stroke', boxStroke)
+        //    .attr('stroke-width', boxStrokeWidth);
+
+        boxSvg.append('path')
             .attr('class', 'box')
-            .attr('x', d => xScale(d.label))
-            .attr('y', d => yScale(getQ3(d.values)))
-            .attr('width', xScale.bandwidth())
-            .attr('height', d => yScale(getQ1(d.values)) - yScale(getQ3(d.values)))
             .attr('fill', (d, i) => {
 
                 if (!useColor)
@@ -284,28 +327,40 @@ export default function() {
             })
             .attr('shape-rendering', 'crispEdges')
             .attr('stroke', boxStroke)
-            .attr('stroke-width', boxStrokeWidth);
+            .attr('stroke-width', boxStrokeWidth)
+            .attr('d', d => {
+                return `
+                    M${xScale(d.label)} ${yScale(getQ3(d.values))}
+                    L${xScale(d.label) + xScale.bandwidth()} ${yScale(getQ3(d.values))}
+                    L${xScale(d.label) + xScale.bandwidth()} ${yScale(getQ1(d.values))}
+                    L${xScale(d.label)} ${yScale(getQ1(d.values))}
+                    L${xScale(d.label)} ${yScale(getQ3(d.values))}
+                `;
+            })
+        ;
 
-        //if (useColor)
-        //    renderMedian();
+        let start = yScale(getQ3(data[0].values));
+        let height = yScale(getQ1(data[0].values)) - yScale(getQ3(data[0].values));
+        console.log(`box: ${start - height}`);
+        console.log(`q3: ${yScale(getQ3(data[0].values))}`);
         renderMedian();
 
-        boxSvg.append('rect')
-            .attr('class', 'box')
-            .attr('x', d => xScale(d.label))
-            .attr('y', d => yScale(getQ3(d.values)))
-            .attr('width', xScale.bandwidth())
-            .attr('height', d => yScale(getQ1(d.values)) - yScale(getQ3(d.values)))
-            .attr('fill', 'none')
-            .attr('shape-rendering', 'crispEdges')
-            .attr('stroke', d => {
+        //boxSvg.append('rect')
+        //    .attr('class', 'box')
+        //    .attr('x', d => xScale(d.label))
+        //    .attr('y', d => yScale(getQ3(d.values)))
+        //    .attr('width', xScale.bandwidth())
+        //    .attr('height', d => yScale(getQ1(d.values)) - yScale(getQ3(d.values)))
+        //    .attr('fill', 'none')
+        //    .attr('shape-rendering', 'crispEdges')
+        //    .attr('stroke', d => {
 
-                if (!d.stroke)
-                    return boxStroke;
+        //        if (!d.stroke)
+        //            return boxStroke;
 
-                return d.stroke;
-            })
-            .attr('stroke-width', boxStrokeWidth);
+        //        return d.stroke;
+        //    })
+        //    .attr('stroke-width', boxStrokeWidth);
     };
 
     /**
@@ -502,7 +557,7 @@ export default function() {
         let ticks = yScale.ticks(yTicks);
 
         // Don't draw for the first tick which is essentially the x-axis
-        for (var i = 1; i < ticks.length; i++) {
+        for (var i = 0; i < ticks.length; i++) {
 
             // no fucking clue why this is one pixel off
             svg.append('line')
@@ -568,6 +623,11 @@ export default function() {
     exports.getWidth = getWidth;
     exports.getHeight = getHeight;
 
+    exports.xAxis = xAxis;
+    exports.xScale = xScale;
+    exports.yAxis = yAxis;
+    exports.yScale = yScale;
+
     /**
       * Setters and getters.
       */
@@ -577,9 +637,6 @@ export default function() {
     exports.altAxisLabels = function(_) {
         if (!arguments.length) return altAxisLabels;
         altAxisLabels = _;
-        // Sensible defaults for this option
-        xLabelPad = -5;
-        yLabelPadY = 20;
         return exports;
     };
 
@@ -634,6 +691,12 @@ export default function() {
     exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
+        return exports;
+    };
+
+    exports.keepAxisRotation = function(_) {
+        if (!arguments.length) return keepAxisRotation;
+        keepAxisRotation = _;
         return exports;
     };
 
@@ -721,6 +784,18 @@ export default function() {
         return exports;
     };
 
+    exports.xLabeldx = function(_) {
+        if (!arguments.length) return xLabeldx;
+        xLabeldx = +_;
+        return exports;
+    };
+
+    exports.xLabeldy = function(_) {
+        if (!arguments.length) return xLabeldy;
+        xLabeldy = +_;
+        return exports;
+    };
+
     exports.yDomain = function(_) {
         if (!arguments.length) return yDomain;
         yDomain = _;
@@ -733,9 +808,15 @@ export default function() {
         return exports;
     };
 
-    exports.yLabelPadY = function(_) {
-        if (!arguments.length) return yLabelPadY;
-        yLabelPadY = +_;
+    exports.yLabeldy = function(_) {
+        if (!arguments.length) return yLabeldy;
+        yLabeldy = +_;
+        return exports;
+    };
+
+    exports.yLabeldx = function(_) {
+        if (!arguments.length) return yLabeldx;
+        yLabeldx = +_;
         return exports;
     };
 

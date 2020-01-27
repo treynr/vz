@@ -23,12 +23,16 @@ export default function() {
         width = 800,
         // SVG height
         height = 500,
+        // Axis text size
+        fontSize = 13,
         // Margin object
         margin = {top: 10, right: 30, bottom: 50, left: 50},
         // Line width
         lineWidth = 2,
         // Draw the line of no discrimination (for ROC curves)
         drawDiscrimination = false,
+        keepAxisRotation = false,
+        curveAlpha = 0.5,
         // Line color
         //lineColor = '#98ABC5',
         lineColors = scaleOrdinal(schemeCategory10),
@@ -42,26 +46,38 @@ export default function() {
         nodeStrokeWidth = 2,
         // If nodes are drawn, the node radius
         nodeRadius = 5,
-        // Draws nodes at each X-axis point if true
-        useNodes = false,
         // Boolean to draw or hide the outer x-axis ticks
         outerTicks = false,
-        // Axis text size
-        fontSize = 13,
+        useClipping = false,
+        // Draws nodes at each X-axis point if true
+        useNodes = false,
+        // Render ticks on the opposite side of the axis line
+        useOppositeTicks = false,
+        useConnectedAxes = false,
         // Graph title
         title = '',
+        // Width of each tick mark
+        tickSize = 5,
+        // Stroke width for the x-axis
+        xAxisStrokeWidth = 1,
         // X-axis text
         xLabel = '',
         // X position of the x-axis label
         xLabelPad = null,
+        xLabeldx = null,
+        xLabeldy = null,
         // Scale for the x-axis
         xScale = null,
         // Number of x-axis ticks
         xTicks = 10,
+        // Stroke width for the y-axis
+        yAxisStrokeWidth = 1,
         // Y-axis text
         yLabel = '',
         // Y position of the x-axis label
         yLabelPad = null,
+        yLabeldx = null,
+        yLabeldy = null,
         // Y-axis padding
         yAxisPad = 35,
         // Scale for the y-axis
@@ -73,6 +89,7 @@ export default function() {
         yDomain = null,
         xDomain = null,
         xTickValues = null,
+        xScaleFunction = scaleLinear,
         // Format string for y-axis labels
         yTickFormat = null,
         // y-axis tick values
@@ -92,18 +109,19 @@ export default function() {
 
         if (!xDomain)
             xDomain = extent(data.reduce((ac, d) => {
-                return ac.concat(d.points.map(p => p[0]));
+                return ac.concat(d.points.map(p => p.x));
             }, []));
 
         if (!yDomain)
             yDomain = extent(data.reduce((ac, d) => {
-                return ac.concat(d.points.map(p => p[1]));
+                return ac.concat(d.points.map(p => p.y));
             }, []));
 
-        xScale = scaleLinear()
+        xScale = xScaleFunction()
             .domain(xDomain)
             .nice()
-            .range([margin.left, getWidth()]);
+            .range([useConnectedAxes ? yAxisPad : margin.left, getWidth()]);
+            //.range([yAxisPad, getWidth()]);
 
         yScale = scaleLinear()
             .domain(yDomain)
@@ -117,57 +135,113 @@ export default function() {
     var makeAxes = function() {
 
         let xAxis = axisBottom(xScale)
-            .ticks(xTicks, xTickFormat);
+            .ticks(xTicks, xTickFormat)
+            .tickSize(tickSize)
+            .tickSizeOuter(useOppositeTicks ? 0 : tickSize);
 
         let yAxis = axisLeft(yScale)
-            .ticks(yTicks, yTickFormat);
+            .ticks(yTicks, yTickFormat)
+            .tickSize(tickSize)
+            .tickSizeOuter(useOppositeTicks ? 0 : tickSize);
 
         let xAxisObject = svg.append('g')
-            .attr('class', 'axis')
-            .attr('transform', `translate(0, ${getHeight() + 1})`)
-            .style('font-family', 'sans-serif')
-            .style('font-size', `${fontSize}px`)
-            .style('font-weight', 'normal')
-            .style('fill', 'none')
+            .attr('class', 'x-axis')
+            .attr('transform', `translate(0, ${getHeight()})`)
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', 'normal')
+            .attr('fill', 'none')
+            .attr('stroke-width', xAxisStrokeWidth)
             .call(xAxis);
 
         xAxisObject.append('text')
+            .attr('class', 'x-axis-label')
             .attr('fill', '#000')
-            //.attr('x', (margin.left + getWidth()) / 2)
-            //.attr('y', 45)
-            //.attr('text-anchor', 'middle')
-            .attr('x', altAxisLabels ? getWidth() : (margin.left + getWidth()) / 2)
-            .attr('y', altAxisLabels ? -5 : 45)
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', `${fontSize}px`)
+            .attr('dx', () => {
+                if (xLabeldx)
+                    return xLabeldx;
+
+                return altAxisLabels ? getWidth() : (margin.left + getWidth()) / 2;
+            })
+            .attr('dy', () => {
+                if (xLabeldy)
+                    return xLabeldy;
+
+                return altAxisLabels ? -5 : 45;
+            })
             .attr('text-anchor', altAxisLabels ? 'end' : 'middle')
             .text(xLabel);
 
+        xAxisObject.selectAll('text')
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', `${fontSize}px`);
+
         let yAxisObject = svg.append('g')
-            .attr('class', 'axis')
+            .attr('class', 'y-axis')
             .attr('transform', `translate(${yAxisPad}, 0)`)
-            .style('font-family', 'sans-serif')
-            .style('font-size', `${fontSize}px`)
-            .style('font-weight', 'normal')
-            .style('fill', 'none')
-            .call(yAxis)
-            //.call(g => g.select(".tick:last-of-type text").clone()
-            //  .attr("x", 3)
-            //  .attr("text-anchor", "start")
-            //  .attr("font-weight", "bold")
-            //  .text(yLabel))
-            ;
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', `${fontSize}px`)
+            .attr('font-weight', 'normal')
+            .attr('fill', 'none')
+            .attr('stroke-width', yAxisStrokeWidth)
+            .call(yAxis);
 
         yAxisObject.append('text')
+            .attr('class', 'y-axis-label')
             .attr('fill', '#000')
-            // Weird x, y argumetnns cause of the -90 rotation
-            //.attr('x', -getHeight() / 2)
-            //.attr('y', -50)
-            //.attr('transform', 'rotate(-90)')
-            //.attr('text-anchor', 'middle')
-            .attr('x', altAxisLabels ? 5 : -getHeight() / 2)
-            .attr('y', altAxisLabels ? 0 : -50)
-            .attr('text-anchor', altAxisLabels ? 'start' : 'middle')
-            .attr('transform', altAxisLabels ? '' : 'rotate(-90)')
+            .attr('dx', () => {
+                if (yLabeldx)
+                    return yLabeldx;
+
+                return altAxisLabels ? 5 : -getHeight() / 2;
+            })
+            .attr('dy', () => {
+                if (yLabeldy)
+                    return yLabeldy;
+
+                return altAxisLabels ? 5 : -50;
+            })
+            .attr('text-anchor', () => {
+                return altAxisLabels ? 'start' : 'middle'
+            })
+            .attr('transform', () => {
+
+                if (altAxisLabels && keepAxisRotation)
+                    return 'rotate(-90)';
+
+                else if (altAxisLabels)
+                    return '';
+
+                return 'rotate(-90)';
+            })
             .text(yLabel);
+
+        yAxisObject.selectAll('text')
+            .attr('font-family', 'sans-serif')
+            .attr('font-size', `${fontSize}px`);
+
+        if (useOppositeTicks) {
+
+            yAxisObject.selectAll('.tick > line')
+                .attr('transform', `translate(${tickSize}, 0)`);
+
+            xAxisObject.selectAll('.tick > line')
+                .attr('transform', `translate(0, ${-tickSize})`);
+        }
+    };
+
+    let renderClipping = function() {
+
+        svg.append('clipPath')
+            .attr('id', 'clipping-area')
+            .attr('class', 'clipping')
+            .append('rect')
+            .attr('x', useConnectedAxes ? yAxisPad : margin.left)
+            .attr('y', 0)
+            .attr('height', getHeight())
+            .attr('width', getWidth() - margin.right);
     };
 
     /**
@@ -176,9 +250,12 @@ export default function() {
     var drawLines = function() {
 
         var linePath = line()
-            .curve(curveCatmullRom.alpha(0.5))
-            .x(function(d) { return xScale(d[0]); })
-            .y(function(d) { return yScale(d[1]); });
+            //.curve(curveCatmullRom.alpha(curveAlpha))
+            //.x(function(d) { return xScale(d[0]); })
+            //.y(function(d) { return yScale(d[1]); });
+            .x(function(d) { return xScale(d.x); })
+            .y(function(d) { return yScale(d.y); })
+            .curve(curveCatmullRom.alpha(1));
 
         var svgLine = svg.selectAll('aline')
             .data(data)
@@ -186,15 +263,22 @@ export default function() {
             .append('g');
 
         svgLine.append('path')
-            .attr('d', function(d) { return linePath(d.points); })
-            .attr('stroke', function(d, i) { 
+            .attr('class', (d, i) => {
+                if (d.id)
+                    return `${d.id}-line-path`;
 
-                if (d.color)
-                    return d.color;
-
-                return lineColors(i); 
+                return `${i}-line-path`;
             })
-            .attr('stroke-width', function(d) { 
+            .attr('clip-path', useClipping ? 'url(#clipping-area)' : '')
+            .attr('d', function(d) { return linePath(d.points); })
+            .attr('stroke', function(d, i) {
+
+                if (d.stroke)
+                    return d.stroke;
+
+                return lineColors(i);
+            })
+            .attr('stroke-width', function(d) {
 
                 if (d.width)
                     return d.width;
@@ -236,16 +320,35 @@ export default function() {
                 .append('g');
 
             nodes.append('circle')
-                .attr('cx', function(d) { return xScale(d[0]); })
-                .attr('cy', function(d) { return yScale(d[1]); })
+                .attr('clip-path', useClipping ? 'url(#clipping-area)' : '')
+                .attr('cx', d => xScale(d.x))
+                .attr('cy', d => yScale(d.y))
                 .attr('r', function(d) {
                     if (d.radius)
                         return d.radius;
 
                     return nodeRadius;
                 })
-                .attr('fill', nodeColor)
-                .attr('stroke', function() { return nodeStrokes(i); })
+                .attr('fill', () => {
+
+                    if (data[i].nodeFill)
+                        return data[i].nodeFill;
+
+                    if (data[i].stroke)
+                        return data[i].stroke;
+
+                    return lineColors(i);
+                })
+                .attr('stroke', () => {
+
+                    if (data[i].nodeStroke)
+                        return data[i].nodeStroke;
+
+                    if (data[i].stroke)
+                        return data[i].stroke;
+
+                    return nodeStrokes(i);
+                })
                 .attr('stroke-width', nodeStrokeWidth);
         }
     };
@@ -285,24 +388,36 @@ export default function() {
             .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
         makeScales();
+        renderClipping();
         drawLines();
+
+        if (useNodes)
+            drawNodes();
+
         makeAxes();
 
         if (drawDiscrimination)
             drawDiscriminationLine();
 
-        if (useNodes)
-            drawNodes();
-
         if (title)
             drawTitle();
+
+        return exports;
     };
 
     /** setters/getters **/
 
+    exports.svg = function(_) { return svg; };
+
     exports.data = function(_) {
         if (!arguments.length) return data;
         data = _;
+        return exports;
+    };
+
+    exports.altAxisLabels = function(_) {
+        if (!arguments.length) return altAxisLabels;
+        altAxisLabels = _;
         return exports;
     };
 
@@ -318,9 +433,21 @@ export default function() {
         return exports;
     };
 
+    exports.curveAlpha = function(_) {
+        if (!arguments.length) return curveAlpha;
+        curveAlpha = +_;
+        return exports;
+    };
+
     exports.drawDiscrimination = function(_) {
         if (!arguments.length) return drawDiscrimination;
         drawDiscrimination = _;
+        return exports;
+    };
+
+    exports.keepAxisRotation = function(_) {
+        if (!arguments.length) return keepAxisRotation;
+        keepAxisRotation = _;
         return exports;
     };
 
@@ -339,12 +466,6 @@ export default function() {
     exports.outerTicks = function(_) {
         if (!arguments.length) return outerTicks;
         outerTicks = _;
-        return exports;
-    };
-
-    exports.yAxisPad = function(_) {
-        if (!arguments.length) return yAxisPad;
-        yAxisPad = +_;
         return exports;
     };
 
@@ -378,15 +499,51 @@ export default function() {
         return exports;
     };
 
+    exports.nodeStrokeWidth = function(_) {
+        if (!arguments.length) return nodeStrokeWidth;
+        nodeStrokeWidth = _;
+        return exports;
+    };
+
     exports.nodeRadius = function(_) {
         if (!arguments.length) return nodeRadius;
         nodeRadius = +_;
         return exports;
     };
 
+    exports.tickSize = function(_) {
+        if (!arguments.length) return tickSize;
+        tickSize = +_;
+        return exports;
+    };
+
+    exports.useConnectedAxes = function(_) {
+        if (!arguments.length) return useConnectedAxes;
+        useConnectedAxes = _;
+        return exports;
+    };
+
+    exports.useOppositeTicks = function(_) {
+        if (!arguments.length) return useOppositeTicks;
+        useOppositeTicks = _;
+        return exports;
+    };
+
+    exports.useClipping = function(_) {
+        if (!arguments.length) return useClipping;
+        useClipping = _;
+        return exports;
+    };
+
     exports.useNodes = function(_) {
         if (!arguments.length) return useNodes;
         useNodes = _;
+        return exports;
+    };
+
+    exports.xAxisStrokeWidth = function(_) {
+        if (!arguments.length) return xAxisStrokeWidth;
+        xAxisStrokeWidth = _;
         return exports;
     };
 
@@ -408,15 +565,51 @@ export default function() {
         return exports;
     };
 
+    exports.xLabeldy = function(_) {
+        if (!arguments.length) return xLabeldy;
+        xLabeldy = +_;
+        return exports;
+    };
+
+    exports.xLabeldx = function(_) {
+        if (!arguments.length) return xLabeldx;
+        xLabeldx = +_;
+        return exports;
+    };
+
+    exports.xScaleFunction = function(_) {
+        if (!arguments.length) return xScaleFunction;
+        xScaleFunction = _;
+        return exports;
+    };
+
     exports.xTickFormat = function(_) {
         if (!arguments.length) return xTickFormat;
         xTickFormat = _;
         return exports;
     };
 
+    exports.xTicks = function(_) {
+        if (!arguments.length) return xTicks;
+        xTicks = _;
+        return exports;
+    };
+
     exports.xTickValues = function(_) {
         if (!arguments.length) return xTickValues;
         xTickValues = _;
+        return exports;
+    };
+
+    exports.yAxisPad = function(_) {
+        if (!arguments.length) return yAxisPad;
+        yAxisPad = +_;
+        return exports;
+    };
+
+    exports.yAxisStrokeWidth = function(_) {
+        if (!arguments.length) return yAxisStrokeWidth;
+        yAxisStrokeWidth = _;
         return exports;
     };
 
@@ -432,6 +625,18 @@ export default function() {
         return exports;
     };
 
+    exports.yLabeldy = function(_) {
+        if (!arguments.length) return yLabeldy;
+        yLabeldy = +_;
+        return exports;
+    };
+
+    exports.yLabeldx = function(_) {
+        if (!arguments.length) return yLabeldx;
+        yLabeldx = +_;
+        return exports;
+    };
+
     exports.yLabelPad = function(_) {
         if (!arguments.length) return yLabelPad;
         yLabelPad = +_;
@@ -441,6 +646,12 @@ export default function() {
     exports.yTickFormat = function(_) {
         if (!arguments.length) return yTickFormat;
         yTickFormat = _;
+        return exports;
+    };
+
+    exports.yTicks = function(_) {
+        if (!arguments.length) return yTicks;
+        yTicks = _;
         return exports;
     };
 

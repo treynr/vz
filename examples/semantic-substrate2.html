@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <script src="../dist/d3.min.js" type="text/javascript"></script>
+        <script src="../dist/lodash.min.js" type="text/javascript"></script>
+        <script src="../dist/development/semantic-substrate.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+		d3.tsv('data/aud-promoter-hisim-nodes.tsv', (error, ntsv) => {
+        d3.tsv('data/aud-promoter-hisim-edges.tsv', (error, etsv) => {
+
+            let nodes = _.chain(ntsv)
+                .filter(d => d.genesets.split(';').length > 1)
+                .map(d => {
+
+                    return {
+                        id: d.node_id,
+                        x: d.genes.split(';').length,
+                        y: d.genesets.split(';').length,
+                        fill: '#4e79a7',
+                        stroke: '#FFFFFF',
+                        width: 2
+                    };
+                })
+                .value();
+
+            let edges = etsv.map(d => {
+
+                return {
+                    source: d.node_from,
+                    target: d.node_to
+                };
+            });
+
+
+			var chart = semanticSubstrate()
+                .data({nodes: nodes, edges: edges})
+                .width(600)
+                .height(400)
+                .xDomain([5000, 1])
+                .yDomain([1, 6])
+                .xLabel('Some X Values')
+                .yLabel('Some Y Values')
+                .xScaleFunction(d3.scaleLog)
+                .xTickFormat('0.0s')
+                .nodeRadius(8)
+                //.xScaleDiscontinuity(true)
+                .altAxisLabels(true)
+                .useForce(true)
+                .xForceStrength(0.1)
+                //.disableXAxis(true)
+                .useSingleAxis(true)
+                .useBackgroundBox(true)
+                //.yLabelPad(8)
+                //.yForceStrength(13)
+                //.yDomain([0, 45])
+				//.xLabel('Mouse Brain Regions (Abbreviated)')
+				//.yLabel('# of Up-regulated Genes')
+				.draw();
+
+            return;
+			let nodeMap = nodes.reduce((ac, d) => {
+
+			    ac[d.id] = d;
+
+			    return ac;
+            }, {});
+			console.log(nodeMap);
+            console.log(edges);
+
+			edges.forEach(d => {
+
+			    if (!(d.source in nodeMap))
+			        return;
+                if (!(d.target in nodeMap))
+                    return;
+
+			    if (!('children' in nodeMap[d.source]))
+                    nodeMap[d.source].children = [];
+                if (!('children' in nodeMap[d.target]))
+                    nodeMap[d.target].children = [];
+                if (!('parents' in nodeMap[d.source]))
+                    nodeMap[d.source].parents = [];
+                if (!('parents' in nodeMap[d.target]))
+                    nodeMap[d.target].parents = [];
+
+
+			    if (nodeMap[d.source].y > nodeMap[d.target].y) {
+
+
+                    // Prevent children from having more than one parent otherwise the tree
+                    // layout fucks up
+                    if (nodeMap[d.target].parents.length == 0)
+                        nodeMap[d.source].children.push(nodeMap[d.target]);
+
+                    nodeMap[d.target].parents.push(nodeMap[d.source]);
+
+                } else {
+
+                    if (nodeMap[d.source].parents.length == 0)
+                        nodeMap[d.target].children.push(nodeMap[d.source]);
+
+                    nodeMap[d.source].parents.push(nodeMap[d.target]);
+                }
+            });
+
+			nodes.forEach(d => {
+
+                // Get rid of children w/ > 1 layer of separation otherwise
+                // the tree layout fucks up
+                if (d.children !== undefined)
+                    d.children = d.children.filter(x => Math.abs(x.y - d.y) == 1);
+
+			    if (d.parents === undefined)
+			        return;
+
+			    // Fake parents for nodes without any
+			    if (d.parents.length === 0) {
+			        if (d.y === d3.max(nodes, x => x.y))
+			            return;
+
+			        for (let n of nodes) {
+                        if ((n.y - 1) == d.y) {
+
+                            console.log(d)
+                            console.log(n)
+                            console.log('---')
+                            n.children.push(d);
+                            break;
+                        }
+                    }
+                }
+            });
+
+			nodes = {
+			    id: 'root',
+                children: nodes.filter(d => d.y == d3.max(nodes, x => x.y))//.concat(nodes.filter(d => d.parents && d.parents.length === 0))
+                //children: nodes.filter(d => d.parents && d.parents.length === 0)
+            };
+
+			console.log(d3.hierarchy(nodes));
+			let tree = d3.tree().size([500 - 80, 500 - 80])(d3.hierarchy(nodes));
+
+			let svg = d3.select('body')
+                .append('svg')
+                .attr('height', 500)
+                .attr('width', 500)
+                .append('g')
+                .attr('transform', `translate(80, 80)`);
+
+			console.log(tree.descendants());
+			//let newNodeMap = tree.descendants().slice().reduce((ac, d) => {
+			//    ac[d.data.id] = d;
+			//    return ac;
+            //});
+            let newNodeMap = {};
+
+            tree.each(d => {
+                newNodeMap[d.data.id] = d;
+            });
+
+			let allEdges = edges.reduce((ac, d) => {
+			    if (!(d.source in newNodeMap))
+			        return ac;
+                if (!(d.target in newNodeMap))
+                    return ac;
+
+                ac.push({
+			        source: newNodeMap[d.source],
+                    target: newNodeMap[d.target],
+                });
+                return ac;
+            }, []);
+			console.log(allEdges);
+
+			let es = svg.selectAll('edges')
+                //.data(tree.descendants().slice(1))
+                .data(allEdges)
+                .enter()
+                .append('line')
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y)
+                //.attr('x1', d => d.parent.x)
+                //.attr('y1', d => d.parent.y)
+                //.attr('x2', d => d.x)
+                //.attr('y2', d => d.y)
+                .attr('stroke', '#000')
+                .attr('stroke-width', 1)
+            ;
+
+			let ns = svg.selectAll('nodes')
+                .data(tree.descendants().slice(1))
+                .enter()
+                .append('g')
+                .attr('class', 'node')
+            ;
+            ns.append('circle')
+                .attr('r', 4)
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y)
+                .attr('fill', '#006400')
+            ;
+            ns.append('svg:title')
+                .text(d => `${d.data.id}: ${d.data.y}`);
+		});
+        });
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>
+

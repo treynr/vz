@@ -1,39 +1,39 @@
 /**
-  * file: heatmap.js
-  * desc: d3js implementation of heatmaps.
-  * auth: TR
-  */
+ * file: heatmap.js
+ * desc: d3js implementation of heatmaps.
+ * auth: TR
+ */
 
 /**
-  * The data structure necessary for this viz is an array of objects. Each
-  * object represents a separate box plot which may have >= 1 violins.
-  * The design is similar to the scatter plot visualization and allows the user
-  * to specify plot positions in a grid like arrangement; although this
-  * complicates the codebase, it is much better for producing consistently 
-  * aligned, publication-ready images.
-  *
-  * Each object has the following fields:
-  *
-  * plot {
-  *     values: [required] an array of data point objects
-  *     title:  [optional] text for the plot title
-  *     label:  [optional] label text for indicating separate figures
-  *     color:  [optional] hmmm idk yet
-  * }
-  *
-  * value {
-  *     x:      [required] x-axis (column) category
-  *     y:      [required] y-axis (row) category
-  *     value:  [required] the numeric value for this data point
-  * }
-  *
-  */
+ * The data structure necessary for this viz is an array of objects. Each
+ * object represents a separate box plot which may have >= 1 violins.
+ * The design is similar to the scatter plot visualization and allows the user
+ * to specify plot positions in a grid like arrangement; although this
+ * complicates the codebase, it is much better for producing consistently
+ * aligned, publication-ready images.
+ *
+ * Each object has the following fields:
+ *
+ * plot {
+ *     values: [required] an array of data point objects
+ *     title:  [optional] text for the plot title
+ *     label:  [optional] label text for indicating separate figures
+ *     color:  [optional] hmmm idk yet
+ * }
+ *
+ * value {
+ *     x:      [required] x-axis (column) category
+ *     y:      [required] y-axis (row) category
+ *     value:  [required] the numeric value for this data point
+ * }
+ *
+ */
 /** TODO
-  *
-  * Add proper handling for groups.
-  * Clean up code.
-  * Normalize normalization functions.
-  */
+ *
+ * Add proper handling for groups.
+ * Clean up code.
+ * Normalize normalization functions.
+ */
 
 'use strict';
 
@@ -69,7 +69,7 @@ export default function() {
 
         /** private **/
 
-        // d3 scale used for alt. secondary values
+            // d3 scale used for alt. secondary values
         altValueScale = null,
         // D3 clusters built from hierarchies of the data and used to render dendograms
         clusters = [],
@@ -84,12 +84,12 @@ export default function() {
 
         /** protected **/
 
-        // SVG object for the plot
+            // SVG object for the plot
         svg = null,
 
         /** public **/
 
-        // Color used for the stroke around alt. heatmap cells
+            // Color used for the stroke around alt. heatmap cells
         altCellStroke = '#000000',
         // Width of the stroke around alt. heatmap cells
         altCellStrokeWidth = 1,
@@ -129,9 +129,9 @@ export default function() {
         // HTML element or ID the SVG should be appended to
         element = 'body',
         // Font family
-        font = 'sans-serif',
+        font = '"Helvetica neue", Helvetica, Arial, sans-serif',
         // Font size
-        fontSize = 11,
+        fontSize = 13,
         // Font weight
         fontWeight = 'normal',
         // SVG height
@@ -150,6 +150,7 @@ export default function() {
         // Only render the upper triangle of the matrix (should only be used when
         // rows == columns)
         renderTriangle = false,
+        renderLowerTriangle = false,
         // If true, renders heatmap cells where row[i] == column[j]
         renderIdentities = false,
         // If true, render the dendrogram representing the hierarchical clusters
@@ -177,7 +178,7 @@ export default function() {
         yLabelPad = 50,
         // SVG width
         width = 600
-        ;
+    ;
 
 
     /** private **/
@@ -188,33 +189,33 @@ export default function() {
     let unique = function(a) { return Array.from(new Set(a)); };
 
     /**
-      * Returns the list of column labels, i.e. the list of categories that make up the
-      * x-axis.
-      */
+     * Returns the list of column labels, i.e. the list of categories that make up the
+     * x-axis.
+     */
     let getColumnCategories = function() { return unique(data.values.map(d => d.x)); };
 
     /**
-      * Returns the list of row labels, i.e. the list of categories that make up the
-      * y-axis.
-      */
+     * Returns the list of row labels, i.e. the list of categories that make up the
+     * y-axis.
+     */
     let getRowCategories = function() { return unique(data.values.map(d => d.y)); };
 
     /**
-      * Forces x- and y-axis labels (row and column categories) to be strings.
-      */
+     * Forces x- and y-axis labels (row and column categories) to be strings.
+     */
     let stringifyCategories = function() {
 
         data.values.forEach(v => { v.x = `${v.x}`; v.y = `${v.y}`; });
     };
 
     /**
-      * This function checks to see if comparisons between any rows/columns are missing.
-      * If they are missing, the function will fill in those comparisons with
-      * null values.
-      *
-      * arguments
-      *     mirror: if true then rows == columns
-      */
+     * This function checks to see if comparisons between any rows/columns are missing.
+     * If they are missing, the function will fill in those comparisons with
+     * null values.
+     *
+     * arguments
+     *     mirror: if true then rows == columns
+     */
     let completeMatrix = function(mirror=false) {
 
         // Reduce the list of row/column comparisons into a 2D matrix
@@ -283,21 +284,29 @@ export default function() {
     };
 
     /**
-      * Sorts the rows and columns of the matrix based on 1) dendogram clusters or 2)
-      * labels. If the user provides clustering data to draw a dendogram, then we sort
-      * rows/columns based on in-order traversal of the tree structure. Otherwise, we
-      * just sort the rows/columns based on their labels.
-      *
-      * arguments
-      *     xd: the x-domain (columns)
-      *     yd: the y-domain (rows)
-      *
-      * returns
-      *     sorted column and row lists
-      */
+     * Sorts the rows and columns of the matrix based on 1) dendogram clusters or 2)
+     * labels. If the user provides clustering data to draw a dendogram, then we sort
+     * rows/columns based on in-order traversal of the tree structure. Otherwise, we
+     * just sort the rows/columns based on their labels.
+     *
+     * arguments
+     *     xd: the x-domain (columns)
+     *     yd: the y-domain (rows)
+     *
+     * returns
+     *     sorted column and row lists
+     */
     let sortMatrix = function(xd, yd) {
 
         if (!data.clusters || !data.clusters.length) {
+
+            if (data.sorting !== undefined) {
+
+                return [
+                    xd.sort((a, b) => data.sorting[b] - data.sorting[a]),
+                    yd.sort((a, b) => data.sorting[b] - data.sorting[a]),
+                ];
+            }
 
             return [
                 xd.sort((a, b) => a.localeCompare(b)),
@@ -363,10 +372,10 @@ export default function() {
     };
 
     /**
-      * Creates the d3 scale objects for x- and y-axes using the available x and y
-      * domains. Also creates a scale of colors based on either the values 
-      * associated with the data, or a custom domain specified by the user.
-      */
+     * Creates the d3 scale objects for x- and y-axes using the available x and y
+     * domains. Also creates a scale of colors based on either the values
+     * associated with the data, or a custom domain specified by the user.
+     */
     let makeScales = function() {
 
         xDomain = xDomain ? xDomain : getColumnCategories();
@@ -394,13 +403,13 @@ export default function() {
         colorScale = scaleQuantize()
             .domain(colorDomain)
             .range(colors);
-        
+
         if (useAltValues) {
 
-            // Choose the smaller of the bandwidths to be the upper bound for the alt 
+            // Choose the smaller of the bandwidths to be the upper bound for the alt
             // value scale
-            let altMax = xScale.bandwidth() < yScale.bandwidth() ? 
-                         xScale.bandwidth() : yScale.bandwidth();
+            let altMax = xScale.bandwidth() < yScale.bandwidth() ?
+                xScale.bandwidth() : yScale.bandwidth();
 
             // The upper bound is set to be 95% of half bandwidth so it doesn't overlap
             // the cell edges
@@ -408,8 +417,8 @@ export default function() {
 
             // Or just ignore everything we just did if the user specifies a range
             altValueRange = altValueRange ? altValueRange : [3, altMax];
-            altValueDomain = altValueDomain ? 
-                             altValueDomain : extent(data.values, d => d.altValue);
+            altValueDomain = altValueDomain ?
+                altValueDomain : extent(data.values, d => d.altValue);
 
             altValueScale = scaleLinear()
                 .domain(altValueDomain)
@@ -423,14 +432,14 @@ export default function() {
         if (cellAlignHorizontal === Align.RIGHT)
             xScale.range([getWidth(), 0]);
 
-        // Cells begin at the top axis 
+        // Cells begin at the top axis
         if (cellAlignVertical === Align.TOP)
             yScale.range([getHeight(), 0]);
     };
 
     /**
-      * Draws the x- and y-axes.
-      */
+     * Draws the x- and y-axes.
+     */
     let renderAxes = function() {
 
         // Determine the position of each axis--top, right, bottom, or left of the plot
@@ -455,7 +464,7 @@ export default function() {
             .attr('class', 'x-axis')
             .attr('transform', () => {
                 return xAxisAlign == Align.TOP ? 'translate(0, 0)' :
-                                                 `translate(0, ${getHeight()})`;
+                    `translate(0, ${getHeight()})`;
             })
             .call(xaxis);
 
@@ -469,7 +478,7 @@ export default function() {
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', fontWeight)
             .attr('transform', () => {
-                
+
                 if (rotateXLabels)
                     return xAxisAlign == Align.TOP ? 'rotate(-45)' : 'rotate(-320)';
 
@@ -489,9 +498,9 @@ export default function() {
         let yAxisObject = svg.append('g')
             .attr('class', 'y-axis')
             .attr('transform', () => {
-                return yAxisAlign == Align.LEFT ? 
-                       'translate(0, 0)' :
-                       `translate(${getWidth()}, 0)`;
+                return yAxisAlign == Align.LEFT ?
+                    'translate(0, 0)' :
+                    `translate(${getWidth()}, 0)`;
             })
             .call(yaxis);
 
@@ -523,8 +532,8 @@ export default function() {
     };
 
     /**
-      * Draws each cell of the heatmap.
-      */
+     * Draws each cell of the heatmap.
+     */
     let renderCells = function() {
 
         // Maps row and column categories to their indexed position on the plot
@@ -553,8 +562,12 @@ export default function() {
                 //    return indexMap[d.y] <= indexMap[d.x];
                 //else if (mirrorAxes)
                 //    return indexMap[d.y] < indexMap[d.x];
+                if (renderTriangle && renderLowerTriangle && renderIdentities)
+                    return indexMap[d.y] >= indexMap[d.x];
                 if (renderTriangle && renderIdentities)
                     return indexMap[d.y] <= indexMap[d.x];
+                else if (renderTriangle && renderLowerTriangle)
+                    return indexMap[d.y] > indexMap[d.x];
                 else if (renderTriangle)
                     return indexMap[d.y] < indexMap[d.x];
                 else
@@ -593,8 +606,8 @@ export default function() {
     };
 
     /**
-      * Renders cells with alt. values.
-      */
+     * Renders cells with alt. values.
+     */
     let renderAltCells = function() {
 
         // Maps row and column categories to their indexed position on the plot
@@ -619,8 +632,18 @@ export default function() {
                 //    return indexMap[d.y] < indexMap[d.x];
                 //else
                 //    return true;
+                //if (renderTriangle && renderIdentities)
+                //    return indexMap[d.y] <= indexMap[d.x];
+                //else if (renderTriangle)
+                //    return indexMap[d.y] < indexMap[d.x];
+                //else
+                //    return true;
+                if (renderTriangle && renderLowerTriangle && renderIdentities)
+                    return indexMap[d.y] >= indexMap[d.x];
                 if (renderTriangle && renderIdentities)
                     return indexMap[d.y] <= indexMap[d.x];
+                else if (renderTriangle && renderLowerTriangle)
+                    return indexMap[d.y] > indexMap[d.x];
                 else if (renderTriangle)
                     return indexMap[d.y] < indexMap[d.x];
                 else
@@ -682,7 +705,7 @@ export default function() {
 
             let dendogram = null;
             let dendSize = determineDendrogramSize(clust.axis);
-            
+
             if (clust.axis == Align.TOP || clust.axis == Align.BOTTOM) {
 
                 dendogram = cluster()
@@ -704,10 +727,10 @@ export default function() {
     };
 
     /**
-      * Rneder dendrograms for the given clusters. We're lazy so we make a single
-      * dendrograms and just flip/rotate it depending on the axis it should be aligned 
-      * to.
-      */
+     * Rneder dendrograms for the given clusters. We're lazy so we make a single
+     * dendrograms and just flip/rotate it depending on the axis it should be aligned
+     * to.
+     */
     let renderDendrogram = function() {
 
         // No clusters so no dendrograms
@@ -1000,6 +1023,12 @@ export default function() {
         return exports;
     };
 
+    exports.renderLowerTriangle = function(_) {
+        if (!arguments.length) return renderLowerTriangle;
+        renderLowerTriangle = _;
+        return exports;
+    };
+
     exports.renderTriangle = function(_) {
         if (!arguments.length) return renderTriangle;
         renderTriangle = _;
@@ -1035,7 +1064,7 @@ export default function() {
         width = +_;
         return exports;
     };
-    
+
     exports.xAxisAlign = function(_) {
         if (!arguments.length) return xAxisAlign;
         xAxisAlign = _;
@@ -1053,13 +1082,13 @@ export default function() {
         xLabelPad = +_;
         return exports;
     };
-    
+
     exports.yAxisAlign = function(_) {
         if (!arguments.length) return yAxisAlign;
         yAxisAlign = _;
         return exports;
     };
-    
+
     exports.yLabel = function(_) {
         if (!arguments.length) return yLabel;
         yLabel = _;
@@ -1091,8 +1120,8 @@ export default function() {
             return exports;
         };
 
-    // Properties for production/release. We don't allow x/yScale to be setters like in
-    // the dev releases.
+        // Properties for production/release. We don't allow x/yScale to be setters like in
+        // the dev releases.
     } else {
 
         /** properties **/
@@ -1106,4 +1135,5 @@ export default function() {
 
     return exports;
 }
+
 

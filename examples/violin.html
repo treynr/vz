@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="../dist/d3.min.js" type="text/javascript"></script>
+        <script src="../dist/development/violin.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+            let randomRange = function(low, high) { return Math.random() * (high - low) + low; };
+            let randomUniform = function(n, delta=2.0) { return randomRange(n - delta, n + delta); };
+
+            let metropolis = function(p, n, prop=randomUniform) {
+
+                let x = 1;
+                let distribution = [];
+
+                for (let i = 0; i < n; i++) {
+
+                    const trial = prop(x);
+                    const accept = p(trial) / p(x);
+
+                    if (Math.random() < accept)
+                        x = trial;
+
+                    distribution.push(x);
+                }
+
+                return distribution;
+            };
+
+            let gaussian = function(x, mu, sigma) {
+                return 1 / sigma / Math.sqrt(2 * Math.PI) * Math.exp(-(Math.pow(x - mu, 2)) / 2 / sigma / sigma)
+            };
+            let idk = (x) => { return Math.pow(Math.sin(x) / x, 2); };
+
+            let data = [
+                {
+                    label: 'A',
+                    //values: metropolis(x => gaussian(x, 5, 0.08), 15000)
+                    values: metropolis(x => idk(x), 1000)
+                },
+                {
+                    label: 'b',
+                    //values: metropolis(x => gaussian(x, 6, 0.08), 15000)
+                    values: metropolis(x => idk(x), 1000)
+                },
+            ];
+            //let scale = d3.scaleLinear().domain(d3.extent(data[0].values)).range([-10, 10]);
+            //data[0].values = data[0].values.map(d => scale(d));
+
+            let chart = violin()
+                .data(data)
+                .height(400)
+                .width(350)
+                //.yDomain([1, 10])
+                .kernelBandwidth(4)
+                .yLabel('Frequency (p)')
+                .yDomain([-6,6])
+                //.yLabeldy(-30)
+                .yLabeldy(15)
+                .yLabeldx(0)
+                .useAltYAxisLabel(true)
+                .draw();
+
+            chart.svg().selectAll('.x-axis > .domain').remove();
+
+            let violins = chart.svg().selectAll('.violin');
+            console.log(violins.filter((_, i) => i == 0));
+            console.log(violins.filter((_, i) => i == 0).selectAll('g > .right-area'));
+            console.log(violins.filter((_, i) => i == 0).selectAll('g > .right-area').attr('fill'));
+
+		//d3.json('data/bar-example-0.json', function(error, json) {
+
+            //console.log(error);
+            //console.log(json);
+            //console.log(json.notes);
+
+            //// Transform gene lists to counts
+            //json.data.forEach(d => { d.y = d.y.length; });
+
+			//var chart = bar()
+            //    .data(data)
+            //    .width(350)
+            //    .height(300)
+            //    .yDomain([0, 45])
+			//	.xLabel('Stuff')
+			//	.yLabel('Values')
+            //    .fontSize(13)
+            //    .noXLine(true)
+			//	.draw();
+
+		//});
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>
+

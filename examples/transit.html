@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <script src="../dist/d3.min.js" type="text/javascript"></script>
+        <script src="../dist/lodash.min.js" type="text/javascript"></script>
+        <script src="../dist/development/transit.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+            let data = {
+                nodes: [
+                    {id: 'Chaos', layer: 0, x: 4},
+                    {id: 'Gaea', layer: 1, x: 3},
+                    {id: 'Uranus', layer: 1, x: 3},
+                    {id: 'Oceanus', layer: 2, x: 2},
+                    {id: 'Thethys',  layer: 2, x: 2},
+                    {id: 'Rhea', layer: 2, x: 2},
+                    {id: 'Pontus', layer: 2, x: 2},
+                    {id: 'Doris', layer: 3, x: 1},
+                    {id: 'Neures', layer: 3, x: 1},
+                    {id: 'Dionne', layer: 3, x: 1},
+                    {id: 'Demeter', layer: 3, x: 1}
+                ],
+                edges: [
+                    {source: 'Chaos', target: 'Uranus'},
+                    {source: 'Uranus', target: 'Oceanus'},
+                    {source: 'Gaea', target: 'Rhea'},
+                    {source: 'Uranus', target: 'Rhea'},
+                    {source: 'Gaea', target: 'Thethys'},
+                    {source: 'Uranus', target: 'Thethys'},
+                    {source: 'Thethys', target: 'Doris'},
+                    {source: 'Oceanus', target: 'Doris'},
+                    {source: 'Gaea', target: 'Neures'},
+                    {source: 'Pontus', target: 'Neures'},
+                    {source: 'Rhea', target: 'Demeter'},
+                    {source: 'Uranus', target: 'Demeter'},
+                ]
+            };
+            levels = [
+                [
+                    {id: 'Chaos', }
+                ],
+                [
+                    {id: 'Gaea', },
+                    {id: 'Uranus', parents: ['Chaos']},
+                ],
+                [
+                    {id: 'Oceanus', parents: ['Uranus']},
+                    {id: 'Thethys',  parents: ['Uranus', 'Gaea']},
+                    {id: 'Rhea', parents: ['Gaea', 'Uranus']},
+                    {id: 'Pontus'},
+                ],
+                [
+                    {id: 'Doris', parents: ['Oceanus', 'Thethys']},
+                    {id: 'Neures', parents: ['Pontus', 'Gaea']},
+                    {id: 'Dionne'},
+                    {id: 'Demeter', parents: ['Rhea', 'Uranus']},
+                ]
+
+            ];
+
+            let t = transit()
+                .data(data)
+                .bundleHeight(12)
+                .nodeRadius(5)
+                .xNodeSpacing(14)
+                .edgeStrokeWidth(4)
+                .draw();
+
+        </script>
+</html>
+

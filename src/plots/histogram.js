@@ -39,7 +39,7 @@ export default function() {
         // Margin object
         margin = {top: 40, right: 30, bottom: 50, left: 50},
         // Bar chart color
-        barColor = '#98ABC5',
+        barFill = '#98ABC5',
         // Bar chart edge color
         barStroke = '#222222',
         // Bar stroke width
@@ -55,14 +55,23 @@ export default function() {
         font = 'sans-serif',
         // Axis text size
         fontSize = 13,
+        useAltXAxisLabel = false,
+        useAltYAxisLabel = false,
+        rotateYAxisLabel = false,
         // X-axis text
         xLabel = '',
         // X-axis text padding
         xLabelPad = 35,
+        // X-axis text padding to position it away from the x-axis
+        xLabeldx = null,
+        xLabeldy = null,
         // Y-axis text
         yLabel = '',
         // Y-axis text padding
         yLabelPad = -35,
+        // Y-axis text padding to position it away from the x-axis
+        yLabeldy = null,
+        yLabeldx = null,
         // Y-axis padding
         yAxisPad = 35,
         xAxis = null,
@@ -74,6 +83,9 @@ export default function() {
         xTickFormat = null,
         // Scale for the y-axis
         yScale = null,
+        // Scale for the y-axis
+        yScaleFunction = scaleLinear,
+        yTicks = 5,
         // Format string for y-axis labels
         yTickFormat = null,
         // Y-axis tick values
@@ -105,7 +117,7 @@ export default function() {
             .nice()
             .rangeRound([margin.left, getWidth()]);
 
-        yScale = scaleLinear()
+        yScale = yScaleFunction()
             .rangeRound([getHeight(), 0]);
     };
 
@@ -118,7 +130,11 @@ export default function() {
             .domain(xScale.domain())
             .thresholds(xScale.ticks(numBins))(data);
 
-        yScale.domain([0, max(bins, d => d.length)])
+        // Not sure if I should keep it at 0.1, but needed if using a log scale
+        let ydomain = yDomain !== null ? yDomain : [0.1, max(bins, d => d.length)];
+
+        //yScale.domain([0.1, max(bins, d => d.length)])
+        yScale.domain(ydomain)
             .nice();
     };
 
@@ -132,11 +148,12 @@ export default function() {
             .tickFormat(xTickFormat);
 
         yAxis = axisLeft(yScale)
-            .tickFormat(yTickFormat)
-            .tickValues(yTickValues);
+            .ticks(yTicks, yTickFormat);
+            //.tickFormat(yTickFormat)
+            //.tickValues(yTickValues);
 
         let xAxisObject = svg.append('g')
-            .attr('class', 'axis')
+            .attr('class', 'x-axis')
             .attr('transform', `translate(0, ${getHeight() + 1})`)
             .style('font-family', font)
             .style('font-size', `${fontSize}px`)
@@ -144,11 +161,37 @@ export default function() {
             .style('fill', 'none')
             .call(xAxis);
 
+        //xAxisObject.append('text')
+        //    .attr('x', (margin.left + getWidth()) / 2)
+        //    .attr('y', 45)
+        //    .attr('fill', '#000')
+        //    .style('text-anchor', 'middle')
+        //    .text(xLabel);
+
         xAxisObject.append('text')
-            .attr('x', (margin.left + getWidth()) / 2)
-            .attr('y', 45)
+            .attr('class', 'x-axis-label')
+            .attr('x', () => {
+
+                if (xLabeldx == null && useAltXAxisLabel)
+                    return getWidth();
+
+                if (xLabeldx == null)
+                    return getWidth() / 2;
+
+                return xLabeldx;
+            })
+            .attr('y', () => {
+
+                if (xLabeldy == null && useAltXAxisLabel)
+                    return -5;
+
+                if (xLabeldy == null)
+                    return 40;
+
+                return xLabeldy
+            })
             .attr('fill', '#000')
-            .style('text-anchor', 'middle')
+            .attr('text-anchor', useAltXAxisLabel ? 'end' : 'middle')
             .text(xLabel);
 
         let yAxisObject = svg.append('g')
@@ -160,13 +203,56 @@ export default function() {
             .style('fill', 'none')
             .call(yAxis);
 
+        //yAxisObject.append('text')
+        //    // Weird x, y argumetnns cause of the -90 rotation
+        //    .attr('x', (-getHeight() / 2))
+        //    .attr('y', yLabelPad)
+        //    .attr('fill', '#000')
+        //    .attr('transform', 'rotate(-90)')
+        //    .style('text-anchor', 'middle')
+        //    .text(yLabel);
+
         yAxisObject.append('text')
+            .attr('class', 'y-axis-label')
             // Weird x, y argumetnns cause of the -90 rotation
-            .attr('x', (-getHeight() / 2))
-            .attr('y', yLabelPad)
+            .attr('x', () => {
+
+                if (yLabeldx == null && useAltYAxisLabel)
+                    return 0;
+
+                if (yLabeldx == null)
+                    return -getHeight() / 2;
+
+                return yLabeldx;
+            })
+            .attr('y', () => {
+
+                if (yLabeldy == null && useAltYAxisLabel)
+                    return 0;
+
+                if (yLabeldy == null)
+                    return -35;
+
+                return yLabeldy;
+            })
             .attr('fill', '#000')
-            .attr('transform', 'rotate(-90)')
-            .style('text-anchor', 'middle')
+            .attr('text-anchor', () => {
+                if (rotateYAxisLabel)
+                    return 'end';
+                if (useAltYAxisLabel)
+                    return 'start';
+
+                return 'middle';
+            })
+            .attr('transform', () => {
+                if (rotateYAxisLabel)
+                    return 'rotate(-90)';
+
+                if (useAltYAxisLabel)
+                    return '';
+
+                return 'rotate(-90)';
+            })
             .text(yLabel);
 
         if (noXLine)
@@ -188,11 +274,24 @@ export default function() {
             .attr('class', 'bar');
 
         bar.append('rect')
+            //.attr('x', d => xScale(d.x0) + 1)
+            //.attr('y', d => yScale(d.length + 0.1) + 1)
+            //.attr('width', d => xScale(d.x1) - xScale(d.x0) - 1)
+            //.attr('height', d => {
+
+            //    return (yScale(0.1) - yScale(d.length)) <= 0 ? 0.1 : yScale(0.1) - yScale(d.length);
+            //})
             .attr('x', d => xScale(d.x0) + 1)
-            .attr('y', d => yScale(d.length) + 1)
-            .attr('width', d => xScale(d.x1) - xScale(d.x0) - 1)
-            .attr('height', d => yScale(0) - yScale(d.length))
-            .attr('fill', barColor)
+            .attr('y', d => d.length == 0 ? yScale.range()[0] : yScale(d.length))
+            .attr('width', d => xScale(d.x1) - xScale(d.x0) <= 0 ? 0 : xScale(d.x1) - xScale(d.x0) - 1)
+            .attr('height', d => {
+
+                //console.log(`d.length: ${d.length}`)
+                //console.log(`yScale(d.length): ${yScale(d.length)}`)
+                //return (yScale(0.1) - yScale(d.length)) <= 0 ? 0.1 : yScale(0.1) - yScale(d.length);
+                return d.length === 0 ? 0 : yScale.range()[0] - yScale(d.length);
+            })
+            .attr('fill', barFill)
             .attr('stroke', barStroke)
             .attr('stroke-width', strokeWidth);
     };
@@ -333,9 +432,9 @@ export default function() {
         return exports;
     };
 
-    exports.barColor = function(_) {
-        if (!arguments.length) return barColor;
-        barColor = _;
+    exports.barFill = function(_) {
+        if (!arguments.length) return barFill;
+        barFill = _;
         return exports;
     };
 
@@ -393,6 +492,12 @@ export default function() {
         return exports;
     };
 
+    exports.rotateYAxisLabel = function(_) {
+        if (!arguments.length) return rotateYAxisLabel;
+        rotateYAxisLabel = _;
+        return exports;
+    };
+
     exports.yAxisPad = function(_) {
         if (!arguments.length) return yAxisPad;
         yAxisPad = +_;
@@ -435,9 +540,33 @@ export default function() {
         return exports;
     };
 
+    exports.useAltXAxisLabel = function(_) {
+        if (!arguments.length) return useAltXAxisLabel;
+        useAltXAxisLabel = _;
+        return exports;
+    };
+
+    exports.useAltYAxisLabel = function(_) {
+        if (!arguments.length) return useAltYAxisLabel;
+        useAltYAxisLabel = _;
+        return exports;
+    };
+
     exports.xLabel = function(_) {
         if (!arguments.length) return xLabel;
         xLabel = _;
+        return exports;
+    };
+
+    exports.xLabeldx = function(_) {
+        if (!arguments.length) return xLabeldx;
+        xLabeldx = +_;
+        return exports;
+    };
+
+    exports.xLabeldy = function(_) {
+        if (!arguments.length) return xLabeldy;
+        xLabeldy = +_;
         return exports;
     };
 
@@ -450,6 +579,18 @@ export default function() {
     exports.yLabel = function(_) {
         if (!arguments.length) return yLabel;
         yLabel = _;
+        return exports;
+    };
+
+    exports.yLabeldx = function(_) {
+        if (!arguments.length) return yLabeldx;
+        yLabeldx = +_;
+        return exports;
+    };
+
+    exports.yLabeldy = function(_) {
+        if (!arguments.length) return yLabeldy;
+        yLabeldy = +_;
         return exports;
     };
 
@@ -471,6 +612,12 @@ export default function() {
         return exports;
     };
 
+    exports.yTicks = function(_) {
+        if (!arguments.length) return yTicks;
+        yTicks = +_;
+        return exports;
+    };
+
     exports.yTickValues = function(_) {
         if (!arguments.length) return yTickValues;
         yTickValues = _;
@@ -480,6 +627,12 @@ export default function() {
     exports.yDomain = function(_) {
         if (!arguments.length) return yDomain;
         yDomain = _;
+        return exports;
+    };
+
+    exports.yScaleFunction = function(_) {
+        if (!arguments.length) return yScaleFunction;
+        yScaleFunction = _;
         return exports;
     };
 

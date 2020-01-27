@@ -1,5 +1,6 @@
 
-let hyphenRegex = /(.+)(-)(.+)/;
+const path = require('path');
+const hyphenRegex = /(.+)(-)(.+)/;
 
 let hyphenReplacer = (_, p1, p2, p3, __, s) => {
 
@@ -9,19 +10,23 @@ let hyphenReplacer = (_, p1, p2, p3, __, s) => {
 const plots = [
     'bar',
     'boxplot',
-    //'force-graph',
-    //'heatmap',
-    //'histogram',
+    'contour',
+    'force-graph',
+    'heatmap',
+    'histogram',
     'legend',
-    //'line',
-    //'scatter',
-    //'semantic-substrate'
+    'line',
+    'scatter',
+    'semantic-substrate',
+    'sidebar',
+    'transit',
+    'violin'
 ];
 
 let entries = plots.map(d => {
 
     return {
-        entry: {[d]: `./src/entries/${d}.js`},
+        entry: {[d]: path.join(__dirname, 'src', 'entries', `${d}.js`)},
         output: {
             globalObject: 'this',
             library: d.replace(hyphenRegex, hyphenReplacer),

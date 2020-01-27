@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="d3.min.js" type="text/javascript"></script>
+        <script src="../dist/development/line.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+		//d3.json('data/bar-example-0.json', function(error, json) {
+
+            //console.log(error);
+            //console.log(json);
+            //console.log(json.notes);
+
+            //// Transform gene lists to counts
+            //json.data.forEach(d => { d.y = d.y.length; });
+            let points = [
+                {x: 0, y: 1},
+                {x: 0.1, y: 2.5},
+                {x: 0.15, y: 2.8},
+                {x: 0.2, y: 3},
+                {x: 0.3, y: 3.4},
+                {x: 0.4, y: 4},
+                {x: 0.5, y: 5},
+            ];
+
+			var chart = line()
+                .data([{points: points}])
+                .width(350)
+                .height(300)
+                .yDomain([0, 5])
+                .useOppositeTicks(true)
+                .useConnectedAxes(true)
+				//.xLabel('Stuff')
+				//.yLabel('Values')
+                .xAxisStrokeWidth(1.5)
+                .yAxisStrokeWidth(1.5)
+                .xTicks(5)
+                .fontSize(13)
+                //.noXLine(true)
+				.draw();
+
+		//});
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>
+

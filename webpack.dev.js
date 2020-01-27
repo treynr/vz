@@ -8,7 +8,8 @@ const devConfig = {
     devtool: 'inline-source-map',
     mode: 'development',
     output: {
-        path: path.resolve(__dirname, 'dist/development'),
+        //path: path.resolve(__dirname, 'dist/development'),
+        path: path.resolve(__dirname, path.join('dist', 'development')),
         filename: '[name].js'
     }
 };

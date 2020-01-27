@@ -1,14 +1,14 @@
 /**
-  * file: force-graph.js
-  * desc: d3js implementation of force directed graphs.
-  * auth: TR
-  */
+ * file: force-graph.js
+ * desc: d3js implementation of force directed graphs.
+ * auth: TR
+ */
 
 'use strict';
 
 import {drag} from 'd3-drag';
 import {event, select} from 'd3-selection';
-import {forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation} from 'd3-force';
+import {forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY} from 'd3-force';
 
 export default function() {
 
@@ -16,7 +16,7 @@ export default function() {
 
         /** private **/
 
-        // d3 node objects
+            // d3 node objects
         graphNodes = null,
         // d3 edge objects
         graphEdges = null,
@@ -25,9 +25,8 @@ export default function() {
 
         /** public **/
 
-        // Data object containing objects/data to visualize
+            // Data object containing objects/data to visualize
         data = null,
-
         // Transparency for rendered edges
         edgeOpacity = 0.6,
         // Edge color
@@ -37,7 +36,7 @@ export default function() {
         // HTML element or ID the SVG should be appended to
         element = 'body',
         // Font to use when displaying text
-        font = 'sans-serif',
+        font = '"Helvetica Neue", Helvetica, Arial, sans-serif',
         // Font size in pixels
         fontSize = 12,
         // SVG height
@@ -62,6 +61,7 @@ export default function() {
         linkForceDistance = 30,
         // Strength for the many body force ((-) reples, (+) attracts)
         manyBodyForceStrength = -30,
+        simulationIterations = 0,
         // If true, utilize a center force in the force simulation
         useCenterForce = true,
         // If true, utilize a collide force in the force simulation
@@ -70,20 +70,24 @@ export default function() {
         useLinkForce = true,
         // If true, utilize a many body force in the force simulation
         useManyBodyForce = true,
+        useMultiEdges = true,
+        useStickyNodes = false,
+        useXForce = false,
+        useYForce = false,
         // SVG width
         width = 600;
 
     /** private **/
 
     /**
-      * Returns the width and height of the SVG while taking into account the margins.
-      */
+     * Returns the width and height of the SVG while taking into account the margins.
+     */
     let getHeight = function() { return height - margin.bottom - margin.top; };
     let getWidth = function() { return width - margin.left - margin.right; };
 
     /**
-      * Renders each node in the graph and attaches the objects to the SVG.
-      */
+     * Renders each node in the graph and attaches the objects to the SVG.
+     */
     let renderNodes = function() {
 
         graphNodes = svg.append('g')
@@ -95,45 +99,99 @@ export default function() {
             .attr('class', 'node')
             .attr('id', d => `node-${d.id}`);
 
-        graphNodes.append('circle')
-            .attr('fill', d => {
+        // Actual colored node. This selects nodes that don't have a symbol key
+        // in their object.
+        let graphCircles = graphNodes
+            .filter(function(d) { return d.rect == undefined; })
+            .append('circle')
+            .attr('r', function(d) {
+                if (d.value !== undefined && useSizeRange)
+                    return sizeScale(d.value);
 
-                if (d.fill)
-                    return d.fill;
+                if (d.radius === undefined)
+                    return nodeRadius;
 
-                return nodeFill;
-            })
-            .attr('shape-rendering', 'auto')
-            .attr('stroke', d => {
+                return d.radius;
+            });
 
-                if (d.stroke)
-                    return d.stroke;
+        // delete
+        // Actual colored node. This selects nodes that don't have a symbol key
+        // in their object.
+        let graphRects = graphNodes
+                .filter(function(d) { return d.rect !== undefined; })
+                .append('rect')
+                .attr('width', function(d) {
+                    if (d.value !== undefined && useSizeRange)
+                        return sizeScale(d.value);
 
-                return nodeStroke;
-            })
-            .attr('stroke-width', d => {
+                    if (d.width !== undefined)
+                        return d.width;
 
-                if (d.strokeWidth)
-                    return d.strokeWidth;
+                    if (d.radius === undefined)
+                        return nodeRadius;
 
-                return nodeStrokeWidth;
-            })
-            .attr('r', d => {
+                    return d.radius * 2;
+                })
+                .attr('height', function(d) {
+                    if (d.value !== undefined && useSizeRange)
+                        return sizeScale(d.value);
 
-                if (d.radius)
+                    if (d.height !== undefined)
+                        return d.height;
+
+                    if (d.radius === undefined)
+                        return nodeRadius;
+
                     return d.radius;
+                })
+                .attr('rx', d => d.round == undefined ? 4 : d.round)
+                .attr('ry', d => d.round == undefined ? 4 : d.round)
+            //.attr('x', function(d) { return -((d.radius*2) / 2); })
+            //.attr('y', function(d) { return -(d.radius / 2); })
+        ;
 
-                return nodeRadius;
-            });
+        for (let nodes of [graphCircles, graphRects]) {
 
-        graphNodes.append('title')
-            .text(d => {
+            nodes//.append('circle')
+                .attr('fill', d => {
 
-                if (d.label)
-                    return d.label;
+                    if (d.fill)
+                        return d.fill;
 
-                return '';
-            });
+                    return nodeFill;
+                })
+                .attr('shape-rendering', 'auto')
+                .attr('stroke', d => {
+
+                    if (d.stroke)
+                        return d.stroke;
+
+                    return nodeStroke;
+                })
+                .attr('stroke-width', d => {
+
+                    if (d.strokeWidth)
+                        return d.strokeWidth;
+
+                    return nodeStrokeWidth;
+                })
+                .attr('r', d => {
+
+                    if (d.radius)
+                        return d.radius;
+
+                    return nodeRadius;
+                });
+
+            nodes.append('svg:title')
+                .text(d => {
+
+                    if (d.label)
+                        return d.label;
+
+                    return d.id;
+                });
+        }
     };
 
     let renderEdges = function() {
@@ -143,7 +201,7 @@ export default function() {
             .selectAll('edges')
             .data(data.edges)
             .enter()
-            .append('line')
+            .append(useMultiEdges ? 'path' : 'line')
             .attr('class', 'edge')
             .attr('fill', 'none')
             .attr('opacity', d => {
@@ -176,8 +234,8 @@ export default function() {
             .force(
                 'link',
                 useLinkForce ?
-                forceLink(data.edges).id(d => d.id).distance(linkForceDistance) :
-                null
+                    forceLink(data.edges).id(d => d.id).distance(linkForceDistance) :
+                    null
             )
             .force(
                 'collide',
@@ -188,12 +246,20 @@ export default function() {
             .force(
                 'charge',
                 useManyBodyForce ?
-                forceManyBody().strength(manyBodyForceStrength) :
-                null
+                    forceManyBody().strength(manyBodyForceStrength) :
+                    null
             )
             .force(
                 'center',
                 useCenterForce ? forceCenter(getWidth() / 2, getHeight() / 2) : null
+            )
+            .force(
+                'x',
+                useXForce ? forceX() : null
+            )
+            .force(
+                'y',
+                useYForce ? forceY() : null
             );
 
         simulation.on('tick', () => {
@@ -201,24 +267,119 @@ export default function() {
             // Typically we just transform the node group (<g>) but if we do this,
             // the group transformation isn't preserved and when we
             // download/format/convert the image later on everything is fucked.
-            graphNodes.attr('transform', d => `translate(${d.x}, ${d.y})`);
-            //graphNodes//.attr('transform', d => `translate(${d.x}, ${d.y})`);
-            //    .selectAll('circle')
-            //    .attr('cx', d => d.x)
-            //    .attr('cy', d => d.y);
+            //graphNodes.attr('transform', d => `translate(${d.x}, ${d.y})`);
+            graphNodes//.attr('transform', d => `translate(${d.x}, ${d.y})`);
+                .selectAll('circle')
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y);
+            graphNodes//.attr('transform', d => `translate(${d.x}, ${d.y})`);
+                .selectAll('rect')
+                .attr('x', d => d.x - (d.width / 2))
+                .attr('y', d => d.y - (d.height / 2));
+            //.attr('x', function(d) { return -((d.radius*2) / 2); })
+            //.attr('y', function(d) { return -(d.radius / 2); })
 
-            graphEdges
-                .attr('x1', d => d.source.x)
-                .attr('y1', d => d.source.y)
-                .attr('x2', d => d.target.x)
-                .attr('y2', d => d.target.y);
+            if (useMultiEdges) {
+
+                let multiEdges = {};
+                let multiEdgeCount = {};
+
+                data.edges.forEach(d => {
+
+                    if (!(d.source.id in multiEdges)) {
+                        multiEdges[d.source.id] = {};
+                        multiEdgeCount[d.source.id] = {};
+                    }
+                    if (!(d.target.id in multiEdges)) {
+                        multiEdges[d.target.id] = {};
+                        multiEdgeCount[d.target.id] = {};
+                    }
+                    if (!(d.target.id in multiEdges[d.source.id])) {
+                        multiEdges[d.source.id][d.target.id] = 0;
+                        multiEdgeCount[d.source.id][d.target.id] = 0;
+                    }
+                    if (!(d.source.id in multiEdges[d.target.id])) {
+                        multiEdges[d.target.id][d.source.id] = 0;
+                        multiEdgeCount[d.target.id][d.source.id] = 0;
+                    }
+
+                    multiEdges[d.source.id][d.target.id]++;
+                    multiEdges[d.target.id][d.source.id]++;
+
+                    // idc
+                });
+
+                //return;
+                //console.log(multiEdges);
+                graphEdges
+                    .attr('d', d => {
+
+                        if (multiEdges[d.source.id][d.target.id] == 1) {
+                            return `
+                                M${d.source.x}, ${d.source.y}
+                                L${d.target.x}, ${d.target.y}
+                            `;
+
+                        } else {
+                            let numEdges = multiEdges[d.source.id][d.target.id];
+                            let seen = multiEdgeCount[d.source.id][d.target.id];
+
+                            multiEdgeCount[d.source.id][d.target.id]++;
+                            multiEdgeCount[d.target.id][d.source.id]++;
+
+                            // midpoints
+                            let midx = (d.source.x + d.target.x) / 2;
+                            let midy = (d.source.y + d.target.y) / 2;
+                            let theta = Math.atan2(d.target.y - d.source.y, d.target.x - d.target.y) - Math.PI / 2;
+                            let offset = 0;
+                            let minOffset = 10;
+                            let bpx = 0;
+                            let bpy = 0;
+
+                            if (seen % numEdges > 0){
+                                offset = Math.ceil(seen / 2) * minOffset;
+
+                                if (seen % 2)
+                                    offset = -offset;
+                            }
+
+                            bpx = midx + offset * Math.cos(theta);
+                            bpy = midy + offset * Math.sin(theta);
+                            //if (seen == 0) {
+                            //    bpx = midx + offset * Math.cos(theta);
+                            //    bpy = midy + offset * Math.sin(theta);
+                            //} else {
+                            //    bpx = midx - offset * Math.cos(theta);
+                            //    bpy = midy - offset * Math.sin(theta);
+                            //}
+
+                            return `
+                                M ${d.source.x}, ${d.source.y}
+                                Q ${bpx}, ${bpy}
+                                  ${d.target.x}, ${d.target.y}
+                            `;
+                        }
+                    });
+
+                //return 'M' + d.source.x + ',' + d.source.y
+                //     + 'C' + (d.target.x) + ',' + (d.source.y + 50)
+                //     + ' ' + (d.target.x) + ',' + (d.target.y)
+                //     + ' ' + d.target.x + ',' + d.target.y;
+            } else {
+
+                graphEdges
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+            }
         });
     };
 
     let updateDragEvents = function() {
 
         let dragEvents = drag()
-            .on('start', d => {
+            .on('start', function(d) {
 
                 if (!event.active)
                     simulation.alphaTarget(0.3).restart();
@@ -226,7 +387,7 @@ export default function() {
                 d.fx = d.x;
                 d.fy = d.y;
             })
-            .on('drag', d => {
+            .on('drag', function(d) {
 
                 d.fx = event.x;
                 d.fy = event.y;
@@ -236,11 +397,30 @@ export default function() {
                 if (!event.active)
                     simulation.alphaTarget(0);
 
-                d.fx = null;
-                d.fy = null;
+                if (useStickyNodes) {
+
+                    console.log('wut');
+                    d.fx = event.x;
+                    d.fy = event.y;
+
+                } else {
+
+                    console.log('wut1');
+                    d.fx = null;
+                    d.fy = null;
+                }
             });
 
         graphNodes.call(dragEvents);
+
+        if (useStickyNodes) {
+
+            graphNodes.on('dblclick', d => {
+                console.log('fuck');
+                d.fx = null;
+                d.fy = null;
+            });
+        }
     };
 
     /** public **/
@@ -262,6 +442,14 @@ export default function() {
         renderNodes();
         createSimulation();
         updateDragEvents();
+
+        //simulation.stop();
+        //if (simulationIterations > 0) {
+        //    simulation.stop();
+
+        //    for (let i = 0; i < simulationIterations; i++)
+        //        simulation.tick();
+        //}
 
         return exports;
     };
@@ -294,55 +482,55 @@ export default function() {
         return exports;
     };
 
-    exports.edgeStroke = function(_) { 
+    exports.edgeStroke = function(_) {
         if (!arguments.length) return edgeStroke;
         edgeStroke = _;
         return exports;
     };
 
-    exports.edgeStrokeWidth = function(_) { 
+    exports.edgeStrokeWidth = function(_) {
         if (!arguments.length) return edgeStrokeWidth;
         edgeStrokeWidth = +_;
         return exports;
     };
 
-    exports.element = function(_) { 
+    exports.element = function(_) {
         if (!arguments.length) return element;
         element = _;
         return exports;
     };
 
-    exports.font = function(_) { 
+    exports.font = function(_) {
         if (!arguments.length) return font;
         font = _;
         return exports;
     };
 
-    exports.fontSize = function(_) { 
+    exports.fontSize = function(_) {
         if (!arguments.length) return fontSize;
         fontSize = +_;
         return exports;
     };
 
-    exports.linkForceDistance = function(_) { 
+    exports.linkForceDistance = function(_) {
         if (!arguments.length) return linkForceDistance;
         linkForceDistance = +_;
         return exports;
     };
 
-    exports.height = function(_) { 
+    exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
         return exports;
     };
 
-    exports.manyBodyForceStrength = function(_) { 
+    exports.manyBodyForceStrength = function(_) {
         if (!arguments.length) return manyBodyForceStrength;
         manyBodyForceStrength = +_;
         return exports;
     };
 
-    exports.margin = function(_) { 
+    exports.margin = function(_) {
         if (!arguments.length) return margin;
         margin = _;
         return exports;
@@ -354,45 +542,51 @@ export default function() {
         return exports;
     };
 
-    exports.marginLeft = function(_) { 
+    exports.marginLeft = function(_) {
         if (!arguments.length) return margin.left;
         margin.left = +_;
         return exports;
     };
 
-    exports.marginRight = function(_) { 
+    exports.marginRight = function(_) {
         if (!arguments.length) return margin.right;
         margin.right = +_;
         return exports;
     };
 
-    exports.marginTop = function(_) { 
+    exports.marginTop = function(_) {
         if (!arguments.length) return margin.top;
         margin.top = +_;
         return exports;
     };
 
-    exports.nodeFill = function(_) { 
+    exports.nodeFill = function(_) {
         if (!arguments.length) return nodeFill;
         nodeFill = _;
         return exports;
     };
 
-    exports.nodeRadius = function(_) { 
+    exports.nodeRadius = function(_) {
         if (!arguments.length) return nodeRadius;
         nodeRadius = +_;
         return exports;
     };
 
-    exports.nodeStroke = function(_) { 
+    exports.nodeStroke = function(_) {
         if (!arguments.length) return nodeStroke;
         nodeStroke = _;
         return exports;
     };
 
-    exports.nodeStrokeWidth = function(_) { 
+    exports.nodeStrokeWidth = function(_) {
         if (!arguments.length) return nodeStrokeWidth;
         nodeStrokeWidth = +_;
+        return exports;
+    };
+
+    exports.simulationIterations = function(_) {
+        if (!arguments.length) return simulationIterations;
+        simulationIterations = +_;
         return exports;
     };
 
@@ -417,6 +611,30 @@ export default function() {
     exports.useManyBodyForce = function(_) {
         if (!arguments.length) return useManyBodyForce;
         useManyBodyForce = _;
+        return exports;
+    };
+
+    exports.useMultiEdges = function(_) {
+        if (!arguments.length) return useMultiEdges;
+        useMultiEdges = _;
+        return exports;
+    };
+
+    exports.useStickyNodes = function(_) {
+        if (!arguments.length) return useStickyNodes;
+        useStickyNodes = _;
+        return exports;
+    };
+
+    exports.useXForce = function(_) {
+        if (!arguments.length) return useXForce;
+        useXForce = _;
+        return exports;
+    };
+
+    exports.useYForce = function(_) {
+        if (!arguments.length) return useYForce;
+        useYForce = _;
         return exports;
     };
 
@@ -446,3 +664,4 @@ export default function() {
 
     return exports;
 }
+

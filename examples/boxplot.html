@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="../dist/d3.min.js" type="text/javascript"></script>
+        <script src="../dist/development/boxplot.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+            let randomRange = function(low, high) { return Math.random() * (high - low) + low; };
+            let randomUniform = function(n, delta=2.0) { return randomRange(n - delta, n + delta); };
+
+            let metropolis = function(p, n, prop=randomUniform) {
+
+                let x = 1;
+                let distribution = [];
+
+                for (let i = 0; i < n; i++) {
+
+                    const trial = prop(x);
+                    const accept = p(trial) / p(x);
+
+                    if (Math.random() < accept)
+                        x = trial;
+
+                    distribution.push(x);
+                }
+
+                return distribution;
+            };
+
+            let gaussian = function(x, mu, sigma) {
+                return 1 / sigma / Math.sqrt(2 * Math.PI) * Math.exp(-(Math.pow(x - mu, 2)) / 2 / sigma / sigma)
+            };
+            let idk = (x) => { return Math.pow(Math.sin(x) / x, 2); };
+
+            let data = [
+                {
+                    label: 'A',
+                    values: metropolis(x => gaussian(x, 2, 0.1), 100)
+                    //values: metropolis(x => idk(x), 1000)
+                },
+                {
+                    label: 'b',
+                    values: metropolis(x => gaussian(x, 3, 0.1), 100)
+                    //values: metropolis(x => idk(x), 1000)
+                },
+            ];
+            //let scale = d3.scaleLinear().domain(d3.extent(data[0].values)).range([-10, 10]);
+            //data[0].values = data[0].values.map(d => scale(d));
+
+            let chart = boxplot()
+                .data(data)
+                .height(350)
+                .width(200)
+                .useWhiskers(false)
+                .yTicks(5)
+                .yDomain([0, 5])
+                //.yDomain([1, 10])
+                //.kernelBandwidth(0.5)
+                .draw();
+
+		//d3.json('data/bar-example-0.json', function(error, json) {
+
+            //console.log(error);
+            //console.log(json);
+            //console.log(json.notes);
+
+            //// Transform gene lists to counts
+            //json.data.forEach(d => { d.y = d.y.length; });
+
+			//var chart = bar()
+            //    .data(data)
+            //    .width(350)
+            //    .height(300)
+            //    .yDomain([0, 45])
+			//	.xLabel('Stuff')
+			//	.yLabel('Values')
+            //    .fontSize(13)
+            //    .noXLine(true)
+			//	.draw();
+
+		//});
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>
+

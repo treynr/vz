@@ -1,20 +1,16 @@
-{
+module.exports = {
     "env": {
-        "node": true,
+        "browser": true,
         "es6": true
     },
     "extends": "eslint:recommended",
     "parserOptions": {
-        "ecmaVersion": 2018,
-        "sourceType": "module"
+        "ecmaVersion": 2016
     },
     "rules": {
         "indent": [
             "error",
-            4,
-            {
-                "ignoredNodes": ["ConditionalExpression"]
-            }
+            4
         ],
         "linebreak-style": [
             "error",
@@ -29,4 +25,4 @@
             "always"
         ]
     }
-}
+};

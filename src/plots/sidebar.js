@@ -60,7 +60,7 @@ export default function() {
         // Padding between bands (bars) in the bandScale, should be [0, 1]
         bandPadding = 0.2,
         // Bar chart color
-        barColor = '#98ABC5',
+        barFill = '#98ABC5',
         // Bar chart edge color
         barStroke = '#222222',
         // Bar stroke width
@@ -79,134 +79,112 @@ export default function() {
         // SVG height
         height = 500,
         // Margin object
-        margin = {top: 40, right: 30, bottom: 60, left: 50},
+        margin = {top: 40, right: 30, bottom: 50, left: 50},
         // Boolean to draw or hide the outer x-axis ticks
         outerTicks = false,
         rotateXLabel = false,
         // Top level bar chart title
         title = '',
+        useAltXAxis = false,
+        useAltYAxis = false,
         // SVG width
         width = 800,
+        xDomain = null,
         // X-axis text
         xLabel = '',
         // X-axis text padding to position it away from the x-axis
         xLabeldx = null,
-        xLabeldy = 50,
+        xLabeldy = null,
+        xNice = false,
+        // d3 format string for x-axis tick values
+        xTickFormat = null,
+        // Suggested number of x-axis ticks to render
+        xTicks = 5,
+        // X-axis tick values
+        xTickValues = null,
         // Y-axis padding. Positive values shift the y-axis further to the
         // left.
-        yAxisPad = 40,
+        yAxisPad = 0,
         // Y-axis text
         yLabel = '',
         // Y-axis text padding. Positive values shift the y-axis label further
         // to the left.
-        yLabeldy = -35,
+        yLabeldy = null,
         yLabeldx = null,
-        yNice = true,
-        // d3 format string for x-axis tick values
-        xTickFormat = null,
         // d3 format string for y-axis tick values
         yTickFormat = null,
-        yTicks = 5,
-        // Y-axis tick values
-        yTickValues = null,
-        yDomain = null,
         noXLine = false,
         noYLine = false,
-        yScaleFunction = scaleLinear,
+        xScaleFunction = scaleLinear,
         textures = []
         ;
 
     /** private **/
 
-    var getWidth = function() { return width - margin.left - margin.right; };
-    var getHeight = function() { return height - margin.top - margin.bottom; };
+    let getWidth = function() { return width - margin.left - margin.right; };
+    let getHeight = function() { return height - margin.top - margin.bottom; };
 
-    var makeScales = function() {
+    let makeScales = function() {
 
-        var xdomain = data.map(d => d.x);
-        var ydomain = yDomain ? yDomain : extent(data, d => d.y);
+        var ydomain = data.map(d => d.y);
+        var xdomain = xDomain ? xDomain : extent(data, d => d.x);
 
-        if (grouped) {
-
-            xGroupScale = scaleBand()
-                .domain(returnKeyUniques('x'))
-                .rangeRound([margin.left, getWidth()])
-                .paddingInner(0.1);
-
-            xScale = scaleBand()
-                .domain(returnKeyUniques('group'))
-                .range([0, xGroupScale.bandwidth()])
-                .padding(0.20);
-
-        } else {
-
-            xScale = scaleBand()
-                .domain(xdomain)
-                .range([margin.left, getWidth()])
-                .padding(bandPadding);
-        }
-
-        yScale = yScaleFunction()
+        yScale = scaleBand()
             .domain(ydomain)
-            .range([getHeight(), 0]);
+            .range([getHeight(), 0])
+            .padding(bandPadding);
 
-        if (yNice)
-            yScale.nice();
+        xScale = xScaleFunction()
+            .domain(xdomain)
+            .range([0, getWidth()]);
 
-        if (groupColors)
-            colorScale = scaleOrdinal().range(groupColors);
+        if (xNice)
+            xScale.nice();
     };
 
-    var makeAxes = function() {
+    let makeAxes = function() {
 
-        if (grouped) {
-
-            xAxis = axisBottom(xGroupScale)
-                .tickSizeOuter(outerTicks ? 6 : 0)
-                .tickFormat(null);
-
-        } else {
-
-            xAxis = axisBottom(xScale)
-                .tickSizeOuter(outerTicks ? 6 : 0)
-                .tickFormat(xTickFormat);
-        }
+        xAxis = axisBottom(xScale)
+            .ticks(xTicks, xTickFormat);
 
         yAxis = axisLeft(yScale)
-            .ticks(yTicks, yTickFormat);
-            //.tickFormat(yTickFormat)
-            //.tickValues(yTickValues);
+            .tickSizeOuter(outerTicks ? 6 : 0)
+            .tickFormat(yTickFormat);
 
-        var xAxisObject = svg.append('g')
+    };
+
+    let renderAxes = function() {
+
+        let xAxisObject = svg.append('g')
             .attr('class', 'x-axis')
-            .attr('transform', function() {
-                return 'translate(0' + ',' + (getHeight() + 1) + ')';
-            })
+            .attr('transform', `translate(0, ${getHeight() + 1})`)
             .attr('fill', 'none')
             .call(xAxis);
 
-        xAxisObject.selectAll('text')
-            .attr('transform', rotateXLabel ? 'rotate(-320)' : '')
-            .attr('x', rotateXLabel ? 5 : 0)
-            .attr('y', rotateXLabel ? 8 : fontSize + 2)
-            .attr('dy', '.35em')
-            .attr('dx', rotateXLabel ? '.30em' : '')
-            .attr('text-anchor', rotateXLabel ? 'start': 'middle');
-
         xAxisObject.append('text')
             .attr('class', 'x-axis-label')
-            //.attr('x', function() { return (margin.left + getWidth()) / 2; })
-            //.attr('y', xLabelPad)
             .attr('x', () => {
 
+                if (xLabeldx == null && useAltXAxis)
+                    return getWidth();
+
                 if (xLabeldx == null)
-                    return (margin.left + getWidth()) / 2;
+                    return getWidth() / 2;
 
                 return xLabeldx;
             })
-            .attr('y', xLabeldy)
+            .attr('y', () => {
+
+                if (xLabeldy == null && useAltXAxis)
+                    return -5;
+
+                if (xLabeldy == null)
+                    return 40;
+
+                return xLabeldy
+            })
             .attr('fill', '#000')
-            .attr('text-anchor', 'middle')
+            .attr('text-anchor', useAltXAxis ? 'end' : 'middle')
             .text(xLabel);
 
         xAxisObject.selectAll('text')
@@ -214,12 +192,10 @@ export default function() {
             .attr('font-size', `${fontSize}px`)
             .attr('font-weight', 'normal');
 
-        var yAxisObject = svg.append('g')
+        let yAxisObject = svg.append('g')
             .attr('class', 'y-axis')
             .attr('class', 'axis')
-            .attr('transform', function() {
-                return 'translate(' + yAxisPad + ',0)';
-            })
+            .attr('transform', `translate(${yAxisPad}, 0)`)
             .attr('fill', 'none')
             .call(yAxis);
 
@@ -228,15 +204,27 @@ export default function() {
             // Weird x, y argumetnns cause of the -90 rotation
             .attr('x', () => {
 
+                if (yLabeldx == null && useAltYAxis)
+                    return 0;
+
                 if (yLabeldx == null)
-                    return altYAxis ? 5 : -getHeight() / 2;
+                    return -getHeight() / 2;
 
                 return yLabeldx;
             })
-            .attr('y', yLabeldy)
+            .attr('y', () => {
+
+                if (yLabeldy == null && useAltYAxis)
+                    return 0
+
+                if (yLabeldy == null)
+                    return -35;
+
+                return yLabeldy;
+            })
             .attr('fill', '#000')
-            .attr('transform', /*altYAxis ? '' :*/ 'rotate(-90)')
-            .attr('text-anchor', altYAxis ? 'end' : 'middle')
+            .attr('text-anchor', useAltYAxis ? 'start' : 'middle')
+            .attr('transform', useAltYAxis ? '' : 'rotate(-90)')
             .text(yLabel);
 
         yAxisObject.selectAll('text')
@@ -253,42 +241,22 @@ export default function() {
         return [xAxisObject, yAxisObject];
     };
 
-    var returnKeyUniques = function(key) {
-        var unique = {};
-
-        for (var i = 0; i < data.length; i++)
-            unique[data[i][key]] = 0;
-
-        return Object.keys(unique);
-    };
-
-    var drawBars = function() {
+    let drawBars = function() {
 
         let bar = svg.selectAll('.bar')
             .data(data)
             .enter()
             .append('g')
+            .attr('id', d => `${d.y.replace(/\s+/, '-').toLowerCase()}-bar`)
             .attr('class', 'bar')
-            .attr('transform', d => {
-                if (grouped)
-                    return 'translate(' + xGroupScale(d.x) + ',0)'; 
-                else
-                    return 'translate(0,0)'; 
-            });
+            .attr('transform', 'translate(0, 0)');
 
         bar.append('rect')
-            .attr('x', d => {
-                if (grouped)
-                    return xScale(d.group); 
-                else
-                    return xScale(d.x); 
-            })
+            .attr('x', xScale.range()[0])
             // +1 so the bar converges with the x-axis
-            .attr('y', d => {
-                return yScale(d.y) + 1; 
-            })
-            .attr('width', xScale.bandwidth()) 
-            .attr('height', d => getHeight() - yScale(d.y))
+            .attr('y', d => yScale(d.y))
+            .attr('width', d => xScale(d.x))
+            .attr('height', yScale.bandwidth())
             .attr('shape-rendering', 'crispEdges')
             .attr('stroke', barStroke)
             .attr('stroke-width', barStrokeWidth)
@@ -297,84 +265,106 @@ export default function() {
                 if (textures.length > 0 && d.texture)
                     return d.texture.url();
 
-                if (d.color)
-                    return d.color;
+                if (d.fill)
+                    return d.fill;
 
-                if (grouped)
-                    return colorScale(d.group);
-
-                return barColor;
+                return barFill;
             });
     };
 
     var renderConfidenceIntervals = function() {
 
-        // Draws the confidence interval lines
+        // Draws the confidence interval lines, first the upper line
         svg.selectAll('.bar')
             .filter(d => d.se !== undefined && d.se)
             .append('line')
-            .attr('x1', d => xScale(d.x) + (xScale.bandwidth() / 2))
-            .attr('y1', d => yScale(d.y + (1.96 * d.se)))
-            .attr('x2', d => xScale(d.x) + (xScale.bandwidth() / 2))
-            .attr('y2', d => yScale(d.y - (1.96 * d.se)))
+            .attr('class', 'upper-ci')
+            //.attr('x1', d => xScale(d.x + (1.96 * d.se)))
+            //.attr('y1', d => yScale(d.y) + (yScale.bandwidth() / 2))
+            //.attr('x2', d => xScale(d.x - (1.96 * d.se)))
+            //.attr('y2', d => yScale(d.y) + (yScale.bandwidth() / 2))
+            .attr('x1', d => xScale(d.x))
+            .attr('y1', d => yScale(d.y) + (yScale.bandwidth() / 2))
+            .attr('x2', d => xScale(d.x + (1.96 * d.se)) <= xScale.range()[1] ? xScale(d.x + (1.96 * d.se)) : xScale.range()[1])
+            .attr('y2', d => yScale(d.y) + (yScale.bandwidth() / 2))
             .attr('shape-rendering', 'auto')
             .attr('stroke', '#000')
             .attr('stroke-width', 1);
 
-        // Draw the whiskers at each end of the interval
+        // Then the lower line
         svg.selectAll('.bar')
             .filter(d => d.se !== undefined && d.se)
             .append('line')
+            .attr('class', 'lower-ci')
+            .attr('x1', d => xScale(d.x))
+            .attr('y1', d => yScale(d.y) + (yScale.bandwidth() / 2))
+            //.attr('x2', d => xScale(d.x - (1.96 * d.se)))
+            .attr('x2', d => xScale(d.x - (1.96 * d.se)) >= xScale.range()[0] ? xScale(d.x - (1.96 * d.se)) : xScale.range()[0])
+            .attr('y2', d => yScale(d.y) + (yScale.bandwidth() / 2))
+            //.attr('x1', d => xScale(d.x + (1.96 * d.se)))
+            //.attr('y1', d => yScale(d.y) + (yScale.bandwidth() / 2))
+            //.attr('x2', d => xScale(d.x - (1.96 * d.se)))
+            //.attr('y2', d => yScale(d.y) + (yScale.bandwidth() / 2))
+            .attr('shape-rendering', 'auto')
+            .attr('stroke', '#000')
+            .attr('stroke-width', 1);
+
+        // Draw the whiskers at each end of the interval (first set of whiskers)
+        svg.selectAll('.bar')
+            .filter(d => d.se !== undefined && d.se)
+            .append('line')
+            .attr('class', 'upper-ci-whisker')
             .attr('x1', d => {
-                return xScale(d.x) + (xScale.bandwidth() / 2) +
-                       (xScale.bandwidth() / 6);
+                return xScale(d.x + (1.96 * d.se)) <= xScale.range()[1] ?
+                       xScale(d.x + (1.96 * d.se)) :
+                       xScale.range()[1];
             })
-            .attr('y1', d => yScale(d.y + (1.96 * d.se)))
+            .attr('y1', d => {
+                return yScale(d.y) + (yScale.bandwidth() / 2) +
+                    (yScale.bandwidth() / 6);
+            })
+            //.attr('x2', d => xScale(d.x + (1.96 * d.se)))
             .attr('x2', d => {
-                return xScale(d.x) + (xScale.bandwidth() / 2) -
-                       (xScale.bandwidth() / 6);
+                return xScale(d.x + (1.96 * d.se)) <= xScale.range()[1] ?
+                    xScale(d.x + (1.96 * d.se)) :
+                    xScale.range()[1];
             })
-            .attr('y2', d => yScale(d.y + (1.96 * d.se)))
+            .attr('y2', d => {
+                return yScale(d.y) + (yScale.bandwidth() / 2) -
+                    (yScale.bandwidth() / 6);
+            })
             .attr('shape-rendering', 'auto')
             .attr('stroke', '#000')
             .attr('stroke-width', 1);
 
+        // Second set of whiskers
         svg.selectAll('.bar')
             .filter(d => d.se !== undefined && d.se)
             .append('line')
+            .attr('class', 'lower-ci-whisker')
+            .attr('y1', d => {
+                return yScale(d.y) + (yScale.bandwidth() / 2) +
+                    (yScale.bandwidth() / 6);
+            })
+            //.attr('x1', d => xScale(d.x - (1.96 * d.se)))
             .attr('x1', d => {
-                return xScale(d.x) + (xScale.bandwidth() / 2) +
-                       (xScale.bandwidth() / 6);
+                return xScale(d.x - (1.96 * d.se)) >= xScale.range()[0] ?
+                       xScale(d.x - (1.96 * d.se)) :
+                       xScale.range()[0];
             })
-            .attr('y1', d => yScale(d.y - (1.96 * d.se)))
+            .attr('y2', d => {
+                return yScale(d.y) + (yScale.bandwidth() / 2) -
+                    (yScale.bandwidth() / 6);
+            })
+            //.attr('x2', d => xScale(d.x - (1.96 * d.se)))
             .attr('x2', d => {
-                return xScale(d.x) + (xScale.bandwidth() / 2) -
-                       (xScale.bandwidth() / 6);
+                return xScale(d.x - (1.96 * d.se)) >= xScale.range()[0] ?
+                       xScale(d.x - (1.96 * d.se)) :
+                       xScale.range()[0];
             })
-            .attr('y2', d => yScale(d.y - (1.96 * d.se)))
             .attr('shape-rendering', 'auto')
             .attr('stroke', '#000')
             .attr('stroke-width', 1);
-    };
-
-    var drawText = function() {
-
-        if (title) {
-
-            svg.append('text')
-                //.attr('transform', 'translate(-' + margin.left  + ',-' + margin.top + ')')
-                .attr('transform', 'translate(' + 0  + ',-' + margin.top + ')')
-                //.attr('x', getWidth() / 2)
-                .attr('x', getWidth() / 2)
-                .attr('y', margin.top / 2)
-                .attr('text-anchor', 'middle')
-                .attr('font-family', fontFamily)
-                .attr('font-size', '17px')
-                .attr('font-weight', 'normal')
-                .text(title);
-        }
-
-
     };
 
     /** public **/
@@ -392,23 +382,20 @@ export default function() {
             for (var i = 0; i < textures.length; i++)
                 svg.call(textures[i]);
 
-        grouped = ('group' in data[0]) ? true : false;
-
         makeScales();
-
-        //if (grouped)
-        //    groups = returnKeyUniques('group');
-
         makeAxes();
         drawBars();
-        drawText();
+        renderAxes();
         renderConfidenceIntervals();
-
-        //if (distribution)
-        //    drawdist();
 
         return exports;
     };
+
+    /** Getters only **/
+    exports._getHeight = getHeight;
+    exports._getWidth = getWidth;
+    exports._xScale = () => xScale;
+    exports._yScale = () => xScale;
 
     /** setters/getters **/
 
@@ -417,12 +404,6 @@ export default function() {
     exports.data = function(_) {
         if (!arguments.length) return data;
         data = _;
-        return exports;
-    };
-
-    exports.altYAxis = function(_) {
-        if (!arguments.length) return altYAxis;
-        altYAxis = _;
         return exports;
     };
 
@@ -486,9 +467,9 @@ export default function() {
         return exports;
     };
 
-    exports.barColor = function(_) {
-        if (!arguments.length) return barColor;
-        barColor = _;
+    exports.barFill = function(_) {
+        if (!arguments.length) return barFill;
+        barFill = _;
         return exports;
     };
 
@@ -576,6 +557,18 @@ export default function() {
         return exports;
     };
 
+    exports.useAltXAxis = function(_) {
+        if (!arguments.length) return useAltXAxis;
+        useAltXAxis = _;
+        return exports;
+    };
+
+    exports.useAltYAxis = function(_) {
+        if (!arguments.length) return useAltYAxis;
+        useAltYAxis = _;
+        return exports;
+    };
+
     exports.rotateXLabel = function(_) {
         if (!arguments.length) return rotateXLabel;
         rotateXLabel = _;
@@ -600,6 +593,36 @@ export default function() {
         return exports;
     };
 
+    exports.xDomain = function(_) {
+        if (!arguments.length) return xDomain;
+        xDomain = _;
+        return exports;
+    };
+
+    exports.xNice = function(_) {
+        if (!arguments.length) return xNice;
+        xNice = _;
+        return exports;
+    };
+
+    exports.xTickValues = function(_) {
+        if (!arguments.length) return xTickValues;
+        xTickValues = _;
+        return exports;
+    };
+
+    exports.xTicks = function(_) {
+        if (!arguments.length) return xTicks;
+        xTicks = +_;
+        return exports;
+    };
+
+    exports.xScaleFunction = function(_) {
+        if (!arguments.length) return xScaleFunction;
+        xScaleFunction = _;
+        return exports;
+    };
+
     exports.yLabeldx = function(_) {
         if (!arguments.length) return yLabeldx;
         yLabeldx = +_;
@@ -609,36 +632,6 @@ export default function() {
     exports.yLabeldy = function(_) {
         if (!arguments.length) return yLabeldy;
         yLabeldy = +_;
-        return exports;
-    };
-
-    exports.yNice = function(_) {
-        if (!arguments.length) return yNice;
-        yNice = _;
-        return exports;
-    };
-
-    exports.yTickValues = function(_) {
-        if (!arguments.length) return yTickValues;
-        yTickValues = _;
-        return exports;
-    };
-
-    exports.yTicks = function(_) {
-        if (!arguments.length) return yTicks;
-        yTicks = +_;
-        return exports;
-    };
-
-    exports.yScaleFunction = function(_) {
-        if (!arguments.length) return yScaleFunction;
-        yScaleFunction = _;
-        return exports;
-    };
-
-    exports.yDomain = function(_) {
-        if (!arguments.length) return yDomain;
-        yDomain = _;
         return exports;
     };
 

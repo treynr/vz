@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <script src="../dist/d3.min.js" type="text/javascript"></script>
+        <script src="../dist/lodash.min.js" type="text/javascript"></script>
+        <script src="../dist/development/transit.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+            d3.tsv('data/aud-promoter-hisim-nodes.tsv', (err1, ntsv) => {
+            d3.tsv('data/aud-promoter-hisim-edges.tsv', (err2, etsv) => {
+
+                ntsv = _.chain(ntsv)
+                    .map(d => {
+                        return {
+                            layer: d.layer,
+                            id: d.node_id,
+                            label: d.genes.split(';').length == 1 ? `rs${d.genes.split(';')[0]}` : '',
+                            x: d.genesets.split(';').length,
+                            yNodeSpacing: (d.genesets.split(';').length == 5 || d.genes.split(';').length == 1) ? 20 : null
+                        };
+                    })
+                    //.filter(d => d.x > 1)
+                    .value();
+
+                etsv = _.map(etsv, d => ({source: d.node_from, target: d.node_to}));
+
+                let t = transit()
+                    .data({nodes: ntsv, edges: etsv})
+                    .height(1900)
+                    .width(700)
+                    .bundleHeight(10)
+                    .fontWeight('bold')
+                    .nodeRadius(6)
+                    .xNodeSpacing(10)
+                    .yNodeSpacing(13)
+                    .edgeStrokeWidth(4)
+                    .c(16)
+                    //.useHorizontalLayout(true)
+                    .altAxisLabels(true)
+                    .marginLeft(20)
+                    //.xLabelPad(4)
+                    //.yLabelPad(6)
+                    .xLabel('Gene Sets')
+                    .draw();
+
+            });
+            });
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>
+

@@ -1,7 +1,7 @@
 /**
-  * file: scatter.js
-  * desc: d3js implementation of scatter plots.
-  */
+ * file: scatter.js
+ * desc: d3js implementation of scatter plots.
+ */
 
 'use strict';
 
@@ -18,7 +18,7 @@ export default function() {
 
         /** private **/
 
-        // d3 axis object for the x-axis
+            // d3 axis object for the x-axis
         xAxis = null,
         // d3 scale for the x-axis
         xScale = null,
@@ -29,8 +29,8 @@ export default function() {
 
         /** public **/
 
-        // If true, positions x- and y-axis labels along the ends of each axis rather than
-        // centering them outside the axis
+            // If true, positions x- and y-axis labels along the ends of each axis rather than
+            // centering them outside the axis
         altAxisLabels = false,
         // Shaded background color to use when rendering the grid background
         backgroundStroke = '#cecece',
@@ -41,9 +41,9 @@ export default function() {
         // HTML element or ID the SVG should be appended to
         element = 'body',
         // Font to use when displaying text
-        font = 'sans-serif',
+        font = '"Helvetica neue", Helvetica, Arial, sans-serif',
         // Font size in pixels
-        fontSize = 12,
+        fontSize = 13,
         // SVG height
         height = 600,
         margin = {top: 50, right: 50, bottom: 50, left: 50},
@@ -59,15 +59,23 @@ export default function() {
         renderXDomain = true,
         // Render the y-domain line if true, otherwise only render ticks
         renderYDomain = true,
+        tickSize = 6,
         // SVG object for the plot
         svg = null,
         // Draw background grid
         useBackground = false,
+        useConnectedAxes = false,
         // Position points in the graph using collision forces to avoid overlap
         useForce = false,
+        useMirroredXAxis = false,
+        useMirroredYAxis = false,
+        useOppositeTicks = false,
+        useOuterXTicks = true,
+        useOuterYTicks = true,
         useRegression = false,
         // SVG width
         width = 600,
+        xAxisStrokeWidth = 1,
         xDomain = null,
         // Strength of the x forces used if force positioning is enabled
         xForceStrength = 0.7,
@@ -84,6 +92,7 @@ export default function() {
         // Suggestion for the number of ticks on the x-axis
         xTicks = 10,
         xTickValues = null,
+        yAxisStrokeWidth = 1,
         yDomain = null,
         // Strength of the y forces used if force positioning is enabled
         yForceStrength = 0.7,
@@ -100,20 +109,20 @@ export default function() {
         // Suggestion for the number of ticks on the y-axis
         yTicks = 10,
         yTickValues = null
-        ;
-    
+    ;
+
     /** private **/
 
     /**
-      * Returns the width and height of the SVG while taking into account the margins.
-      */
+     * Returns the width and height of the SVG while taking into account the margins.
+     */
     let getHeight = function() { return height - margin.bottom - margin.top; };
     let getWidth = function() { return width - margin.left - margin.right; };
 
     /**
-      * Creates the d3 scale objects for the x- and y-axes using the available x and y
-      * domains.
-      */
+     * Creates the d3 scale objects for the x- and y-axes using the available x and y
+     * domains.
+     */
     let makeScales = function() {
 
         xDomain = xDomain ? xDomain : extent(data.values, d => d.x);
@@ -121,12 +130,13 @@ export default function() {
 
         xScale = xScaleFunction()
             .domain(xDomain)
+            //.range([useConnectedAxes ? yAxisPad : margin.left, getWidth()]);
             .range([margin.left, getWidth()]);
 
         yScale = yScaleFunction()
             .domain(yDomain)
             .range([getHeight(), 0]);
-        
+
         if (xNice)
             xScale.nice();
 
@@ -135,23 +145,33 @@ export default function() {
     };
 
     /**
-      * Creates the d3 axis objects for x- and y-axes.
-      */
+     * Creates the d3 axis objects for x- and y-axes.
+     */
     let makeAxes = function() {
 
-        xAxis = axisBottom(xScale).ticks(xTicks, xTickFormat);
-        yAxis = axisLeft(yScale).ticks(yTicks, yTickFormat);
+        xAxis = axisBottom(xScale)
+            .ticks(xTicks, xTickFormat)
+            .tickSize(tickSize);
+        yAxis = axisLeft(yScale)
+            .ticks(yTicks, yTickFormat)
+            .tickSize(tickSize);
 
         if (xTickValues)
             xAxis.tickValues(xTickValues);
 
         if (yTickValues)
             yAxis.tickValues(yTickValues);
+
+        if (!useOuterXTicks)
+            xAxis.tickSizeOuter(0);
+
+        if (!useOuterYTicks)
+            yAxis.tickSizeOuter(0);
     };
 
     /**
-      * Renders the x- and y-axes and attaches them to the SVG.
-      */
+     * Renders the x- and y-axes and attaches them to the SVG.
+     */
     let renderAxes = function() {
 
         // Set default positions for the x- and y-axis labels if necesssary
@@ -168,6 +188,8 @@ export default function() {
         let xAxisObject = svg.append('g')
             .attr('class', 'x-axis')
             .attr('transform', `translate(0, ${getHeight()})`)
+            .attr('shape-rendering', 'auto')
+            .attr('stroke-width', xAxisStrokeWidth)
             .call(xAxis);
 
         // Attach the x-axis label
@@ -188,6 +210,8 @@ export default function() {
         let yAxisObject = svg.append('g')
             .attr('class', 'y-axis')
             .attr('transform', `translate(${margin.left}, 0)`)
+            .attr('shape-rendering', 'auto')
+            .attr('stroke-width', yAxisStrokeWidth)
             .call(yAxis);
 
         // Attach the y-axis label
@@ -213,12 +237,53 @@ export default function() {
 
         if (!renderYDomain)
             yAxisObject.select('.domain').remove();
+
+        if (useMirroredXAxis) {
+
+            let x2AxisObject = svg.append('g')
+                .attr('class', 'x2-axis')
+                .attr('transform', `translate(0, 0)`)
+                .attr('shape-rendering', 'auto')
+                .attr('stroke-width', xAxisStrokeWidth)
+                .call(xAxis);
+
+            x2AxisObject.selectAll('text')
+                .attr('font', font)
+                .attr('font-size', fontSize)
+                //.attr('font-weight', fontWeight)
+                .remove();
+        }
+
+        if (useMirroredYAxis) {
+
+            let y2AxisObject = svg.append('g')
+                .attr('class', 'y2-axis')
+                .attr('transform', `translate(${getWidth()}, 0)`)
+                .attr('shape-rendering', 'auto')
+                .attr('stroke-width', xAxisStrokeWidth)
+                .call(yAxis);
+
+            y2AxisObject.selectAll('text')
+                .attr('font', font)
+                .attr('font-size', fontSize)
+                //.attr('font-weight', fontWeight)
+                .remove();
+        }
+
+        if (useOppositeTicks) {
+
+            yAxisObject.selectAll('.tick > line')
+                .attr('transform', `translate(${tickSize}, 0)`);
+
+            xAxisObject.selectAll('.tick > line')
+                .attr('transform', `translate(0, ${-tickSize})`);
+        }
     };
 
     /**
-      * Adds a clipPath element to the plot so data points or other rendered shapes
-      * don't overlap onto the axes.
-      */
+     * Adds a clipPath element to the plot so data points or other rendered shapes
+     * don't overlap onto the axes.
+     */
     let renderClipping = function() {
 
         svg.append('clipPath')
@@ -226,14 +291,15 @@ export default function() {
             .attr('class', 'clipping')
             .append('rect')
             .attr('x', margin.left)
+            //.attr('x', useConnectedAxes ? yAxisPad : margin.left)
             .attr('y', 0)
             .attr('height', getHeight())
             .attr('width', getWidth() - margin.right);
     };
 
     /**
-      * Renders each data point on the scatter plot.
-      */
+     * Renders each data point on the scatter plot.
+     */
     let renderPoints = function() {
 
         // Apply clipping area to the rendered points
@@ -268,7 +334,7 @@ export default function() {
         circles.attr('fill', d => d.fill ? d.fill : pointFill)
             .attr('stroke', d => d.stroke ? d.stroke : pointStroke)
             .attr(
-                'stroke-width', 
+                'stroke-width',
                 d => d.strokeWidth ? d.strokeWidth : pointStrokeWidth
             )
             .attr('shape-rendering', 'auto');
@@ -279,14 +345,14 @@ export default function() {
         symbols.attr('fill', d => d.fill ? d.fill : pointFill)
             .attr('stroke', d => d.stroke ? d.stroke : pointStroke)
             .attr(
-                'stroke-width', 
+                'stroke-width',
                 d => d.strokeWidth ? d.strokeWidth : pointStrokeWidth
             )
             .attr('shape-rendering', 'auto');
 
         // Tooltip when hovering over a datapoint
         symbols.append('title').text(d => d.label ? d.label : '');
-            
+
     };
 
     let renderBackgroundGrid = function() {
@@ -329,7 +395,7 @@ export default function() {
         let simulation = forceSimulation(data.values)
             .force('x', forceX(d => xScale(d.x)).strength(xForceStrength))
             .force('y', forceY(d => yScale(d.y)).strength(yForceStrength))
-            .force('collide', 
+            .force('collide',
                 forceCollide(collisionForce)
                     .radius(d => d.radius ? d.radius : pointRadius)
             )
@@ -365,8 +431,8 @@ export default function() {
         if (useForce)
             positionWithForce();
 
-        renderAxes();
         renderPoints();
+        renderAxes();
 
         return exports;
     };
@@ -375,241 +441,295 @@ export default function() {
 
     exports.svg = function() { return svg; };
 
-    exports.altAxisLabels = function(_) { 
+    exports.altAxisLabels = function(_) {
         if (!arguments.length) return altAxisLabels;
         altAxisLabels = _;
         return exports;
     };
 
-    exports.backgroundStroke = function(_) { 
+    exports.backgroundStroke = function(_) {
         if (!arguments.length) return backgroundStroke;
         backgroundStroke = _;
         return exports;
     };
 
-    exports.backgroundStrokeWidth = function(_) { 
+    exports.backgroundStrokeWidth = function(_) {
         if (!arguments.length) return backgroundStrokeWidth;
         backgroundStrokeWidth = +_;
         return exports;
     };
 
-    exports.data = function(_) { 
+    exports.data = function(_) {
         if (!arguments.length) return data;
         data = _;
         return exports;
     };
 
-    exports.collisionForce = function(_) { 
+    exports.collisionForce = function(_) {
         if (!arguments.length) return collisionForce;
         collisionForce = +_;
         return exports;
     };
 
-    exports.element = function(_) { 
+    exports.element = function(_) {
         if (!arguments.length) return element;
         element = _;
         return exports;
     };
 
-    exports.font = function(_) { 
+    exports.font = function(_) {
         if (!arguments.length) return font;
         font = _;
         return exports;
     };
 
-    exports.fontSize = function(_) { 
+    exports.fontSize = function(_) {
         if (!arguments.length) return fontSize;
         fontSize = +_;
         return exports;
     };
 
-    exports.height = function(_) { 
+    exports.height = function(_) {
         if (!arguments.length) return height;
         height = +_;
         return exports;
     };
 
-    exports.margin = function(_) { 
+    exports.margin = function(_) {
         if (!arguments.length) return margin;
         margin = _;
         return exports;
     };
 
-    exports.marginBottom = function(_) { 
+    exports.marginBottom = function(_) {
         if (!arguments.length) return margin.bottom;
         margin.bottom = +_;
         return exports;
     };
 
-    exports.marginLeft = function(_) { 
+    exports.marginLeft = function(_) {
         if (!arguments.length) return margin.left;
         margin.left = +_;
         return exports;
     };
 
-    exports.marginRight = function(_) { 
+    exports.marginRight = function(_) {
         if (!arguments.length) return margin.right;
         margin.right = +_;
         return exports;
     };
 
-    exports.marginTop = function(_) { 
+    exports.marginTop = function(_) {
         if (!arguments.length) return margin.top;
         margin.top = +_;
         return exports;
     };
 
-    exports.pointFill = function(_) { 
+    exports.pointFill = function(_) {
         if (!arguments.length) return pointFill;
         pointFill = _;
         return exports;
     };
 
-    exports.pointRadius = function(_) { 
+    exports.pointRadius = function(_) {
         if (!arguments.length) return pointRadius;
         pointRadius = +_;
         return exports;
     };
 
-    exports.pointStroke = function(_) { 
+    exports.pointStroke = function(_) {
         if (!arguments.length) return pointStroke;
         pointStroke = _;
         return exports;
     };
 
-    exports.pointStrokeWidth = function(_) { 
+    exports.pointStrokeWidth = function(_) {
         if (!arguments.length) return pointStrokeWidth;
         pointStrokeWidth = +_;
         return exports;
     };
 
-    exports.useBackground = function(_) { 
+    exports.tickSize = function(_) {
+        if (!arguments.length) return tickSize;
+        tickSize = +_;
+        return exports;
+    };
+
+    exports.useBackground = function(_) {
         if (!arguments.length) return useBackground;
         useBackground = _;
         return exports;
     };
 
-    exports.useForce = function(_) { 
+    exports.useConnectedAxes = function(_) {
+        if (!arguments.length) return useConnectedAxes;
+        useConnectedAxes = _;
+        return exports;
+    };
+
+    exports.useForce = function(_) {
         if (!arguments.length) return useForce;
         useForce = _;
         return exports;
     };
 
-    exports.useRegression = function(_) { 
+    exports.useMirroredXAxis = function(_) {
+        if (!arguments.length) return useMirroredXAxis;
+        useMirroredXAxis = _;
+        return exports;
+    };
+
+    exports.useMirroredYAxis = function(_) {
+        if (!arguments.length) return useMirroredYAxis;
+        useMirroredYAxis = _;
+        return exports;
+    };
+
+    exports.useOuterXTicks = function(_) {
+        if (!arguments.length) return useOuterXTicks;
+        useOuterXTicks = _;
+        return exports;
+    };
+
+    exports.useOppositeTicks = function(_) {
+        if (!arguments.length) return useOppositeTicks;
+        useOppositeTicks = _;
+        return exports;
+    };
+
+    exports.useOuterYTicks = function(_) {
+        if (!arguments.length) return useOuterYTicks;
+        useOuterYTicks = _;
+        return exports;
+    };
+
+    exports.useRegression = function(_) {
         if (!arguments.length) return useRegression;
         useRegression = _;
         return exports;
     };
 
-    exports.width = function(_) { 
+    exports.width = function(_) {
         if (!arguments.length) return width;
         width = +_;
         return exports;
     };
 
-    exports.xDomain = function(_) { 
+    exports.xAxisStrokeWidth = function(_) {
+        if (!arguments.length) return xAxisStrokeWidth;
+        xAxisStrokeWidth = +_;
+        return exports;
+    };
+
+    exports.xDomain = function(_) {
         if (!arguments.length) return xDomain;
         xDomain = _;
         return exports;
     };
 
-    exports.xForceStrength = function(_) { 
+    exports.xForceStrength = function(_) {
         if (!arguments.length) return xForceStrength;
         xForceStrength = +_;
         return exports;
     };
 
-    exports.xLabel = function(_) { 
+    exports.xLabel = function(_) {
         if (!arguments.length) return xLabel;
         xLabel = _;
         return exports;
     };
 
-    exports.xLabelPad = function(_) { 
+    exports.xLabelPad = function(_) {
         if (!arguments.length) return xLabelPad;
         xLabelPad = +_;
         return exports;
     };
 
-    exports.xNice = function(_) { 
+    exports.xNice = function(_) {
         if (!arguments.length) return xNice;
         xNice = _;
         return exports;
     };
 
-    exports.xScaleFunction = function(_) { 
+    exports.xScaleFunction = function(_) {
         if (!arguments.length) return xScaleFunction;
         xScaleFunction = _;
         return exports;
     };
 
-    exports.xTickFormat = function(_) { 
+    exports.xTickFormat = function(_) {
         if (!arguments.length) return xTickFormat;
         xTickFormat = _;
         return exports;
     };
 
-    exports.xTicks = function(_) { 
+    exports.xTicks = function(_) {
         if (!arguments.length) return xTicks;
         xTicks = +_;
         return exports;
     };
 
-    exports.xTickValues = function(_) { 
+    exports.xTickValues = function(_) {
         if (!arguments.length) return xTickValues;
         xTickValues = _;
         return exports;
     };
 
-    exports.yDomain = function(_) { 
+    exports.yAxisStrokeWidth = function(_) {
+        if (!arguments.length) return yAxisStrokeWidth;
+        yAxisStrokeWidth = +_;
+        return exports;
+    };
+
+    exports.yDomain = function(_) {
         if (!arguments.length) return yDomain;
         yDomain = _;
         return exports;
     };
 
-    exports.yForceStrength = function(_) { 
+    exports.yForceStrength = function(_) {
         if (!arguments.length) return yForceStrength;
         yForceStrength = +_;
         return exports;
     };
 
-    exports.yLabel = function(_) { 
+    exports.yLabel = function(_) {
         if (!arguments.length) return yLabel;
         yLabel = _;
         return exports;
     };
 
-    exports.yLabelPad = function(_) { 
+    exports.yLabelPad = function(_) {
         if (!arguments.length) return yLabelPad;
         yLabelPad = +_;
         return exports;
     };
 
-    exports.yNice = function(_) { 
+    exports.yNice = function(_) {
         if (!arguments.length) return yNice;
         yNice = _;
         return exports;
     };
 
-    exports.yScaleFunction = function(_) { 
+    exports.yScaleFunction = function(_) {
         if (!arguments.length) return yScaleFunction;
         yScaleFunction = _;
         return exports;
     };
 
-    exports.yTickFormat = function(_) { 
+    exports.yTickFormat = function(_) {
         if (!arguments.length) return yTickFormat;
         yTickFormat = _;
         return exports;
     };
 
-    exports.yTicks = function(_) { 
+    exports.yTicks = function(_) {
         if (!arguments.length) return yTicks;
         yTicks = +_;
         return exports;
     };
 
-    exports.yTickValues = function(_) { 
+    exports.yTickValues = function(_) {
         if (!arguments.length) return yTickValues;
         yTickValues = _;
         return exports;
@@ -628,7 +748,7 @@ export default function() {
         exports.yScale = () => yScale;
         exports.yAxis = () => yAxis;
 
-        exports.svg = function(_) { 
+        exports.svg = function(_) {
             if (!arguments.length) return svg;
             svg = _;
             return exports;
@@ -637,3 +757,4 @@ export default function() {
 
     return exports;
 }
+

@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <script src="d3.min.js" type="text/javascript"></script>
-        <script src="../dist/development/bar.js" type="text/javascript"></script>
+        <script src="../dist/development/sidebar.js" type="text/javascript"></script>
     </head>
 
     <body>
@@ -19,21 +19,25 @@
             //// Transform gene lists to counts
             //json.data.forEach(d => { d.y = d.y.length; });
             let data = [
-                {x: 'A', y: 10, se: 4},
-                {x: 'B', y: 20, se: 2},
-                {x: 'C', y: 30, se: 6},
-                {x: 'D', y: 40, se: 2},
+                {y: 'A', x: 10, se: 4},
+                {y: 'B', x: 20, se: 2},
+                {y: 'C', x: 30, se: 6},
+                {y: 'D', x: 40, se: 2},
             ];
 
-			var chart = bar()
+			var chart = sidebar()
                 .data(data)
-                .width(350)
+                .width(550)
                 .height(300)
-                .yDomain([0, 45])
-				.xLabel('Stuff')
-				.yLabel('Values')
+                .xDomain([0, 50])
+				.xLabel('Values')
+				.yLabel('Stuff')
+                .noYLine(true)
+                .xNice(true)
                 .fontSize(13)
-                .noXLine(true)
+                .useAltYAxis(true)
+                .useAltXAxis(true)
+                //.noYLine(true)
 				.draw();
 
 		//});

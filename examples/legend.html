@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="../dist/d3.min.js" type="text/javascript"></script>
+        <script src="../dist/development/legend.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+            let data = [
+                {text: 'A', fill: '#4e79a7', stroke: '#4e79a7'},
+                {text: 'B', fill: '#f28e2c', stroke: '#f28e2c'},
+                {text: 'C', fill: '#e15759', stroke: '#e15759'},
+                {text: 'D', fill: '#76b7b2', stroke: '#76b7b2'},
+            ];
+
+            legend()
+                .data(data)
+                .height(120)
+                .width(100)
+                .keyPad(20)
+                .keySize(150)
+                .draw();
+
+            legend()
+                .data(data)
+                .height(120)
+                .width(100)
+                .keyPad(20)
+                .keySize(150)
+                .symbolType(d3.symbolCircle)
+                .draw();
+
+            legend()
+                .data(data)
+                .height(120)
+                .width(100)
+                .keyPad(20)
+                .keySize(150)
+                .useLine(true)
+                .lineStrokeWidth(4)
+                .draw();
+
+            legend()
+                .data(data)
+                .height(120)
+                .width(100)
+                .tx(10)
+                .keyPad(20)
+                .keySize(100)
+                .lineStrokeWidth(4)
+                .useLineSymbol(true)
+                .symbolType(d3.symbolCircle)
+                .draw();
+
+        </script>
+    <div class="simple_example"></div>
+    </body>
+</html>
+

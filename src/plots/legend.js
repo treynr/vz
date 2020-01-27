@@ -46,30 +46,26 @@ export default function() {
         // HTML element or ID the SVG should be appended to
         element = 'body',
         // Font family for the legend text
-        font = 'sans-serif',
+        font = '"Helvetica neue", Helvetica, Arial, sans-serif',
         // Font size for the legend text
-        fontSize = 12,
+        fontSize = 13,
         // Font weight for the legend text
         fontWeight = 'normal',
         interpolator = interpolateBlues,
         keySize = 150,
         // Vertical padding in-between individual keys in the legend
         keyPad = 30,
+        lineStroke = '#000000',
+        lineStrokeWidth = '#000000',
         width = 300,
         height = 300,
         // Margin object
         margin = {top: 25, right: 25, bottom: 25, left: 25},
         tx = 15,
         ty = 5,
-        stroke = '#000000',
-        strokeWidth = 1,
-        useRect = false,
-        useLine = false,
         rectWidth = 30,
         rectHeight = 30,
         fillOpacity = 1.0,
-        // Use a d3 symbol for colored keys
-        symbolType = null,
         textures = null,
         // Domain values, only required when rendering scales
         scaleDomain = [0, 1],
@@ -85,8 +81,16 @@ export default function() {
         scaleTickSize = 15,
         scaleTitle = '',
         scaleTitlePosition = 'end',
+        symbolStroke = '#000000',
+        symbolStrokeWidth = 1,
+        // Use a d3 symbol for colored keys
+        symbolType = null,
         // Render a quantized scale
         useCircleScale = false,
+        useLine = false,
+        // Use a combination line and symbol legend
+        useLineSymbol = false,
+        useRect = false,
         useSequentialScale = false,
         // Render a quantized scale
         useQuantizeScale = false;
@@ -385,7 +389,17 @@ export default function() {
             .data(data)
             .enter()
             .append('g')
-            .attr('transform', (_, i) => `translate(40, ${(i + 1) * keyPad})`);
+            .attr('transform', (_, i) => {
+
+                return `translate(${margin.left}, ${(i + 1) * keyPad})`
+            })
+            .attr('class', (d, i) => {
+
+                if (d.id)
+                    return `key-${d.id}`;
+
+                return `key-${i}`;
+            });
 
         return legend;
     };
@@ -416,10 +430,18 @@ export default function() {
 
                     return d.size;
                 })
-            );
+            )
+            .attr('transform', useLineSymbol ? `translate(${35 / 2}, 0)` : null)
+            ;
     };
 
-    let styleLegend = function(legend) {
+    let renderLineLegend = function(objects) {
+
+        return objects.append('path')
+            .attr('d', 'M0,0 L35,0');
+    };
+
+    let styleSymbols = function(legend) {
 
         legend
             .attr('fill-opacity', fillOpacity)
@@ -431,15 +453,28 @@ export default function() {
                 return d.fill;
             })
             .attr('stroke', d => {
-
-                if (useLine)
-                    return d.fill;
                 if (d.stroke)
                     return d.stroke;
 
-                return stroke;
+                return symbolStroke;
             })
-            .attr('stroke-width', strokeWidth)
+            .attr('stroke-width', d => d.strokeWidth ? d.strokeWidth : symbolStrokeWidth)
+            .attr('shape-rendering', 'auto');
+    };
+
+    let styleLines = function(legend, isLine = false) {
+
+        legend
+            .attr('fill-opacity', fillOpacity)
+            .attr('fill', 'none')
+            .attr('stroke', d => {
+
+                if (d.stroke)
+                    return d.stroke;
+
+                return lineStroke;
+            })
+            .attr('stroke-width', d => d.strokeWidth ? d.strokeWidth : lineStrokeWidth)
             .attr('shape-rendering', 'auto');
     };
 
@@ -452,6 +487,12 @@ export default function() {
 
                 if (useRect)
                     return rectWidth + 5;
+
+                if ((useLine || useLineSymbol) && d.tx)
+                    return 35 + d.tx;
+
+                if (useLine || useLineSymbol)
+                    return 35 + tx;
 
                 return d.tx ? d.tx : tx; 
             })
@@ -478,8 +519,8 @@ export default function() {
             .attr('height', height)
             .attr('class', 'legend-svg')
             .append('g')
-            .attr('class', 'legend')
-            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+            .attr('class', 'legend');
+            //.attr('transform', `translate(${margin.left}, ${margin.top})`);
 
         if (useCircleScale) {
 
@@ -578,12 +619,33 @@ export default function() {
             let objects = makeLegendObjects();
             let legend = null;
 
-            if (useRect)
+            if (useRect) {
+
                 legend = renderRectLegend(objects);
-            else
+
+            } else if (useLineSymbol) {
+
+                let lineObjects = makeLegendObjects();
+                let lineLegend = renderLineLegend(lineObjects);
+
+                styleLines(lineLegend);
+
                 legend = renderSymbolLegend(objects);
 
-            styleLegend(legend);
+            } else if (useLine) {
+
+                legend = renderLineLegend(objects);
+
+            } else {
+
+                legend = renderSymbolLegend(objects);
+            }
+
+            if (useLine)
+                styleLines(legend);
+            else
+                styleSymbols(legend);
+
             renderLegendText(objects);
         }
 
@@ -751,15 +813,27 @@ export default function() {
         return exports;
     };
 
-    exports.stroke = function(_) {
-        if (!arguments.length) return stroke;
-        stroke = _;
+    exports.lineStroke = function(_) {
+        if (!arguments.length) return lineStroke;
+        lineStroke = _;
         return exports;
     };
 
-    exports.strokeWidth = function(_) {
-        if (!arguments.length) return strokeWidth;
-        strokeWidth = +_;
+    exports.lineStrokeWidth = function(_) {
+        if (!arguments.length) return lineStrokeWidth;
+        lineStrokeWidth = _;
+        return exports;
+    };
+
+    exports.symbolStroke = function(_) {
+        if (!arguments.length) return symbolStroke;
+        symbolStroke = _;
+        return exports;
+    };
+
+    exports.symbolStrokeWidth = function(_) {
+        if (!arguments.length) return symbolStrokeWidth;
+        symbolStrokeWidth = _;
         return exports;
     };
 
@@ -910,6 +984,12 @@ export default function() {
     exports.useCircleScale = function(_) {
         if (!arguments.length) return useCircleScale;
         useCircleScale = _;
+        return exports;
+    };
+
+    exports.useLineSymbol = function(_) {
+        if (!arguments.length) return useLineSymbol;
+        useLineSymbol = _;
         return exports;
     };
 
