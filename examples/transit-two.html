@@ -10,8 +10,8 @@
     <body>
         <script type="text/javascript">
 
-            d3.tsv('data/aud-promoter-hisim-nodes.tsv', (err1, ntsv) => {
-            d3.tsv('data/aud-promoter-hisim-edges.tsv', (err2, etsv) => {
+            d3.tsv('data/sample-hisim-nodes.tsv', (err1, ntsv) => {
+            d3.tsv('data/sample-hisim-edges.tsv', (err2, etsv) => {
 
                 ntsv = _.chain(ntsv)
                     .map(d => {

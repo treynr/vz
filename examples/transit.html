@@ -39,28 +39,6 @@
                     {source: 'Uranus', target: 'Demeter'},
                 ]
             };
-            levels = [
-                [
-                    {id: 'Chaos', }
-                ],
-                [
-                    {id: 'Gaea', },
-                    {id: 'Uranus', parents: ['Chaos']},
-                ],
-                [
-                    {id: 'Oceanus', parents: ['Uranus']},
-                    {id: 'Thethys',  parents: ['Uranus', 'Gaea']},
-                    {id: 'Rhea', parents: ['Gaea', 'Uranus']},
-                    {id: 'Pontus'},
-                ],
-                [
-                    {id: 'Doris', parents: ['Oceanus', 'Thethys']},
-                    {id: 'Neures', parents: ['Pontus', 'Gaea']},
-                    {id: 'Dionne'},
-                    {id: 'Demeter', parents: ['Rhea', 'Uranus']},
-                ]
-
-            ];
 
             let t = transit()
                 .data(data)
